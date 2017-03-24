@@ -18,7 +18,9 @@ from __future__ import unicode_literals
 
 import re
 
+from HTMLParser import HTMLParser
 from ipaddress import ip_network
+from operator import attrgetter
 
 from indico.core.db import db
 from indico.modules.api import settings as api_settings
@@ -27,10 +29,19 @@ from indico.modules.core.settings import core_settings, social_settings
 from indico.modules.events.payment import settings as payment_settings
 from indico.modules.legal import legal_settings
 from indico.modules.networks.models.networks import IPNetworkGroup
+from indico.modules.news import news_settings
+from indico.modules.news.models.news import NewsItem
 from indico.modules.users import user_management_settings
 from indico.util.console import cformat
+from indico.web.flask.templating import strip_tags
 
 from indico_migrate import Importer, convert_to_unicode
+
+
+def _sanitize_title(title, _ws_re=re.compile(r'\s+')):
+    title = convert_to_unicode(title)
+    title = HTMLParser().unescape(strip_tags(title))
+    return _ws_re.sub(' ', title).strip()
 
 
 class GlobalSettingsImporter(Importer):
@@ -41,13 +52,15 @@ class GlobalSettingsImporter(Importer):
 
     def migrate(self):
         self.migrate_global_ip_acl()
-        self.migrate_networks()
         self.migrate_api_settings()
         self.migrate_global_settings()
         self.migrate_upcoming_event_settings()
         self.migrate_user_management_settings()
         self.migrate_legal_settings()
         self.migrate_payment_settings()
+        self.migrate_news_settings()
+        self.migrate_news()
+        self.migrate_networks()
         db.session.commit()
 
     def migrate_api_settings(self):
@@ -140,6 +153,22 @@ class GlobalSettingsImporter(Importer):
             db.session.add(network)
             self.print_success(repr(network))
         db.session.flush()
+
+    def migrate_news(self):
+        self.print_step('News')
+        old_items = sorted(self.zodb_root['modules']['news']._newsItems, key=attrgetter('_creationDate'))
+        for old_item in old_items:
+            n = NewsItem(title=_sanitize_title(old_item._title), content=convert_to_unicode(old_item._content),
+                         created_dt=old_item._creationDate)
+            db.session.add(n)
+            db.session.flush()
+            self.print_success(n.title)
+
+    def migrate_news_settings(self):
+        self.print_step('News settings')
+        mod = self.zodb_root['modules']['news']
+        news_settings.set('show_recent', bool(self.makac_info._newsActive))
+        news_settings.set('new_days', int(mod._recentDays))
 
     def _iter_domains(self):
         return self.zodb_root['domains'].itervalues()

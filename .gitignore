@@ -1,0 +1,17 @@
+# temporary/bytecode files
+*~
+.*.swp
+*.py[co]
+__pycache__/
+
+# configs
+*.conf
+
+# python packaging
+/dist
+/build
+*.egg-info
+
+# IDE files
+.idea/
+*.sublime-*

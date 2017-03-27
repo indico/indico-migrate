@@ -20,6 +20,7 @@ import os
 import sys
 import time
 import warnings
+from argparse import Namespace
 from operator import itemgetter
 
 import click
@@ -48,7 +49,13 @@ click.disable_unicode_literals_warning = True
 @click.argument('zodb-uri')
 @click.option('--verbose', '-v', is_flag=True, default=False, help="Use verbose output")
 @click.option('--dblog', '-L', is_flag=True, default=False, help="Enable db query logging")
-def cli(sqlalchemy_uri, zodb_uri, verbose, dblog):
+@click.option('--ldap-provider-name', default='legacy-ldap', help="Provider name to use for existing LDAP identities")
+@click.option('--default-group-provider', required=True, help="Name of the default group provider")
+@click.option('--ignore-local-accounts', is_flag=True, default=False, help="Do not migrate existing local accounts")
+@click.option('--archive-dir', required=True, multiple=True,
+              help="The base path where resources are stored (ArchiveDir in indico.conf). When used multiple times, "
+                   "the dirs are checked in order until a file is found.")
+def cli(sqlalchemy_uri, zodb_uri, verbose, dblog, **kwargs):
     """
     This script migrates your database from ZODB/Indico 1.2 to PostgreSQL (2.0).
 
@@ -56,17 +63,20 @@ def cli(sqlalchemy_uri, zodb_uri, verbose, dblog):
     ZODB URI (both zeo:// and file:// work).
     """
     from indico_migrate.modules.global_settings import GlobalSettingsImporter
-    steps = (GlobalSettingsImporter,)
+    from indico_migrate.modules.users import UserImporter
+    from indico_migrate.modules.categories import CategoryImporter
+    steps = (GlobalSettingsImporter, UserImporter, CategoryImporter)
 
     for step in steps:
-        step(sqlalchemy_uri, zodb_uri, verbose, dblog).run()
+        step(sqlalchemy_uri, zodb_uri, verbose, dblog, **kwargs).run()
 
 
 class Importer(object):
     #: Specify plugins that need to be loaded for the import (e.g. to access its .settings property)
     plugins = frozenset()
+    _global_maps = Namespace()
 
-    def __init__(self, sqlalchemy_uri, zodb_uri, verbose, dblog):
+    def __init__(self, sqlalchemy_uri, zodb_uri, verbose, dblog, **kwargs):
         self.sqlalchemy_uri = sqlalchemy_uri
         self.zodb_uri = zodb_uri
         self.quiet = not verbose
@@ -75,9 +85,14 @@ class Importer(object):
         self.app = None
         self.tz = None
 
-    @staticmethod
-    def decorate_command(command):
-        return command
+        self.initialize_global_maps(Importer._global_maps)
+
+    def initialize_global_maps(self, g):
+        pass
+
+    @property
+    def global_maps(self):
+        return Importer._global_maps
 
     def __repr__(self):
         return '<{}({}, {})>'.format(type(self).__name__, self.sqlalchemy_uri, self.zodb_uri)

@@ -30,7 +30,6 @@ from uuid import uuid4
 from indico.core.auth import IndicoMultipass, multipass
 from indico.core.db.sqlalchemy.protection import ProtectionMode
 from indico.modules.groups import GroupProxy
-from indico.modules.groups.legacy import GroupWrapper
 from indico.modules.users.legacy import AvatarUserWrapper
 from indico.util.console import cformat
 
@@ -146,11 +145,7 @@ def get_archived_file(f, archive_paths):
 
 def convert_principal(principal):
     """Converts a legacy principal to PrincipalMixin style"""
-    if isinstance(principal, AvatarUserWrapper):
-        return principal.user
-    elif isinstance(principal, GroupWrapper):
-        return principal.group
-    elif principal.__class__.__name__ == 'Avatar':
+    if principal.__class__.__name__ == 'Avatar':
         return AvatarUserWrapper(principal.id).user
     elif principal.__class__.__name__ == 'Group':
         return GroupProxy(principal.id)

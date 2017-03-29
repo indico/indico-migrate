@@ -16,30 +16,22 @@
 
 from __future__ import print_function, unicode_literals
 
-import os
-import sys
 import time
 import warnings
 from argparse import Namespace
+from collections import defaultdict
 from operator import itemgetter
 
 import click
-import pytz
 from flask.exthook import ExtDeprecationWarning
 from sqlalchemy.sql import func, select
 
 warnings.simplefilter('ignore', ExtDeprecationWarning)  # some of our dependencies still use flask.ext :(
 
 from indico.core.db.sqlalchemy import db
-from indico.core.db.sqlalchemy.logging import apply_db_loggers
-from indico.core.db.sqlalchemy.migration import migrate as alembic_migrate
-from indico.core.db.sqlalchemy.util.models import import_all_models
-from indico.core.plugins import plugin_engine
 from indico.modules.users.models.users import User
 from indico.util.console import cformat, clear_line
-from indico.util.decorators import classproperty
-from indico.web.flask.wrappers import IndicoFlask
-from indico_migrate.util import UnbreakingDB, get_storage
+from indico_migrate.migrate import migrate
 
 click.disable_unicode_literals_warning = True
 
@@ -62,13 +54,8 @@ def cli(sqlalchemy_uri, zodb_uri, verbose, dblog, **kwargs):
     You always need to specify both the SQLAlchemy connection URI and
     ZODB URI (both zeo:// and file:// work).
     """
-    from indico_migrate.modules.global_settings import GlobalSettingsImporter
-    from indico_migrate.modules.users import UserImporter
-    from indico_migrate.modules.categories import CategoryImporter
-    steps = (GlobalSettingsImporter, UserImporter, CategoryImporter)
-
-    for step in steps:
-        step(sqlalchemy_uri, zodb_uri, verbose, dblog, **kwargs).run()
+    Importer._global_maps.user_favorite_categories = defaultdict(set)
+    migrate(zodb_uri, sqlalchemy_uri, verbose=verbose, dblog=dblog, **kwargs)
 
 
 class Importer(object):
@@ -76,19 +63,22 @@ class Importer(object):
     plugins = frozenset()
     _global_maps = Namespace()
 
-    def __init__(self, sqlalchemy_uri, zodb_uri, verbose, dblog, **kwargs):
+    def __init__(self, app, sqlalchemy_uri, zodb_root, verbose, dblog, tz, **kwargs):
         self.sqlalchemy_uri = sqlalchemy_uri
-        self.zodb_uri = zodb_uri
         self.quiet = not verbose
         self.dblog = dblog
-        self.zodb_root = None
-        self.app = None
-        self.tz = None
+        self.zodb_root = zodb_root
+        self.app = app
+        self.tz = tz
 
         self.initialize_global_maps(Importer._global_maps)
 
     def initialize_global_maps(self, g):
         pass
+
+    @property
+    def makac_info(self):
+        return self.zodb_root['MaKaCInfo']['main']
 
     @property
     def global_maps(self):
@@ -98,53 +88,9 @@ class Importer(object):
         return '<{}({}, {})>'.format(type(self).__name__, self.sqlalchemy_uri, self.zodb_uri)
 
     def run(self):
-        self.setup()
         start = time.time()
-        with self.app.app_context():
-            self.migrate()
+        self.migrate()
         print('migration took {:.06f} seconds\a'.format((time.time() - start)))
-
-    def setup(self):
-        self.app = app = IndicoFlask('indico_migrate')
-        app.config['PLUGINENGINE_NAMESPACE'] = 'indico.plugins'
-        app.config['PLUGINENGINE_PLUGINS'] = self.plugins
-        app.config['SQLALCHEMY_DATABASE_URI'] = self.sqlalchemy_uri
-        app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = True
-        plugin_engine.init_app(app)
-        if not plugin_engine.load_plugins(app):
-            print(cformat('%{red!}Could not load some plugins: {}%{reset}').format(
-                ', '.join(plugin_engine.get_failed_plugins(app))))
-            sys.exit(1)
-        db.init_app(app)
-        if self.dblog:
-            app.debug = True
-            apply_db_loggers(app)
-        import_all_models()
-        alembic_migrate.init_app(app, db, os.path.join(app.root_path, 'migrations'))
-
-        self.connect_zodb()
-
-        try:
-            self.tz = pytz.timezone(getattr(self.zodb_root['MaKaCInfo']['main'], '_timezone', 'UTC'))
-        except KeyError:
-            self.tz = pytz.utc
-
-        with app.app_context():
-            if not self.pre_check():
-                sys.exit(1)
-
-            if self.has_data():
-                # Usually there's no good reason to migrate with data in the DB. However, during development one might
-                # comment out some migration tasks and run the migration anyway.
-                print(cformat('%{yellow!}*** WARNING'))
-                print(cformat('%{yellow!}***%{reset} Your database is not empty, migration may fail or add duplicate '
-                              'data!'))
-                if raw_input(cformat('%{yellow!}***%{reset} To confirm this, enter %{yellow!}YES%{reset}: ')) != 'YES':
-                    print('Aborting')
-                    sys.exit(1)
-
-    def connect_zodb(self):
-        self.zodb_root = UnbreakingDB(get_storage(self.zodb_uri)).open().root()
 
     def flushing_iterator(self, iterable, n=5000):
         """Iterates over `iterable` and flushes the ZODB cache every `n` items.
@@ -170,20 +116,6 @@ class Importer(object):
             print(cformat('Run %{yellow!}indico db --plugin {} upgrade%{reset} to create it').format(name))
             return False
         return True
-
-    def pre_check(self):
-        """Early checks before doing anything.
-
-        Add checks here that should run before performing any
-        modifications. You could use this method to check if
-        the database contains the necessary tables.
-
-        :return: bool indicating if the migration should run
-        """
-        return True
-
-    def has_data(self):
-        return False
 
     def migrate(self):
         raise NotImplementedError

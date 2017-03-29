@@ -34,6 +34,15 @@ from indico_migrate.util import UnbreakingDB, get_storage
 # TODO: handle plugins
 
 
+def _monkeypatch_config():
+    """Make sure we're not accesing the indico.conf"""
+    def _raise_method():
+        raise RuntimeError("Config file shouldn't be accessed during migration!")
+
+    from indico.core.config import Config
+    Config.getInstance = staticmethod(_raise_method)
+
+
 def migrate(zodb_uri, sqlalchemy_uri, verbose=False, dblog=False, **kwargs):
     from indico_migrate.steps.global_pre_events import GlobalPreEventsImporter
     from indico_migrate.steps.global_post_events import GlobalPostEventsImporter
@@ -63,6 +72,8 @@ def setup(zodb_root, sqlalchemy_uri, dblog=False):
     app.config['PLUGINENGINE_NAMESPACE'] = 'indico.plugins'
     app.config['SQLALCHEMY_DATABASE_URI'] = sqlalchemy_uri
     app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = True
+    _monkeypatch_config()
+
     plugin_engine.init_app(app)
     if not plugin_engine.load_plugins(app):
         print(cformat('%{red!}Could not load some plugins: {}%{reset}').format(

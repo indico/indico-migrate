@@ -23,19 +23,19 @@ from HTMLParser import HTMLParser
 from io import BytesIO
 from operator import attrgetter
 
-import click
 from PIL import Image
 
 from indico.core.db import db
 from indico.core.db.sqlalchemy.protection import ProtectionMode
 from indico.core.db.sqlalchemy.util.session import no_autoflush
 from indico.modules.categories.models.categories import Category
+from indico.modules.categories.models.legacy_mapping import LegacyCategoryMapping
 from indico.modules.events.layout import theme_settings
 from indico.modules.networks.models.networks import IPNetworkGroup
 from indico.modules.users import User
 from indico.util.console import cformat
 from indico.util.fs import secure_filename
-from indico.util.string import crc32, sanitize_email, is_valid_mail
+from indico.util.string import crc32, sanitize_email, is_valid_mail, is_legacy_id
 from indico.web.flask.templating import strip_tags
 
 from indico_migrate import Importer, convert_to_unicode
@@ -43,10 +43,11 @@ from indico_migrate.util import patch_default_group_provider, get_archived_file,
 
 
 class CategoryImporter(Importer):
-    def __init__(self, **kwargs):
+    def __init__(self, *args, **kwargs):
         self.archive_dirs = kwargs.pop('archive_dir')
         self.default_group_provider = kwargs.pop('default_group_provider')
-        super(CategoryImporter, self).__init__(**kwargs)
+        super(CategoryImporter, self).__init__(*args, **kwargs)
+        self.categ_id_counter = self.zodb_root['counters']['CATEGORY']._Counter__count
 
     def has_data(self):
         return Category.query.has_rows()
@@ -57,6 +58,14 @@ class CategoryImporter(Importer):
         with patch_default_group_provider(self.default_group_provider):
             self.migrate_categories()
         self.fix_sequences('categories', {'categories'})
+
+    def migrate_categories(self):
+        self.print_step("Categories")
+        old_root = self.zodb_root['rootCategory']
+        assert old_root.id == '0'
+        root = self._migrate_category(old_root, 1)
+        db.session.add(root)
+        db.session.commit()
 
     def _process_icon(self, cat, icon):
         path = get_archived_file(icon, self.archive_dirs)[1]
@@ -197,7 +206,17 @@ class CategoryImporter(Importer):
         emails = sorted(email for email in emails if is_valid_mail(email, False))
         default_themes = self._process_default_themes(old_cat)
         title = self._fix_title(convert_to_unicode(old_cat.name), old_cat.id)
-        cat = Category(id=int(old_cat.id), position=position, title=title,
+
+        if is_legacy_id(old_cat.id):
+            # if category has a legacy (non-numeric) ID, generate a new ID
+            # and establish a mapping (for URL redirection)
+            new_id = self.gen_categ_id()
+            db.session.add(LegacyCategoryMapping(legacy_category_id=old_cat.id, category_id=new_id))
+            self.print_success(cformat('%{white!}{:6s}%{reset} -> %{cyan}{}').format(old_cat.id, new_id))
+        else:
+            new_id = int(old_cat.id)
+
+        cat = Category(id=int(new_id), position=position, title=title,
                        description=convert_to_unicode(old_cat.description), visibility=visibility,
                        timezone=convert_to_unicode(old_cat._timezone), event_creation_notification_emails=emails,
                        default_event_themes=default_themes,
@@ -211,14 +230,10 @@ class CategoryImporter(Importer):
                         for i, old_subcat in enumerate(sorted(old_cat.subcategories.itervalues(),
                                                               key=attrgetter('_order')), 1)]
         # add to user favorites
-        for user in self.global_maps.user_favorite_categories[old_cat]:
+        for user in self.global_maps.user_favorite_categories[old_cat.id]:
             user.favorite_categories.add(cat)
         return cat
 
-    def migrate_categories(self):
-        self.print_step("Migrating categories")
-        old_root = self.zodb_root['rootCategory']
-        assert old_root.id == '0'
-        root = self._migrate_category(old_root, 1)
-        db.session.add(root)
-        db.session.commit()
+    def gen_categ_id(self):
+        self.categ_id_counter += 1
+        return self.categ_id_counter

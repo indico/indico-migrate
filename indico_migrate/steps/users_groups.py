@@ -18,6 +18,7 @@ from __future__ import unicode_literals
 
 from collections import defaultdict
 from datetime import timedelta
+from operator import attrgetter
 from uuid import uuid4
 
 import pytz
@@ -27,6 +28,7 @@ from pytz import all_timezones_set
 from indico.core.db import db
 from indico.modules.api import APIKey
 from indico.modules.auth import Identity
+from indico.modules.groups.models.groups import LocalGroup
 from indico.modules.users import User, user_settings
 from indico.modules.users.models.users import UserTitle
 from indico.util.caching import memoize
@@ -69,6 +71,8 @@ class UserImporter(Importer):
         self.fix_sequences('users', {'users'})
         self.migrate_favorite_users()
         self.migrate_admins()
+        self.migrate_groups()
+        self.fix_sequences('users', {'groups'})
         db.session.commit()
 
     def migrate_users(self):
@@ -99,7 +103,7 @@ class UserImporter(Importer):
             # favorite users cannot be migrated here since the target user might not have been migrated yet
             for old_categ in avatar.linkedTo['category']['favorite']:
                 if old_categ:
-                    self.global_maps.user_favorite_categories[old_categ].add(user)
+                    self.global_maps.user_favorite_categories[old_categ.id].add(user)
             db.session.flush()
             self.print_success(cformat('%{white!}{:6d}%{reset} %{cyan}{}%{reset} [%{blue!}{}%{reset}] '
                                        '{{%{cyan!}{}%{reset}}}').format(user.id, user.full_name, user.email,
@@ -221,6 +225,36 @@ class UserImporter(Importer):
             user.is_admin = True
             self.print_success(cformat('%{cyan}{}').format(user))
 
+    def migrate_groups(self):
+        print cformat('%{white!}migrating groups')
+
+        for old_group in committing_iterator(self.zodb_root['groups'].itervalues()):
+            if old_group.__class__.__name__ != 'Group':
+                continue
+            group = LocalGroup(id=int(old_group.id), name=convert_to_unicode(old_group.name).strip())
+            print cformat('%{green}+++%{reset} %{white!}{:6d}%{reset} %{cyan}{}%{reset}').format(group.id, group.name)
+            members = set()
+            for old_member in old_group.members:
+                if old_member.__class__.__name__ != 'Avatar':
+                    print cformat('%{yellow!}!!!        Unsupported group member type: {}').format(
+                        old_member.__class__.__name__)
+                    continue
+                user = User.get(int(old_member.id))
+                if user is None:
+                    print cformat('%{yellow!}!!!        User not found: {}').format(old_member.id)
+                    continue
+                while user.merged_into_user:
+                    user = user.merged_into_user
+                if user.is_deleted:
+                    print cformat('%{yellow!}!!!        User deleted: {}').format(user.id)
+                    continue
+                members.add(user)
+            for member in sorted(members, key=attrgetter('full_name')):
+                print cformat('%{blue!}<->%{reset}        %{white!}{:6d} %{yellow}{} ({})').format(
+                    member.id, member.full_name, member.email)
+            group.members = members
+            db.session.add(group)
+
     def _user_from_avatar(self, avatar, **kwargs):
         email = sanitize_email(convert_to_unicode(avatar.email).lower().strip())
         secondary_emails = {sanitize_email(convert_to_unicode(x).lower().strip()) for x in avatar.secondaryEmails}
@@ -239,6 +273,8 @@ class UserImporter(Importer):
                     secondary_emails=secondary_emails,
                     is_blocked=avatar.status == 'disabled',
                     **kwargs)
+        # Add user as a favorite of themselves
+        user.favorite_users.add(user)
         if is_deleted or not is_valid_mail(user.email):
             user.is_deleted = True
         return user

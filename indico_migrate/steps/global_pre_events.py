@@ -24,7 +24,6 @@ from operator import attrgetter
 
 from indico.core.db import db
 from indico.modules.api import settings as api_settings
-from indico.modules.categories import upcoming_events_settings
 from indico.modules.core.settings import core_settings, social_settings
 from indico.modules.events.payment import settings as payment_settings
 from indico.modules.legal import legal_settings
@@ -44,17 +43,12 @@ def _sanitize_title(title, _ws_re=re.compile(r'\s+')):
     return _ws_re.sub(' ', title).strip()
 
 
-class GlobalSettingsImporter(Importer):
-
-    @property
-    def makac_info(self):
-        return self.zodb_root['MaKaCInfo']['main']
+class GlobalPreEventsImporter(Importer):
 
     def migrate(self):
         self.migrate_global_ip_acl()
         self.migrate_api_settings()
         self.migrate_global_settings()
-        self.migrate_upcoming_event_settings()
         self.migrate_user_management_settings()
         self.migrate_legal_settings()
         self.migrate_payment_settings()
@@ -84,19 +78,8 @@ class GlobalSettingsImporter(Importer):
         })
         social_settings.set_multi({
             'enabled': bool(self.makac_info._socialAppConfig['active']),
-            'facebook_app_id': convert_to_unicode(self.makac_info._socialAppConfig['facebook']['appId'])
+            'facebook_app_id': convert_to_unicode(self.makac_info._socialAppConfig['facebook'].get('appId'))
         })
-
-    def migrate_upcoming_event_settings(self):
-        self.print_step('Upcoming event settings')
-        mod = self.zodb_root['modules']['upcoming_events']
-        upcoming_events_settings.set('max_entries', int(mod._maxEvents))
-        entries = [{'weight': float(entry.weight),
-                    'days': entry.advertisingDelta.days,
-                    'type': 'category' if type(entry.obj).__name__ == 'Category' else 'event',
-                    'id': int(entry.obj.id)}
-                   for entry in mod._objects]
-        upcoming_events_settings.set('entries', entries)
 
     def migrate_user_management_settings(self):
         self.print_step('User management settings')

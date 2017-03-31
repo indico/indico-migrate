@@ -34,7 +34,7 @@ from indico.modules.users import user_management_settings
 from indico.util.console import cformat
 from indico.web.flask.templating import strip_tags
 
-from indico_migrate import Importer, convert_to_unicode
+from indico_migrate import TopLevelMigrationStep, convert_to_unicode
 
 
 def _sanitize_title(title, _ws_re=re.compile(r'\s+')):
@@ -43,7 +43,7 @@ def _sanitize_title(title, _ws_re=re.compile(r'\s+')):
     return _ws_re.sub(' ', title).strip()
 
 
-class GlobalPreEventsImporter(Importer):
+class GlobalPreEventsImporter(TopLevelMigrationStep):
 
     def migrate(self):
         self.migrate_global_ip_acl()

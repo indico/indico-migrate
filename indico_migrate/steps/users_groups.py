@@ -35,9 +35,9 @@ from indico.util.caching import memoize
 from indico.util.console import cformat
 from indico.util.i18n import get_all_locales
 from indico.util.string import is_valid_mail, sanitize_email
-from indico.util.struct.iterables import committing_iterator, grouper
+from indico.util.struct.iterables import committing_iterator
 
-from indico_migrate import Importer, convert_to_unicode
+from indico_migrate import TopLevelMigrationStep, convert_to_unicode
 
 
 USER_TITLE_MAP = {x.title: x for x in UserTitle}
@@ -55,7 +55,7 @@ def _get_all_locales():
     return set(get_all_locales())
 
 
-class UserImporter(Importer):
+class UserImporter(TopLevelMigrationStep):
     def __init__(self, *args, **kwargs):
         self.ldap_provider_name = kwargs.pop('ldap_provider_name')
         self.ignore_local_accounts = kwargs.pop('ignore_local_accounts')
@@ -63,10 +63,13 @@ class UserImporter(Importer):
 
     def initialize_global_maps(self, g):
         g.user_favorite_categories = defaultdict(set)
+        g.avatar_merged_user = {}
+        g.users_by_primary_email = {}
+        g.users_by_secondary_email = {}
 
     def migrate(self):
-        self.users_by_primary_email = {}
-        self.users_by_secondary_email = {}
+        self.unresolved_merge_targets = defaultdict(set)
+        self.favorite_avatars = {}
         self.migrate_users()
         self.fix_sequences('users', {'users'})
         self.migrate_favorite_users()
@@ -82,6 +85,12 @@ class UserImporter(Importer):
         for avatar in committing_iterator(self._iter_avatars(), 5000):
             if getattr(avatar, '_mergeTo', None):
                 self.print_warning('Skipping {} - merged into {}'.format(avatar.id, avatar._mergeTo.id))
+                merged_user = self.global_maps.avatar_merged_user.get(avatar._mergeTo.id)
+                if merged_user:
+                    self.global_maps.avatar_merged_user[avatar.id] = merged_user
+                else:
+                    # if the merge target hasn't yet been migrated, keep track of it
+                    self.unresolved_merge_targets[avatar._mergeTo.id].add(avatar.id)
                 continue
             elif avatar.status == 'Not confirmed':
                 self.print_warning('Skipping {} - not activated'.format(avatar.id))
@@ -110,62 +119,65 @@ class UserImporter(Importer):
                                                                         ', '.join(user.secondary_emails)))
             # migrate API keys
             self._migrate_api_keys(avatar, user)
-            # migrate identities of non-deleted avatars
-            if not user.is_deleted:
-                for old_identity in avatar.identities:
-                    identity = None
-                    username = convert_to_unicode(old_identity.login).strip().lower()
+            # migrate identities of avatars
+            for old_identity in avatar.identities:
+                identity = None
+                username = convert_to_unicode(old_identity.login).strip().lower()
 
-                    if not username:
-                        self.print_warning("Empty username: {}. Skipping identity.".format(old_identity))
-                        continue
-
-                    provider = {
-                        'LocalIdentity': 'indico',
-                        'LDAPIdentity': self.ldap_provider_name
-                    }.get(old_identity.__class__.__name__)
-
-                    if provider is None:
-                        self.print_error("Unsupported provider: {}. Skipping identity.".format(
-                            old_identity.__class__.__name__))
-                        continue
-
-                    if (provider, username) in seen_identities:
-                        self.print_error("Duplicate identity: {}, {}. Skipping.".format(provider, username))
-                        continue
-
-                    if provider == 'indico' and not self.ignore_local_accounts:
-                        identity = Identity(provider=provider, identifier=username)
-
-                        if not hasattr(old_identity, 'algorithm'):  # plaintext password
-                            if not old_identity.password:
-                                # password is empty, skip identity
-                                self.print_error("Identity '{}' has empty password. Skipping identity.".format(
-                                                  old_identity.login))
-                                continue
-                            identity.password = old_identity.password
-                        else:
-                            assert old_identity.algorithm == 'bcrypt'
-                            identity.password_hash = old_identity.password
-
-                    elif provider == self.ldap_provider_name:
-                        identity = Identity(provider=provider, identifier=username)
-
-                    if identity:
-                        self.print_info(cformat('%{blue!}<->%{reset}  %{yellow}{}%{reset}').format(identity))
-                        user.identities.add(identity)
-                        seen_identities.add((provider, username))
-
-            for merged_avatar in getattr(avatar, '_mergeFrom', ()):
-                if merged_avatar.id == avatar.id:
+                if not username:
+                    self.print_warning("Empty username: {}. Skipping identity.".format(old_identity))
                     continue
-                merged = self._user_from_avatar(merged_avatar, is_deleted=True, merged_into_id=user.id)
-                self.print_info(cformat('%{white!}{:6d}%{reset} %{cyan}{}%{reset} [%{blue!}{}%{reset}] '
-                                        '{{%{cyan!}{}%{reset}}}').format(merged.id, merged.full_name, merged.email,
-                                                                         ', '.join(merged.secondary_emails)))
-                self._fix_collisions(merged, merged_avatar)
-                db.session.add(merged)
-                db.session.flush()
+
+                provider = {
+                    'LocalIdentity': 'indico',
+                    'LDAPIdentity': self.ldap_provider_name
+                }.get(old_identity.__class__.__name__)
+
+                if provider is None:
+                    self.print_error("Unsupported provider: {}. Skipping identity.".format(
+                        old_identity.__class__.__name__))
+                    continue
+
+                if (provider, username) in seen_identities:
+                    self.print_error("Duplicate identity: {}, {}. Skipping.".format(provider, username))
+                    continue
+
+                if provider == 'indico' and not self.ignore_local_accounts:
+                    identity = Identity(provider=provider, identifier=username)
+
+                    if not hasattr(old_identity, 'algorithm'):  # plaintext password
+                        if not old_identity.password:
+                            # password is empty, skip identity
+                            self.print_error("Identity '{}' has empty password. Skipping identity.".format(
+                                              old_identity.login))
+                            continue
+                        identity.password = old_identity.password
+                    else:
+                        assert old_identity.algorithm == 'bcrypt'
+                        identity.password_hash = old_identity.password
+
+                elif provider == self.ldap_provider_name:
+                    identity = Identity(provider=provider, identifier=username)
+
+                if identity:
+                    self.print_info(cformat('%{blue!}<->%{reset}  %{yellow}{}%{reset}').format(identity))
+                    user.identities.add(identity)
+                    seen_identities.add((provider, username))
+
+            if hasattr(avatar, 'personalInfo') and avatar.personalInfo._basket._users:
+                self.favorite_avatars[user.id] = avatar.personalInfo._basket._users
+
+            self.global_maps.avatar_merged_user[avatar.id] = user
+            if avatar.id in self.unresolved_merge_targets:
+                del self.unresolved_merge_targets[avatar.id]
+                self._resolve_merge_targets(avatar.id, user)
+
+    def _resolve_merge_targets(self, avatar_id, user):
+        for source_av, target_av in self.unresolved_merge_targets.items():
+            if target_av == avatar_id:
+                self.global_maps.avatar_merged_user[source_av] = user
+                del self.unresolved_merge_targets[source_av]
+                self._resolve_merge_targets(source_av, user)
 
     def _migrate_api_keys(self, avatar, user):
         ak = getattr(avatar, 'apiKey', None)
@@ -193,31 +205,26 @@ class UserImporter(Importer):
                                             is_active=False))
 
     def migrate_favorite_users(self):
+        users = {u.id: u for u in User.find(User.id.in_(set(self.favorite_avatars)))}
         self.print_step('Favorite users')
-        for avatars in grouper(self._iter_avatars_with_favorite_users(), 2500, skip_missing=True):
-            avatars = list(avatars)
-            users = {u.id: u for u in User.find(User.id.in_(int(a.id) for a, _ in avatars))}
-            for avatar, user_ids in committing_iterator(avatars, 1000):
-                user = users.get(int(avatar.id))
-                if user is None:
-                    self.print_error('User {} does not exist'.format(avatar.id))
+        for user_id, avatars in self.favorite_avatars.viewitems():
+            user = users[user_id]
+            self.print_success(cformat('%{white!}{:6d}%{reset} %{cyan}{}%{reset}').format(user_id, user.full_name))
+            for avatar_id in avatars:
+                fav_user = self.global_maps.avatar_merged_user.get(avatar_id)
+                if not fav_user:
+                    self.print_warning('User not found: {}'.format(avatar_id))
                     continue
-                self.print_success(cformat('%{white!}{:6d}%{reset} %{cyan}{}%{reset}').format(user.id, user.full_name))
-                valid_users = {u.id: u for u in User.find(User.id.in_(user_ids))}
-                for user_id in user_ids:
-                    target = valid_users.get(user_id)
-                    if target is None:
-                        self.print_warning('User {} does not exist'.format(user_id))
-                        continue
-                    user.favorite_users.add(target)
-                    self.print_info(cformat(u'%{blue!}F%{reset} %{white!}{:6d}%{reset} '
-                                            '%{cyan}{}%{reset}').format(target.id, target.full_name))
+
+                user.favorite_users.add(fav_user)
+                self.print_info(cformat(u'%{blue!}F%{reset} %{white!}{:6d}%{reset} '
+                                        '%{cyan}{}%{reset}').format(fav_user.id, fav_user.full_name))
 
     def migrate_admins(self):
         self.print_step('Admins')
         for avatar in committing_iterator(self.zodb_root['adminlist']._AdminList__list):
             try:
-                user = User.get(int(avatar.id))
+                user = self.global_maps.avatar_merged_user[avatar.id]
             except ValueError:
                 continue
             if user is None or user.is_deleted:
@@ -226,32 +233,25 @@ class UserImporter(Importer):
             self.print_success(cformat('%{cyan}{}').format(user))
 
     def migrate_groups(self):
-        print cformat('%{white!}migrating groups')
-
+        self.print_step('Groups')
         for old_group in committing_iterator(self.zodb_root['groups'].itervalues()):
             if old_group.__class__.__name__ != 'Group':
                 continue
             group = LocalGroup(id=int(old_group.id), name=convert_to_unicode(old_group.name).strip())
-            print cformat('%{green}+++%{reset} %{white!}{:6d}%{reset} %{cyan}{}%{reset}').format(group.id, group.name)
+            self.print_success(cformat('%{white!}{:6d}%{reset} %{cyan}{}%{reset}').format(group.id, group.name))
             members = set()
             for old_member in old_group.members:
                 if old_member.__class__.__name__ != 'Avatar':
-                    print cformat('%{yellow!}!!!        Unsupported group member type: {}').format(
-                        old_member.__class__.__name__)
+                    self.print_warning('Unsupported group member type: {}'.format(old_member.__class__.__name__))
                     continue
-                user = User.get(int(old_member.id))
+                user = self.global_maps.avatar_merged_user.get(old_member.id)
                 if user is None:
-                    print cformat('%{yellow!}!!!        User not found: {}').format(old_member.id)
-                    continue
-                while user.merged_into_user:
-                    user = user.merged_into_user
-                if user.is_deleted:
-                    print cformat('%{yellow!}!!!        User deleted: {}').format(user.id)
+                    self.print_warning('User not found: {}'.format(old_member.id))
                     continue
                 members.add(user)
             for member in sorted(members, key=attrgetter('full_name')):
-                print cformat('%{blue!}<->%{reset}        %{white!}{:6d} %{yellow}{} ({})').format(
-                    member.id, member.full_name, member.email)
+                self.print_info(cformat('%{blue!}<->%{reset}        %{white!}{:6d} %{yellow}{} ({})').format(
+                                    member.id, member.full_name, member.email))
             group.members = members
             db.session.add(group)
 
@@ -261,7 +261,6 @@ class UserImporter(Importer):
         secondary_emails = {x for x in secondary_emails if x and is_valid_mail(x, False) and x != email}
         # we handle deletion later. otherwise it might be set before secondary_emails which would
         # result in those emails not being marked as deleted
-        is_deleted = kwargs.pop('is_deleted', False)
         user = User(id=int(avatar.id),
                     email=email,
                     first_name=convert_to_unicode(avatar.name).strip() or 'UNKNOWN',
@@ -272,10 +271,11 @@ class UserImporter(Importer):
                     address=convert_to_unicode(avatar.address[0]).strip(),
                     secondary_emails=secondary_emails,
                     is_blocked=avatar.status == 'disabled',
+                    is_deleted=False,
                     **kwargs)
         # Add user as a favorite of themselves
         user.favorite_users.add(user)
-        if is_deleted or not is_valid_mail(user.email):
+        if not is_valid_mail(user.email):
             user.is_deleted = True
         return user
 
@@ -308,7 +308,7 @@ class UserImporter(Importer):
     def _fix_collisions(self, user, avatar):
         is_deleted = user.is_deleted
         # Mark both users as deleted if there's a primary email collision
-        coll = self.users_by_primary_email.get(user.email)
+        coll = self.global_maps.users_by_primary_email.get(user.email)
         if coll and not is_deleted:
             if bool(avatar.identities) ^ bool(coll.identities):
                 # exactly one of them has identities - keep the one that does
@@ -323,22 +323,22 @@ class UserImporter(Importer):
                 db.session.flush()
         # if the user was already deleted we don't care about primary email collisions
         if not is_deleted:
-            self.users_by_primary_email[user.email] = user
+            self.global_maps.users_by_primary_email[user.email] = user
 
         # Remove primary email from another user's secondary email list
-        coll = self.users_by_secondary_email.get(user.email)
+        coll = self.global_maps.users_by_secondary_email.get(user.email)
         if coll and user.merged_into_id != coll.id:
             self.print_msg(cformat('%{magenta!}---%{reset} '
                                    '%{yellow!}1 Removing colliding secondary email (P/S) from {}%{reset} '
                                    '[%{blue!}{}%{reset}]').format(coll, user.email))
             coll.secondary_emails.remove(user.email)
-            del self.users_by_secondary_email[user.email]
+            del self.global_maps.users_by_secondary_email[user.email]
             db.session.flush()
 
         # Remove email from both users if there's a collision
         for email in list(user.secondary_emails):
             # colliding with primary email
-            coll = self.users_by_primary_email.get(email)
+            coll = self.global_maps.users_by_primary_email.get(email)
             if coll:
                 self.print_msg(cformat('%{magenta!}---%{reset} '
                                        '%{yellow!}Removing colliding secondary email (S/P) from {}%{reset} '
@@ -346,17 +346,17 @@ class UserImporter(Importer):
                 user.secondary_emails.remove(email)
                 db.session.flush()
             # colliding with a secondary email
-            coll = self.users_by_secondary_email.get(email)
+            coll = self.global_maps.users_by_secondary_email.get(email)
             if coll:
                 self.print_msg(cformat('%{magenta!}---%{reset} '
                                        '%{yellow!}Removing colliding secondary email (S/S) from {}%{reset} '
                                        '[%{blue!}{}%{reset}]').format(user, email))
                 user.secondary_emails.remove(email)
                 db.session.flush()
-                self.users_by_secondary_email[email] = coll
+                self.global_maps.users_by_secondary_email[email] = coll
             # if the user was already deleted we don't care about secondary email collisions
             if not is_deleted and email in user.secondary_emails:
-                self.users_by_secondary_email[email] = user
+                self.global_maps.users_by_secondary_email[email] = user
 
     def _to_utc(self, dt):
         if dt is None:
@@ -366,11 +366,3 @@ class UserImporter(Importer):
 
     def _iter_avatars(self):
         return self.zodb_root['avatars'].itervalues()
-
-    def _iter_avatars_with_favorite_users(self):
-        for avatar in self._iter_avatars():
-            if not hasattr(avatar, 'personalInfo'):
-                continue
-            if not avatar.personalInfo._basket._users:
-                continue
-            yield avatar, map(int, avatar.personalInfo._basket._users)

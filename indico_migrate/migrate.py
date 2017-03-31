@@ -44,11 +44,12 @@ def _monkeypatch_config():
 
 
 def migrate(zodb_uri, sqlalchemy_uri, verbose=False, dblog=False, **kwargs):
-    from indico_migrate.steps.global_pre_events import GlobalPreEventsImporter
-    from indico_migrate.steps.global_post_events import GlobalPostEventsImporter
-    from indico_migrate.steps.users_groups import UserImporter
+    from indico_migrate.steps.events import EventImporter
     from indico_migrate.steps.categories import CategoryImporter
-    steps = (GlobalPreEventsImporter, UserImporter, CategoryImporter, GlobalPostEventsImporter)
+    from indico_migrate.steps.global_post_events import GlobalPostEventsImporter
+    from indico_migrate.steps.global_pre_events import GlobalPreEventsImporter
+    from indico_migrate.steps.users_groups import UserImporter
+    steps = (GlobalPreEventsImporter, UserImporter, CategoryImporter, EventImporter, GlobalPostEventsImporter)
 
     zodb_root = UnbreakingDB(get_storage(zodb_uri)).open().root()
     app, tz = setup(zodb_root, sqlalchemy_uri)
@@ -60,7 +61,8 @@ def migrate(zodb_uri, sqlalchemy_uri, verbose=False, dblog=False, **kwargs):
 
 def db_has_data():
     """Check if there is already data in the DB"""
-    models = ('Category', 'User', 'LocalGroup', 'NewsItem', 'IPNetworkGroup')
+    models = ('Category', 'User', 'LocalGroup', 'NewsItem', 'IPNetworkGroup', 'LegacyCategoryMapping',
+              'LegacyEventMapping', 'Event')
     for model_name in models:
         if getattr(db.m, model_name).query.has_rows():
             return True

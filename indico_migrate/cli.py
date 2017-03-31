@@ -44,6 +44,7 @@ click.disable_unicode_literals_warning = True
 @click.option('--ldap-provider-name', default='legacy-ldap', help="Provider name to use for existing LDAP identities")
 @click.option('--default-group-provider', required=True, help="Name of the default group provider")
 @click.option('--ignore-local-accounts', is_flag=True, default=False, help="Do not migrate existing local accounts")
+@click.option('--janitor-user-id', type=int, required=True, help="The ID of the Janitor user")
 @click.option('--archive-dir', required=True, multiple=True,
               help="The base path where resources are stored (ArchiveDir in indico.conf). When used multiple times, "
                    "the dirs are checked in order until a file is found.")
@@ -62,6 +63,7 @@ class Importer(object):
     #: Specify plugins that need to be loaded for the import (e.g. to access its .settings property)
     plugins = frozenset()
     _global_maps = Namespace()
+    prefix = ''
 
     def __init__(self, app, sqlalchemy_uri, zodb_root, verbose, dblog, tz, **kwargs):
         self.sqlalchemy_uri = sqlalchemy_uri
@@ -86,11 +88,6 @@ class Importer(object):
 
     def __repr__(self):
         return '<{}({}, {})>'.format(type(self).__name__, self.sqlalchemy_uri, self.zodb_uri)
-
-    def run(self):
-        start = time.time()
-        self.migrate()
-        print('migration took {:.06f} seconds\a'.format((time.time() - start)))
 
     def flushing_iterator(self, iterable, n=5000):
         """Iterates over `iterable` and flushes the ZODB cache every `n` items.
@@ -117,40 +114,6 @@ class Importer(object):
             return False
         return True
 
-    def migrate(self):
-        raise NotImplementedError
-
-    def update_merged_users(self, db_column, msg_in):
-        self.print_step("Updating merged users in {}".format(msg_in))
-        for obj in db_column.class_.find(User.merged_into_id != None, _join=db_column):  # noqa
-            initial_user = getattr(obj, db_column.key)
-            while getattr(obj, db_column.key).merged_into_user:
-                merged_into_user = getattr(obj, db_column.key).merged_into_user
-                setattr(obj, db_column.key, merged_into_user)
-            msg = cformat('%{cyan}{}%{reset} -> %{cyan}{}%{reset}').format(initial_user, getattr(obj, db_column.key))
-            self.print_success(msg, always=True)
-        db.session.commit()
-
-    def fix_sequences(self, schema=None, tables=None):
-        for name, cls in sorted(db.Model._decl_class_registry.iteritems(), key=itemgetter(0)):
-            table = getattr(cls, '__table__', None)
-            if table is None:
-                continue
-            elif schema is not None and table.schema != schema:
-                continue
-            elif tables is not None and cls.__tablename__ not in tables:
-                continue
-            # Check if we have a single autoincrementing primary key
-            candidates = [col for col in table.c if col.autoincrement and col.primary_key]
-            if len(candidates) != 1 or not isinstance(candidates[0].type, db.Integer):
-                continue
-            serial_col = candidates[0]
-            sequence_name = '{}.{}_{}_seq'.format(table.schema, cls.__tablename__, serial_col.name)
-
-            query = select([func.setval(sequence_name, func.max(serial_col) + 1)], table)
-            db.session.execute(query)
-        db.session.commit()
-
     def print_msg(self, msg, always=False):
         """Prints a message to the console.
 
@@ -161,19 +124,19 @@ class Importer(object):
             if not always:
                 return
             clear_line()
-        print(msg)
+        print(self.prefix + msg)
 
     def print_step(self, msg):
         """Prints a message about a migration step to the console
 
         This message is always shown, even in quiet mode.
         """
-        self.print_msg(cformat('%{white!}{}%{reset}').format(msg), True)
+        self.print_msg(cformat('%{cyan,blue} > %{cyan!,blue}{:<30}').format(msg), True)
 
-    def print_prefixed(self, prefix, prefix_color, msg, always=False, event_id=None):
-        """Prints a prefixed message to the console."""
+    def print_msg_type(self, msg_type, msg_type_color, msg, always=False, event_id=None):
+        """Prints a colored message to the console."""
         parts = [
-            cformat('%%{%s}{}%%{reset}' % prefix_color).format(prefix),
+            cformat('%%{%s}{}%%{reset}' % msg_type_color).format(msg_type),
             cformat('%{white!}{:>6s}%{reset}').format(unicode(event_id)) if event_id is not None else None,
             msg
         ]
@@ -204,7 +167,7 @@ class Importer(object):
         to avoid expensive `cformat` or `format` calls for a message
         that is never displayed.
         """
-        self.print_prefixed('+++', 'green', msg, always, event_id)
+        self.print_msg_type('+++', 'green!', msg, always, event_id)
 
     def print_warning(self, msg, always=True, event_id=None):
         """Prints a warning message to the console.
@@ -212,7 +175,7 @@ class Importer(object):
         By default, warnings are displayed even in quiet mode.
         Warning messages are with three yellow exclamation marks.
         """
-        self.print_prefixed('!!!', 'yellow!', msg, always, event_id)
+        self.print_msg_type('!!!', 'yellow!', msg, always, event_id)
 
     def print_error(self, msg, event_id=None):
         """Prints an error message to the console
@@ -220,7 +183,37 @@ class Importer(object):
         Errors are always displayed, even in quiet mode.
         They are prefixed with three red exclamation marks.
         """
-        self.print_prefixed('!!!', 'red!', msg, True, event_id)
+        self.print_msg_type('!!!', 'red!', msg, True, event_id)
+
+
+class TopLevelMigrationStep(Importer):
+    def run(self):
+        start = time.time()
+        self.migrate()
+        self.print_msg(cformat('%{cyan}{:.06f} seconds%{reset}\a').format((time.time() - start)))
+
+    def migrate(self):
+        raise NotImplementedError
+
+    def fix_sequences(self, schema=None, tables=None):
+        for name, cls in sorted(db.Model._decl_class_registry.iteritems(), key=itemgetter(0)):
+            table = getattr(cls, '__table__', None)
+            if table is None:
+                continue
+            elif schema is not None and table.schema != schema:
+                continue
+            elif tables is not None and cls.__tablename__ not in tables:
+                continue
+            # Check if we have a single autoincrementing primary key
+            candidates = [col for col in table.c if col.autoincrement and col.primary_key]
+            if len(candidates) != 1 or not isinstance(candidates[0].type, db.Integer):
+                continue
+            serial_col = candidates[0]
+            sequence_name = '{}.{}_{}_seq'.format(table.schema, cls.__tablename__, serial_col.name)
+
+            query = select([func.setval(sequence_name, func.max(serial_col) + 1)], table)
+            db.session.execute(query)
+        db.session.commit()
 
 
 def main():

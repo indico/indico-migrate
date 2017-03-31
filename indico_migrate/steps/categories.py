@@ -38,11 +38,11 @@ from indico.util.fs import secure_filename
 from indico.util.string import crc32, sanitize_email, is_valid_mail, is_legacy_id
 from indico.web.flask.templating import strip_tags
 
-from indico_migrate import Importer, convert_to_unicode
+from indico_migrate import TopLevelMigrationStep, convert_to_unicode
 from indico_migrate.util import patch_default_group_provider, get_archived_file, convert_principal
 
 
-class CategoryImporter(Importer):
+class CategoryImporter(TopLevelMigrationStep):
     def __init__(self, *args, **kwargs):
         self.archive_dirs = kwargs.pop('archive_dir')
         self.default_group_provider = kwargs.pop('default_group_provider')
@@ -51,6 +51,9 @@ class CategoryImporter(Importer):
 
     def has_data(self):
         return Category.query.has_rows()
+
+    def initialize_global_maps(self, g):
+        g.legacy_category_ids = {}
 
     @no_autoflush
     def migrate(self):
@@ -216,9 +219,13 @@ class CategoryImporter(Importer):
         else:
             new_id = int(old_cat.id)
 
+        if hasattr(old_cat, '_timezone'):
+            tz_name = old_cat._timezone
+        else:
+            tz_name = self.makac_info._timezone
         cat = Category(id=int(new_id), position=position, title=title,
                        description=convert_to_unicode(old_cat.description), visibility=visibility,
-                       timezone=convert_to_unicode(old_cat._timezone), event_creation_notification_emails=emails,
+                       timezone=convert_to_unicode(tz_name), event_creation_notification_emails=emails,
                        default_event_themes=default_themes,
                        suggestions_disabled=getattr(old_cat, '_suggestions_disabled', False))
         if not self.quiet:
@@ -232,6 +239,7 @@ class CategoryImporter(Importer):
         # add to user favorites
         for user in self.global_maps.user_favorite_categories[old_cat.id]:
             user.favorite_categories.add(cat)
+        self.global_maps.legacy_category_ids[old_cat.id] = cat
         return cat
 
     def gen_categ_id(self):

@@ -54,13 +54,20 @@ click.disable_unicode_literals_warning = True
 @click.option('--rb-zodb-uri', required=False, help="ZODB URI for the room booking database")
 @click.option('--photo-path', type=click.Path(exists=True, file_okay=False),
               help="path to the folder containing room photos")
-def cli(sqlalchemy_uri, zodb_uri, rb_zodb_uri, verbose, dblog, **kwargs):
+@click.option('--debug', is_flag=True, default=False, help="Run migration in debug mode (requires ipython)")
+def cli(sqlalchemy_uri, zodb_uri, rb_zodb_uri, verbose, dblog, debug, **kwargs):
     """
     This script migrates your database from ZODB/Indico 1.2 to PostgreSQL (2.0).
 
     You always need to specify both the SQLAlchemy connection URI and
     ZODB URI (both zeo:// and file:// work).
     """
+
+    if debug:
+        verbose = True
+        from IPython.core import ultratb
+        sys.excepthook = ultratb.FormattedTB(mode='Verbose', color_scheme='Linux', call_pdb=1)
+
     Importer._global_maps.user_favorite_categories = defaultdict(set)
     migrate(zodb_uri, rb_zodb_uri, sqlalchemy_uri, verbose=verbose, dblog=dblog, **kwargs)
 

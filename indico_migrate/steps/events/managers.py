@@ -27,7 +27,7 @@ from indico.util.console import cformat, verbose_iterator
 from indico.util.string import is_valid_mail, sanitize_email
 from indico_migrate import convert_to_unicode
 from indico_migrate.steps.events import EventMigrationStep
-from indico_migrate.util import convert_principal
+from indico_migrate.util import patch_default_group_provider
 
 WEBFACTORY_NAME_RE = re.compile(r'^MaKaC\.webinterface\.(\w+)(?:\.WebFactory)?$')
 
@@ -38,17 +38,6 @@ class EventManagerImporter(EventMigrationStep):
         self.all_users_by_email = dict(self.global_maps.users_by_primary_email)
         self.all_users_by_email.update(self.global_maps.users_by_secondary_email)
 
-    def convert_principal(self, old_principal):
-        principal = convert_principal(old_principal)
-        if (principal is None and old_principal.__class__.__name__ in ('Avatar', 'AvatarUserWrapper') and
-                'email' in old_principal.__dict__):
-            email = old_principal.__dict__['email'].lower()
-            principal = self.all_users_by_email.get(email)
-            if principal is not None:
-                self.print_warning('Using {} for {} (matched via {})'.format(principal, old_principal, email),
-                                   always=False)
-        return principal
-
     def process_principal(self, event, principals, legacy_principal, name, color, full_access=None, roles=None):
         if isinstance(legacy_principal, basestring):
             user = self.all_users_by_email.get(legacy_principal)
@@ -56,8 +45,8 @@ class EventManagerImporter(EventMigrationStep):
         else:
             principal = self.convert_principal(legacy_principal)
         if principal is None:
-            self.print_warning(cformat('%%{%s}{}%%{reset}%%{yellow} does not exist:%%{reset} {}' % color)
-                               .format(name, legacy_principal), event_id=event.id)
+            self.print_warning(cformat('%%{%s}{}%%{reset}%%{yellow} does not exist:%%{reset} {} ({})' % color)
+                               .format(name, legacy_principal, legacy_principal.id), event_id=event.id)
             return
         try:
             entry = principals[principal]
@@ -95,24 +84,26 @@ class EventManagerImporter(EventMigrationStep):
             else:
                 event.creator = self.janitor
                 self.print_warning('Event {} has no creator'.format(event.id))
-        # add managers
-        for manager in ac.managers:
-            self.process_principal(event, entries, manager, 'Manager', 'blue!', full_access=True)
-        # add email-based managers
-        emails = getattr(ac, 'managersEmail', [])
-        self.process_emails(event, entries, emails, 'Manager', 'green', full_access=True)
-        # add registrars
-        for registrar in getattr(conf, '_Conference__registrars', []):
-            self.process_principal(event, entries, registrar, 'Registrar', 'cyan', roles={'registration'})
-        # add submitters
-        for submitter in getattr(ac, 'submitters', []):
-            self.process_principal(event, entries, submitter, 'Submitter', 'magenta!', roles={'submit'})
-        # email-based (pending) submitters
-        pqm = getattr(conf, '_pendingQueuesMgr', None)
-        if pqm is not None:
-            emails = set(getattr(pqm, '_pendingConfSubmitters', []))
-            self.process_emails(event, entries, emails, 'Submitter', 'magenta', roles={'submit'})
-        db.session.add_all(entries.itervalues())
+
+        with patch_default_group_provider(self.default_group_provider):
+            # add managers
+            for manager in ac.managers:
+                self.process_principal(event, entries, manager, 'Manager', 'blue!', full_access=True)
+            # add email-based managers
+            emails = getattr(ac, 'managersEmail', [])
+            self.process_emails(event, entries, emails, 'Manager', 'green', full_access=True)
+            # add registrars
+            for registrar in getattr(conf, '_Conference__registrars', []):
+                self.process_principal(event, entries, registrar, 'Registrar', 'cyan', roles={'registration'})
+            # add submitters
+            for submitter in getattr(ac, 'submitters', []):
+                self.process_principal(event, entries, submitter, 'Submitter', 'magenta!', roles={'submit'})
+            # email-based (pending) submitters
+            pqm = getattr(conf, '_pendingQueuesMgr', None)
+            if pqm is not None:
+                emails = set(getattr(pqm, '_pendingConfSubmitters', []))
+                self.process_emails(event, entries, emails, 'Submitter', 'magenta', roles={'submit'})
+            db.session.add_all(entries.itervalues())
 
 
 class EventTypeImporter(EventMigrationStep):

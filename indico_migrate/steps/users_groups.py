@@ -32,7 +32,7 @@ from indico.modules.groups.models.groups import LocalGroup
 from indico.modules.users import User, user_settings
 from indico.modules.users.models.users import UserTitle
 from indico.util.caching import memoize
-from indico.util.console import cformat
+from indico.util.console import cformat, verbose_iterator
 from indico.util.i18n import get_all_locales
 from indico.util.string import is_valid_mail, sanitize_email
 from indico.util.struct.iterables import committing_iterator
@@ -64,6 +64,7 @@ class UserImporter(TopLevelMigrationStep):
     def initialize_global_maps(self, g):
         g.user_favorite_categories = defaultdict(set)
         g.avatar_merged_user = {}
+        g.all_groups = {}
         g.users_by_primary_email = {}
         g.users_by_secondary_email = {}
 
@@ -167,6 +168,12 @@ class UserImporter(TopLevelMigrationStep):
             if hasattr(avatar, 'personalInfo') and avatar.personalInfo._basket._users:
                 self.favorite_avatars[user.id] = avatar.personalInfo._basket._users
 
+            # Map old merged identities (no longer in AvatarHolder)
+            # to newly created user
+            for merged_avatar in getattr(avatar, '_mergeFrom', ()):
+                if merged_avatar.id != avatar.id:
+                    self.global_maps.avatar_merged_user[merged_avatar.id] = user
+
             self.global_maps.avatar_merged_user[avatar.id] = user
             if avatar.id in self.unresolved_merge_targets:
                 del self.unresolved_merge_targets[avatar.id]
@@ -213,12 +220,13 @@ class UserImporter(TopLevelMigrationStep):
             for avatar_id in avatars:
                 fav_user = self.global_maps.avatar_merged_user.get(avatar_id)
                 if not fav_user:
-                    self.print_warning('User not found: {}'.format(avatar_id))
+                    self.print_warning('User not found: {} (in {})'.format(avatar_id, user_id))
                     continue
-
                 user.favorite_users.add(fav_user)
                 self.print_info(cformat(u'%{blue!}F%{reset} %{white!}{:6d}%{reset} '
                                         '%{cyan}{}%{reset}').format(fav_user.id, fav_user.full_name))
+            # add the user to his/her own favorites
+            user.favorite_users.add(user)
 
     def migrate_admins(self):
         self.print_step('Admins')
@@ -253,6 +261,7 @@ class UserImporter(TopLevelMigrationStep):
                 self.print_info(cformat('%{blue!}<->%{reset}        %{white!}{:6d} %{yellow}{} ({})').format(
                                     member.id, member.full_name, member.email))
             group.members = members
+            self.global_maps.all_groups[group.id] = group
             db.session.add(group)
 
     def _user_from_avatar(self, avatar, **kwargs):
@@ -274,7 +283,6 @@ class UserImporter(TopLevelMigrationStep):
                     is_deleted=False,
                     **kwargs)
         # Add user as a favorite of themselves
-        user.favorite_users.add(user)
         if not is_valid_mail(user.email):
             user.is_deleted = True
         return user
@@ -365,4 +373,7 @@ class UserImporter(TopLevelMigrationStep):
         return server_tz.localize(dt).astimezone(pytz.utc)
 
     def _iter_avatars(self):
-        return self.zodb_root['avatars'].itervalues()
+        it = self.zodb_root['avatars'].itervalues()
+        if self.quiet:
+            it = verbose_iterator(it, len(self.zodb_root['avatars']), attrgetter('id'), lambda x: '')
+        return it

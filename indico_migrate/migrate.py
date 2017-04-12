@@ -43,20 +43,31 @@ def _monkeypatch_config():
     Config.getInstance = staticmethod(_raise_method)
 
 
-def migrate(zodb_uri, sqlalchemy_uri, verbose=False, dblog=False, **kwargs):
+def migrate(zodb_uri, zodb_rb_uri, sqlalchemy_uri, verbose=False, dblog=False, **kwargs):
     from indico_migrate.steps.events import EventImporter
     from indico_migrate.steps.categories import CategoryImporter
     from indico_migrate.steps.global_post_events import GlobalPostEventsImporter
     from indico_migrate.steps.global_pre_events import GlobalPreEventsImporter
+    from indico_migrate.steps.rooms_locations import RoomsLocationsImporter
+    from indico_migrate.steps.room_bookings import RoomBookingsImporter
     from indico_migrate.steps.users_groups import UserImporter
-    steps = (GlobalPreEventsImporter, UserImporter, CategoryImporter, EventImporter, GlobalPostEventsImporter)
+    steps = (GlobalPreEventsImporter, UserImporter, RoomsLocationsImporter, CategoryImporter, EventImporter,
+             RoomBookingsImporter, GlobalPostEventsImporter)
 
     zodb_root = UnbreakingDB(get_storage(zodb_uri)).open().root()
     app, tz = setup(zodb_root, sqlalchemy_uri)
 
+    default_group_provider = kwargs.pop('default_group_provider')
+
     with app.app_context():
         for step in steps:
-            step(app, sqlalchemy_uri, zodb_root, verbose, dblog, tz, **kwargs).run()
+            if step in (RoomsLocationsImporter, RoomBookingsImporter):
+                if zodb_rb_uri:
+                    zodb_rb_root = UnbreakingDB(get_storage(zodb_rb_uri)).open().root()
+                    step(app, sqlalchemy_uri, zodb_root, verbose, dblog, default_group_provider, tz,
+                         rb_root=zodb_rb_root, **kwargs).run()
+            else:
+                step(app, sqlalchemy_uri, zodb_root, verbose, dblog, default_group_provider, tz, **kwargs).run()
 
 
 def db_has_data():

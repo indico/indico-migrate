@@ -27,7 +27,7 @@ from indico.modules.events.models.settings import EventSetting
 from indico.modules.events.settings import event_core_settings, event_contact_settings
 from indico.modules.users import User
 from indico.util.console import cformat, verbose_iterator
-from indico.util.string import is_legacy_id
+from indico.util.string import is_legacy_id, fix_broken_string
 from indico.util.struct.iterables import committing_iterator
 
 from indico_migrate import TopLevelMigrationStep, convert_to_unicode
@@ -51,6 +51,7 @@ class EventImporter(TopLevelMigrationStep):
         super(EventImporter, self).__init__(*args, **kwargs)
         self.event_id_counter = self.zodb_root['counters']['CONFERENCE']._Counter__count
         self.kwargs = kwargs
+        self.kwargs['janitor'] = self.janitor
 
     def has_data(self):
         return (EventSetting.query.filter(EventSetting.module.in_(['core', 'contact'])).has_rows() or
@@ -64,7 +65,7 @@ class EventImporter(TopLevelMigrationStep):
         all_event_steps = _get_all_steps()
 
         importers = [importer(self.app, self.sqlalchemy_uri, self.zodb_root, not self.quiet, self.dblog,
-                              self.tz, **self.kwargs) for importer in all_event_steps]
+                              self.default_group_provider, self.tz, **self.kwargs) for importer in all_event_steps]
         for importer in importers:
             importer.setup()
 
@@ -103,6 +104,8 @@ class EventImporter(TopLevelMigrationStep):
                           category=parent_category,
                           is_deleted=False)
 
+            self._migrate_location(conf, event)
+
             for importer in importers:
                 with db.session.no_autoflush:
                     importer.run(conf, event)
@@ -137,6 +140,34 @@ class EventImporter(TopLevelMigrationStep):
             event_contact_settings.set(event_id, 'emails', contact_emails)
         if contact_phones:
             event_contact_settings.set(event_id, 'phones', contact_phones)
+
+    def _migrate_location(self, old_event, new_event):
+        custom_location = old_event.places[0] if getattr(old_event, 'places', None) else None
+        custom_room = old_event.rooms[0] if getattr(old_event, 'rooms', None) else None
+        location_name = None
+        room_name = None
+        has_room = False
+        if custom_location:
+            location_name = convert_to_unicode(fix_broken_string(custom_location.name, True))
+            if custom_location.address:
+                new_event.own_address = convert_to_unicode(fix_broken_string(custom_location.address, True))
+        if custom_room:
+            room_name = convert_to_unicode(fix_broken_string(custom_room.name, True))
+        if location_name and room_name:
+            mapping = self.global_maps.room_mapping.get((location_name, room_name))
+            if mapping:
+                has_room = True
+                new_event.own_venue_id = mapping[0]
+                new_event.own_room_id = mapping[1]
+        # if we don't have a RB room set, use whatever location/room name we have
+        if not has_room:
+            venue_id = self.global_maps.venue_mapping.get(location_name)
+            if venue_id is not None:
+                new_event.own_venue_id = venue_id
+                new_event.own_venue_name = ''
+            else:
+                new_event.own_venue_name = location_name or ''
+            new_event.own_room_name = room_name or ''
 
     def _iter_events(self):
         def _it():

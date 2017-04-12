@@ -39,13 +39,12 @@ from indico.util.string import crc32, sanitize_email, is_valid_mail, is_legacy_i
 from indico.web.flask.templating import strip_tags
 
 from indico_migrate import TopLevelMigrationStep, convert_to_unicode
-from indico_migrate.util import patch_default_group_provider, get_archived_file, convert_principal
+from indico_migrate.util import patch_default_group_provider, get_archived_file
 
 
 class CategoryImporter(TopLevelMigrationStep):
     def __init__(self, *args, **kwargs):
         self.archive_dirs = kwargs.pop('archive_dir')
-        self.default_group_provider = kwargs.pop('default_group_provider')
         super(CategoryImporter, self).__init__(*args, **kwargs)
         self.categ_id_counter = self.zodb_root['counters']['CATEGORY']._Counter__count
 
@@ -106,16 +105,6 @@ class CategoryImporter(TopLevelMigrationStep):
             'content_type': 'image/png'
         }
         cat.icon = icon_content
-
-    def convert_principal(self, old_principal):
-        principal = convert_principal(old_principal)
-        if (principal is None and old_principal.__class__.__name__ in ('Avatar', 'AvatarUserWrapper') and
-                'email' in old_principal.__dict__):
-            email = convert_to_unicode(old_principal.__dict__['email']).lower()
-            principal = User.find_first(~User.is_deleted, User.all_emails.contains(email))
-            if principal is not None:
-                self.print_warning('Using {} for {} (matched via {})'.format(principal, old_principal, email))
-        return principal
 
     def process_principal(self, cat, legacy_principal, name, color, read_access=None, full_access=None, roles=None):
         principal = self.convert_principal(legacy_principal)

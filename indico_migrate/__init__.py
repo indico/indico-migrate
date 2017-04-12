@@ -15,6 +15,6 @@
 # along with Indico; if not, see <http://www.gnu.org/licenses/>.
 
 from .cli import Importer, TopLevelMigrationStep
-from .util import convert_to_unicode, convert_principal_list, option_value
+from .util import convert_to_unicode, option_value
 
-__all__ = ('Importer', 'TopLevelMigrationStep', 'convert_to_unicode', 'convert_principal_list', 'option_value')
+__all__ = ('Importer', 'TopLevelMigrationStep', 'convert_to_unicode', 'option_value')

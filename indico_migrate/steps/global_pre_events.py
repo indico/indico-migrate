@@ -60,21 +60,19 @@ class GlobalPreEventsImporter(TopLevelMigrationStep):
     def migrate_api_settings(self):
         self.print_step('API settings')
         settings_map = {
-            '_apiHTTPSRequired': 'require_https',
             '_apiPersistentAllowed': 'allow_persistent',
             '_apiMode': 'security_mode',
             '_apiCacheTTL': 'cache_ttl',
             '_apiSignatureTTL': 'signature_ttl'
         }
         for old, new in settings_map.iteritems():
-            api_settings.set(new, getattr(self.makac_info, old))
+            api_settings.set(new, getattr(self.makac_info, old, None))
 
     def migrate_global_settings(self):
         self.print_step('Migrating global settings')
         core_settings.set_multi({
             'site_title': convert_to_unicode(self.makac_info._title),
-            'site_organization': convert_to_unicode(self.makac_info._organisation),
-            'custom_template_set': convert_to_unicode(self.makac_info._defaultTemplateSet) or None
+            'site_organization': convert_to_unicode(self.makac_info._organisation)
         })
         social_settings.set_multi({
             'enabled': bool(self.makac_info._socialAppConfig['active']),
@@ -122,7 +120,7 @@ class GlobalPreEventsImporter(TopLevelMigrationStep):
                                  networks=ip_networks)
         db.session.add(network)
         db.session.flush()
-        self.print_success(repr(network), always=True)
+        self.print_success(repr(network))
 
     def migrate_networks(self):
         self.print_step('Networks')

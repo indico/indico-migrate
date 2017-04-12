@@ -27,10 +27,7 @@ from ZODB.broken import find_global, Broken
 from ZEO.ClientStorage import ClientStorage
 from uuid import uuid4
 
-from indico.core.auth import IndicoMultipass, multipass
-from indico.core.db.sqlalchemy.protection import ProtectionMode
-from indico.modules.groups import GroupProxy
-from indico.modules.users.legacy import AvatarUserWrapper
+from indico.core.auth import IndicoMultipass
 from indico.util.console import cformat
 
 
@@ -98,17 +95,6 @@ def convert_to_unicode(val, strip=True, _control_char_re=re.compile(ur'[\x00-\x0
     return rv
 
 
-def convert_principal_list(opt):
-    """Converts a 'users' plugin setting to the new format"""
-    principals = set()
-    for principal in opt._PluginOption__value:
-        if principal.__class__.__name__ == 'Avatar':
-            principals.add(('Avatar', principal.id))
-        else:
-            principals.add(('Group', principal.id))
-    return list(principals)
-
-
 def option_value(opt):
     """Gets a plugin option value"""
     value = opt._PluginOption__value
@@ -141,43 +127,6 @@ def get_archived_file(f, archive_paths):
             if os.path.exists(enc_path):
                 return f.fileName, enc_path
     return f.fileName, None
-
-
-def convert_principal(principal):
-    """Converts a legacy principal to PrincipalMixin style"""
-    if principal.__class__.__name__ == 'Avatar':
-        return AvatarUserWrapper(principal.id).user
-    elif principal.__class__.__name__ == 'Group':
-        return GroupProxy(principal.id)
-    elif principal.__class__.__name__ in {'CERNGroup', 'LDAPGroup', 'NiceGroup'}:
-        return GroupProxy(principal.id, multipass.default_group_provider.name)
-
-
-def protection_from_ac(target, ac, acl_attr='acl', ac_attr='allowed', allow_public=False):
-    """Converts AccessController data to ProtectionMixin style
-
-    This needs to run inside the context of `patch_default_group_provider`.
-
-    :param target: The new object that uses ProtectionMixin
-    :param ac: The old AccessController
-    :param acl_attr: The attribute name for the acl of `target`
-    :param ac_attr: The attribute name for the acl in `ac`
-    :param allow_public: If the object allows `ProtectionMode.public`.
-                         Otherwise, public is converted to inheriting.
-    """
-    if ac._accessProtection == -1:
-        target.protection_mode = ProtectionMode.public if allow_public else ProtectionMode.inheriting
-    elif ac._accessProtection == 0:
-        target.protection_mode = ProtectionMode.inheriting
-    elif ac._accessProtection == 1:
-        target.protection_mode = ProtectionMode.protected
-        acl = getattr(target, acl_attr)
-        for principal in getattr(ac, ac_attr):
-            principal = convert_principal(principal)
-            assert principal is not None
-            acl.add(principal)
-    else:
-        raise ValueError('Unexpected protection: {}'.format(ac._accessProtection))
 
 
 @contextmanager

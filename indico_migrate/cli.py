@@ -16,6 +16,7 @@
 
 from __future__ import print_function, unicode_literals
 
+import sys
 import time
 import warnings
 from argparse import Namespace
@@ -29,9 +30,11 @@ from sqlalchemy.sql import func, select
 warnings.simplefilter('ignore', ExtDeprecationWarning)  # some of our dependencies still use flask.ext :(
 
 from indico.core.db.sqlalchemy import db
+from indico.modules.groups import GroupProxy
 from indico.modules.users.models.users import User
 from indico.util.console import cformat, clear_line
 from indico_migrate.migrate import migrate
+from indico_migrate.util import convert_to_unicode
 
 click.disable_unicode_literals_warning = True
 
@@ -48,7 +51,10 @@ click.disable_unicode_literals_warning = True
 @click.option('--archive-dir', required=True, multiple=True,
               help="The base path where resources are stored (ArchiveDir in indico.conf). When used multiple times, "
                    "the dirs are checked in order until a file is found.")
-def cli(sqlalchemy_uri, zodb_uri, verbose, dblog, **kwargs):
+@click.option('--rb-zodb-uri', required=False, help="ZODB URI for the room booking database")
+@click.option('--photo-path', type=click.Path(exists=True, file_okay=False),
+              help="path to the folder containing room photos")
+def cli(sqlalchemy_uri, zodb_uri, rb_zodb_uri, verbose, dblog, **kwargs):
     """
     This script migrates your database from ZODB/Indico 1.2 to PostgreSQL (2.0).
 
@@ -56,7 +62,7 @@ def cli(sqlalchemy_uri, zodb_uri, verbose, dblog, **kwargs):
     ZODB URI (both zeo:// and file:// work).
     """
     Importer._global_maps.user_favorite_categories = defaultdict(set)
-    migrate(zodb_uri, sqlalchemy_uri, verbose=verbose, dblog=dblog, **kwargs)
+    migrate(zodb_uri, rb_zodb_uri, sqlalchemy_uri, verbose=verbose, dblog=dblog, **kwargs)
 
 
 class Importer(object):
@@ -65,13 +71,14 @@ class Importer(object):
     _global_maps = Namespace()
     prefix = ''
 
-    def __init__(self, app, sqlalchemy_uri, zodb_root, verbose, dblog, tz, **kwargs):
+    def __init__(self, app, sqlalchemy_uri, zodb_root, verbose, dblog, default_group_provider, tz, **kwargs):
         self.sqlalchemy_uri = sqlalchemy_uri
         self.quiet = not verbose
         self.dblog = dblog
         self.zodb_root = zodb_root
         self.app = app
         self.tz = tz
+        self.default_group_provider = default_group_provider
 
         self.initialize_global_maps(Importer._global_maps)
 
@@ -124,7 +131,7 @@ class Importer(object):
             if not always:
                 return
             clear_line()
-        print(self.prefix + msg)
+        print((self.prefix + msg).encode('utf-8'))
 
     def print_step(self, msg):
         """Prints a message about a migration step to the console
@@ -184,6 +191,29 @@ class Importer(object):
         They are prefixed with three red exclamation marks.
         """
         self.print_msg_type('!!!', 'red!', msg, True, event_id)
+
+    def convert_principal(self, old_principal):
+        """Converts a legacy principal to PrincipalMixin style"""
+        if old_principal.__class__.__name__ == 'Avatar':
+            principal = self.global_maps.avatar_merged_user.get(old_principal.id)
+            if not principal and 'email' in old_principal.__dict__:
+                email = convert_to_unicode(old_principal.__dict__['email']).lower()
+                principal = self.global_maps.users_by_primary_email.get(
+                    email, self.global_maps.users_by_secondary_email.get(email))
+                if principal is not None:
+                    self.print_warning('Using {} for {} (matched via {})'.format(principal, old_principal, email))
+            if not principal:
+                self.print_error("User {} doesn't exist".format(old_principal.id))
+            return principal
+        elif old_principal.__class__.__name__ == 'Group':
+            assert int(old_principal.id) in self.global_maps.all_groups
+            return GroupProxy(int(old_principal.id))
+        elif old_principal.__class__.__name__ in {'CERNGroup', 'LDAPGroup', 'NiceGroup'}:
+            return GroupProxy(old_principal.id, self.default_group_provider)
+
+    def convert_principal_list(self, opt):
+        """Convert ACL principals to new objects"""
+        return set(filter(None, (self.convert_principal(principal) for principal in opt._PluginOption__value)))
 
 
 class TopLevelMigrationStep(Importer):

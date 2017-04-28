@@ -39,8 +39,10 @@ SPLIT_PHONES_RE = re.compile(r'[/;,]+')
 
 # this function is here only to avoid import loops
 def _get_all_steps():
-    from indico_migrate.steps.events.managers import EventManagerImporter, EventTypeImporter
-    return (EventManagerImporter, EventTypeImporter)
+    from indico_migrate.steps.events.logs import EventLogImporter
+    from indico_migrate.steps.events.managers import EventManagerImporter
+    from indico_migrate.steps.events.misc import EventTypeImporter
+    return (EventManagerImporter, EventTypeImporter, EventLogImporter)
 
 
 class EventImporter(TopLevelMigrationStep):

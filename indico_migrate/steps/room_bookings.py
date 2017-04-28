@@ -29,7 +29,6 @@ from indico.modules.rb.models.reservations import RepeatMapping, Reservation
 from indico.modules.rb.models.rooms import Room
 from indico.util.console import cformat
 from indico.util.date_time import as_utc
-
 from indico_migrate import TopLevelMigrationStep, convert_to_unicode
 
 

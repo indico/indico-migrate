@@ -60,6 +60,11 @@ def migrate(zodb_uri, zodb_rb_uri, sqlalchemy_uri, verbose=False, dblog=False, *
     default_group_provider = kwargs.pop('default_group_provider')
 
     with app.app_context():
+        # XXX: this is quite dirty. we should make it more elegant
+        if not zodb_rb_uri:
+            EventImporter._global_maps.room_mapping = {}
+            EventImporter._global_maps.venue_mapping = {}
+
         for step in steps:
             if step in (RoomsLocationsImporter, RoomBookingsImporter):
                 if zodb_rb_uri:

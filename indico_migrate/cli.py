@@ -29,6 +29,13 @@ from sqlalchemy.sql import func, select
 
 warnings.simplefilter('ignore', ExtDeprecationWarning)  # some of our dependencies still use flask.ext :(
 
+def _inject_unicode_debug(s, level=1):
+    return s
+
+# inject_unicode_debug happens to access the Config object
+import indico.util.string as indico_util_string
+indico_util_string.__dict__['inject_unicode_debug'] = _inject_unicode_debug
+
 from indico.core.db.sqlalchemy import db
 from indico.modules.groups import GroupProxy
 from indico.modules.users.models.users import User

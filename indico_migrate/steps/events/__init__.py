@@ -48,7 +48,7 @@ class EventMigrationStep(Importer):
     def setup(self):
         pass
 
-    def protection_from_ac(self, target, ac, acl_attr='acl', ac_attr='allowed', allow_public=False):
+    def _protection_from_ac(self, target, ac, acl_attr='acl', ac_attr='allowed', allow_public=False):
         """Convert AccessController data to ProtectionMixin style.
 
         This needs to run inside the context of `patch_default_group_provider`.
@@ -73,3 +73,6 @@ class EventMigrationStep(Importer):
                 acl.add(principal)
         else:
             raise ValueError('Unexpected protection: {}'.format(ac._accessProtection))
+
+    def _naive_to_aware(self, event, dt):
+        return event.tzinfo.localize(dt) if dt.tzinfo is None else dt

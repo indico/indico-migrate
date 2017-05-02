@@ -45,7 +45,7 @@ class EventLogImporter(EventMigrationStep):
         msg_action = cformat('%{white!}{:6d}%{reset} %{cyan!}{}')
 
         if not hasattr(conf, '_logHandler'):
-            self.print_error('Event has no log handler!', event_id=event.id)
+            self.print_error('Event has no log handler!')
             return
         for item in conf._logHandler._logLists['emailLog']:
             entry = self._migrate_email_log(conf, event, item)
@@ -105,6 +105,3 @@ class EventLogImporter(EventMigrationStep):
         entry.summary = convert_to_unicode(info['subject']).strip()
         entry.data = {convert_to_unicode(k): _convert_data(conf, v) for k, v in info.iteritems() if k != 'subject'}
         return entry
-
-    def _naive_to_aware(self, event, dt):
-        return event.tzinfo.localize(dt) if dt.tzinfo is None else dt

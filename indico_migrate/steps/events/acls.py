@@ -41,7 +41,7 @@ class EventACLImporter(EventMigrationStep):
             principal = self.convert_principal(legacy_principal)
         if principal is None:
             self.print_warning(cformat('%%{%s}{}%%{reset}%%{yellow} does not exist:%%{reset} {} ({})' % color)
-                               .format(name, legacy_principal, legacy_principal.id), event_id=event.id)
+                               .format(name, legacy_principal, legacy_principal.id))
             return
         try:
             entry = principals[principal]
@@ -74,7 +74,7 @@ class EventACLImporter(EventMigrationStep):
         except AttributeError:
             # events created after the removal of the `self.__creator` assignment
             # should happen only on dev machines
-            self.print_error(cformat('%{red!}Event has no creator attribute'), event_id=conf.id)
+            self.print_error('Event has no creator attribute')
         else:
             user = self.process_principal(event, entries, creator, 'Creator', 'green!', full_access=True)
             if user:
@@ -89,7 +89,7 @@ class EventACLImporter(EventMigrationStep):
         else:
             event.protection_mode = old_protection_mode
         if not self.quiet:
-            self.print_success('Protection mode set to {}'.format(event.protection_mode.name, event_id=event.id))
+            self.print_success('Protection mode set to {}'.format(event.protection_mode.name))
 
         no_access_contact = convert_to_unicode(getattr(ac, 'contactInfo', ''))
         if no_access_contact != 'no contact info defined':
@@ -125,4 +125,4 @@ class EventACLImporter(EventMigrationStep):
             network = self.global_maps.ip_domains[convert_to_unicode(old_domain.name).lower()]
             event.update_principal(network, read_access=True, quiet=True)
             if not self.quiet:
-                self.print_success('Adding {} IPNetworkGroup to the ACLs'.format(network), event_id=event.id)
+                self.print_success('Adding {} IPNetworkGroup to the ACLs'.format(network))

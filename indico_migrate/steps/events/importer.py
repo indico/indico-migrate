@@ -36,8 +36,8 @@ from indico_migrate import TopLevelMigrationStep, convert_to_unicode
 def _get_all_steps():
     from indico_migrate.steps.events.acls import EventACLImporter
     from indico_migrate.steps.events.logs import EventLogImporter
-    from indico_migrate.steps.events.misc import EventTypeImporter, EventSettingsImporter
-    return (EventTypeImporter, EventACLImporter, EventLogImporter, EventSettingsImporter)
+    from indico_migrate.steps.events.misc import EventTypeImporter, EventSettingsImporter, EventAlarmImporter
+    return (EventTypeImporter, EventACLImporter, EventLogImporter, EventSettingsImporter, EventAlarmImporter)
 
 
 class EventImporter(TopLevelMigrationStep):

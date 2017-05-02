@@ -17,11 +17,15 @@
 from __future__ import unicode_literals
 
 import re
+from datetime import timedelta
 from operator import itemgetter
 
+from indico.core.db import db
 from indico.modules.events.models.events import EventType
+from indico.modules.events.reminders.models.reminders import EventReminder
 from indico.modules.events.settings import event_core_settings, event_contact_settings
-from indico.util.console import verbose_iterator
+from indico.util.console import cformat, verbose_iterator
+from indico.util.date_time import now_utc
 from indico_migrate import convert_to_unicode
 from indico_migrate.steps.events import EventMigrationStep
 
@@ -29,6 +33,7 @@ from indico_migrate.steps.events import EventMigrationStep
 WEBFACTORY_NAME_RE = re.compile(r'^MaKaC\.webinterface\.(\w+)(?:\.WebFactory)?$')
 SPLIT_EMAILS_RE = re.compile(r'[\s;,]+')
 SPLIT_PHONES_RE = re.compile(r'[/;,]+')
+ALARM_SENT_THRESHOLD = now_utc() - timedelta(days=1)
 
 
 class EventTypeImporter(EventMigrationStep):
@@ -44,7 +49,7 @@ class EventTypeImporter(EventMigrationStep):
             if wf_id in ('simple_event', 'meeting'):
                 self.wf_registry[event_id] = wf_id
             else:
-                self.print_error('Unexpected WF ID: {}'.format(wf_id), event_id=event_id)
+                self.print_error('Unexpected WF ID: {}'.format(wf_id))
 
     def migrate(self, conf, event):
         wf_entry = self.wf_registry.get(conf.id)
@@ -87,3 +92,35 @@ class EventSettingsImporter(EventMigrationStep):
             event_contact_settings.set(event, 'emails', contact_emails)
         if contact_phones:
             event_contact_settings.set(event, 'phones', contact_phones)
+
+
+class EventAlarmImporter(EventMigrationStep):
+    def migrate(self, conf, event):
+
+        for alarm in conf.alarmList.itervalues():
+            if not alarm.startDateTime:
+                self.print_error('Alarm has no start time')
+                continue
+            start_dt = self._naive_to_aware(event, alarm.startDateTime).replace(second=0, microsecond=0)
+            if not hasattr(alarm, 'status'):
+                # Those ancient alarms can be safely assumed to be sent
+                is_sent = True
+            else:
+                is_sent = alarm.status not in {1, 2}  # not spooled/queued
+            is_overdue = False
+            if not is_sent and start_dt < ALARM_SENT_THRESHOLD:
+                is_sent = True
+                is_overdue = True
+            recipients = filter(None, {convert_to_unicode(x).strip().lower() for x in alarm.toAddr})
+            reminder = EventReminder(event_id=int(event.id), creator=self.janitor,
+                                     created_dt=alarm.createdOn, scheduled_dt=start_dt, is_sent=is_sent,
+                                     event_start_delta=getattr(alarm, '_relative', None), recipients=recipients,
+                                     send_to_participants=alarm.toAllParticipants,
+                                     include_summary=alarm.confSumary,
+                                     reply_to_address=convert_to_unicode(alarm.fromAddr).strip().lower(),
+                                     message=convert_to_unicode(alarm.note).strip())
+            db.session.add(reminder)
+            status = (cformat('%{red!}OVERDUE%{reset}') if is_overdue else
+                      cformat('%{green!}SENT%{reset}') if is_sent else
+                      cformat('%{yellow}PENDING%{reset}'))
+            self.print_success(cformat('%{cyan}{}%{reset} {}').format(reminder.scheduled_dt, status))

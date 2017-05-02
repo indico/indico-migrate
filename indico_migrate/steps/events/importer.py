@@ -24,7 +24,6 @@ from indico.core.db import db
 from indico.modules.events.models.events import Event
 from indico.modules.events.models.legacy_mapping import LegacyEventMapping
 from indico.modules.events.models.settings import EventSetting
-from indico.modules.events.settings import event_core_settings, event_contact_settings
 from indico.modules.users import User
 from indico.util.console import cformat, verbose_iterator
 from indico.util.string import is_legacy_id, fix_broken_string
@@ -33,16 +32,12 @@ from indico.util.struct.iterables import committing_iterator
 from indico_migrate import TopLevelMigrationStep, convert_to_unicode
 
 
-SPLIT_EMAILS_RE = re.compile(r'[\s;,]+')
-SPLIT_PHONES_RE = re.compile(r'[/;,]+')
-
-
 # this function is here only to avoid import loops
 def _get_all_steps():
+    from indico_migrate.steps.events.acls import EventACLImporter
     from indico_migrate.steps.events.logs import EventLogImporter
-    from indico_migrate.steps.events.managers import EventManagerImporter
-    from indico_migrate.steps.events.misc import EventTypeImporter
-    return (EventManagerImporter, EventTypeImporter, EventLogImporter)
+    from indico_migrate.steps.events.misc import EventTypeImporter, EventSettingsImporter
+    return (EventTypeImporter, EventACLImporter, EventLogImporter, EventSettingsImporter)
 
 
 class EventImporter(TopLevelMigrationStep):
@@ -112,36 +107,10 @@ class EventImporter(TopLevelMigrationStep):
                 with db.session.no_autoflush:
                     importer.run(conf, event)
 
-            self._migrate_settings(conf, event_id)
-
             if is_legacy:
                 db.session.add(LegacyEventMapping(legacy_event_id=conf.id, event_id=event_id))
                 if not self.quiet:
                     self.print_success(cformat('-> %{cyan}{}').format(event_id), event_id=conf.id)
-
-    def _migrate_settings(self, conf, event_id):
-        if getattr(conf, '_screenStartDate', None):
-            event_core_settings.set(event_id, 'start_dt_override', conf._screenStartDate)
-        if getattr(conf, '_screenEndDate', None):
-            event_core_settings.set(event_id, 'end_dt_override', conf._screenEndDate)
-        organizer_info = convert_to_unicode(getattr(conf, '._orgText', ''))
-        if organizer_info:
-            event_core_settings.set(event_id, 'organizer_info', organizer_info)
-        additional_info = convert_to_unicode(getattr(conf, 'contactInfo', ''))
-        if additional_info:
-            event_core_settings.set(event_id, 'additional_info', additional_info)
-        si = conf._supportInfo
-        contact_title = convert_to_unicode(si._caption)
-        contact_email = convert_to_unicode(si._email)
-        contact_phone = convert_to_unicode(si._telephone)
-        contact_emails = map(unicode.strip, SPLIT_EMAILS_RE.split(contact_email)) if contact_email else []
-        contact_phones = map(unicode.strip, SPLIT_PHONES_RE.split(contact_phone)) if contact_phone else []
-        if contact_title:
-            event_contact_settings.set(event_id, 'title', contact_title)
-        if contact_emails:
-            event_contact_settings.set(event_id, 'emails', contact_emails)
-        if contact_phones:
-            event_contact_settings.set(event_id, 'phones', contact_phones)
 
     def _migrate_location(self, old_event, new_event):
         custom_location = old_event.places[0] if getattr(old_event, 'places', None) else None

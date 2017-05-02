@@ -1,3 +1,4 @@
+
 # This file is part of Indico.
 # Copyright (C) 2002 - 2017 European Organization for Nuclear Research (CERN).
 #
@@ -18,6 +19,7 @@ from __future__ import unicode_literals
 
 from indico.core.db import db
 from indico.core.db.sqlalchemy.principals import EmailPrincipal
+from indico.core.db.sqlalchemy.protection import ProtectionMode
 from indico.modules.events.models.principals import EventPrincipal
 from indico.util.console import cformat
 from indico.util.string import is_valid_mail, sanitize_email
@@ -26,15 +28,14 @@ from indico_migrate.steps.events import EventMigrationStep
 from indico_migrate.util import patch_default_group_provider
 
 
-class EventManagerImporter(EventMigrationStep):
-    def setup(self):
-        # keep all users in memory to avoid extra queries.
-        self.all_users_by_email = dict(self.global_maps.users_by_primary_email)
-        self.all_users_by_email.update(self.global_maps.users_by_secondary_email)
+PROTECTION_MODE_MAP = {-1: ProtectionMode.public, 0: ProtectionMode.inheriting, 1: ProtectionMode.protected}
 
-    def process_principal(self, event, principals, legacy_principal, name, color, full_access=None, roles=None):
+
+class EventACLImporter(EventMigrationStep):
+    def process_principal(self, event, principals, legacy_principal, name, color, full_access=None, roles=None,
+                          read_access=None):
         if isinstance(legacy_principal, basestring):
-            user = self.all_users_by_email.get(legacy_principal)
+            user = self.global_maps.users_by_email.get(legacy_principal)
             principal = user or EmailPrincipal(legacy_principal)
         else:
             principal = self.convert_principal(legacy_principal)
@@ -49,6 +50,8 @@ class EventManagerImporter(EventMigrationStep):
             principals[principal] = entry
         if full_access:
             entry.full_access = True
+        if read_access:
+            entry.read_access = True
         if roles:
             entry.roles = sorted(set(entry.roles) | set(roles))
         if not self.quiet:
@@ -63,6 +66,7 @@ class EventManagerImporter(EventMigrationStep):
 
     def migrate(self, conf, event):
         ac = conf._Conference__ac
+        old_protection_mode = PROTECTION_MODE_MAP[ac._accessProtection]
         entries = {}
         # add creator as a manager
         try:
@@ -79,7 +83,24 @@ class EventManagerImporter(EventMigrationStep):
                 event.creator = self.janitor
                 self.print_warning('Event {} has no creator'.format(event.id))
 
+        if old_protection_mode == ProtectionMode.public and ac.requiredDomains:
+            event.protection_mode = ProtectionMode.protected
+            self._migrate_domains(event, ac.requiredDomains)
+        else:
+            event.protection_mode = old_protection_mode
+        if not self.quiet:
+            self.print_success('Protection mode set to {}'.format(event.protection_mode.name, event_id=event.id))
+
+        no_access_contact = convert_to_unicode(getattr(ac, 'contactInfo', ''))
+        if no_access_contact != 'no contact info defined':
+            event.own_no_access_contact = no_access_contact
+        event.access_key = convert_to_unicode(getattr(conf, '_accessKey', ''))
+
         with patch_default_group_provider(self.default_group_provider):
+
+            for allowed in ac.allowed:
+                self.process_principal(event, entries, allowed, 'Access', 'blue!', read_access=True)
+
             # add managers
             for manager in ac.managers:
                 self.process_principal(event, entries, manager, 'Manager', 'blue!', full_access=True)
@@ -98,3 +119,10 @@ class EventManagerImporter(EventMigrationStep):
                 emails = set(getattr(pqm, '_pendingConfSubmitters', []))
                 self.process_emails(event, entries, emails, 'Submitter', 'magenta', roles={'submit'})
             db.session.add_all(entries.itervalues())
+
+    def _migrate_domains(self, event, old_domains):
+        for old_domain in old_domains:
+            network = self.global_maps.ip_domains[convert_to_unicode(old_domain.name).lower()]
+            event.update_principal(network, read_access=True, quiet=True)
+            if not self.quiet:
+                self.print_success('Adding {} IPNetworkGroup to the ACLs'.format(network), event_id=event.id)

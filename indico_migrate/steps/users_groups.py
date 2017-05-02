@@ -67,6 +67,7 @@ class UserImporter(TopLevelMigrationStep):
         g.all_groups = {}
         g.users_by_primary_email = {}
         g.users_by_secondary_email = {}
+        g.users_by_email = {}
 
     def migrate(self):
         self.unresolved_merge_targets = defaultdict(set)
@@ -77,6 +78,8 @@ class UserImporter(TopLevelMigrationStep):
         self.migrate_admins()
         self.migrate_groups()
         self.fix_sequences('users', {'groups'})
+        self.global_maps.users_by_email = dict(self.global_maps.users_by_primary_email)
+        self.global_maps.users_by_email.update(self.global_maps.users_by_secondary_email)
         db.session.commit()
 
     def migrate_users(self):

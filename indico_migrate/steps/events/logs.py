@@ -41,9 +41,6 @@ def _convert_data(conf, value):
 
 class EventLogImporter(EventMigrationStep):
     def migrate(self, conf, event):
-        msg_email = cformat('%{white!}{:6d}%{reset} %{cyan}{}')
-        msg_action = cformat('%{white!}{:6d}%{reset} %{cyan!}{}')
-
         if not hasattr(conf, '_logHandler'):
             self.print_error('Event has no log handler!')
             return
@@ -51,12 +48,12 @@ class EventLogImporter(EventMigrationStep):
             entry = self._migrate_email_log(conf, event, item)
             db.session.add(entry)
             if not self.quiet:
-                self.print_success(msg_email.format(event.id, entry))
+                self.print_success(str(entry))
         for item in conf._logHandler._logLists['actionLog']:
             entry = self._migrate_action_log(conf, event, item)
             db.session.add(entry)
             if not self.quiet:
-                self.print_success(msg_action.format(event.id, entry))
+                self.print_success(str(entry))
 
     def _migrate_log(self, conf, event, item):
         user = None

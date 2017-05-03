@@ -122,7 +122,11 @@ class EventACLImporter(EventMigrationStep):
 
     def _migrate_domains(self, event, old_domains):
         for old_domain in old_domains:
-            network = self.global_maps.ip_domains[convert_to_unicode(old_domain.name).lower()]
+            domain_name = convert_to_unicode(old_domain.name).lower()
+            network = self.global_maps.ip_domains.get(domain_name)
+            if not network:
+                self.print_warning('Skipping unknown protection domain: {}'.format(domain_name))
+                continue
             event.update_principal(network, read_access=True, quiet=True)
             if not self.quiet:
                 self.print_success('Adding {} IPNetworkGroup to the ACLs'.format(network))

@@ -41,7 +41,7 @@ class EventACLImporter(EventMigrationStep):
             principal = self.convert_principal(legacy_principal)
         if principal is None:
             self.print_warning(cformat('%%{%s}{}%%{reset}%%{yellow} does not exist:%%{reset} {} ({})' % color)
-                               .format(name, legacy_principal, legacy_principal.id))
+                               .format(name, legacy_principal, getattr(legacy_principal, 'id', '-')))
             return
         try:
             entry = principals[principal]

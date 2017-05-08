@@ -16,7 +16,6 @@
 
 from __future__ import unicode_literals
 
-import re
 from operator import attrgetter
 
 import pytz
@@ -35,9 +34,12 @@ from indico_migrate import TopLevelMigrationStep, convert_to_unicode
 # this function is here only to avoid import loops
 def _get_all_steps():
     from indico_migrate.steps.events.acls import EventACLImporter
+    from indico_migrate.steps.events.layout import EventLayoutImporter, EventImageImporter
     from indico_migrate.steps.events.logs import EventLogImporter
-    from indico_migrate.steps.events.misc import EventTypeImporter, EventSettingsImporter, EventAlarmImporter
-    return (EventTypeImporter, EventACLImporter, EventLogImporter, EventSettingsImporter, EventAlarmImporter)
+    from indico_migrate.steps.events.misc import (EventTypeImporter, EventSettingsImporter, EventAlarmImporter,
+                                                  EventShortUrlsImporter)
+    return (EventTypeImporter, EventACLImporter, EventLogImporter, EventSettingsImporter, EventAlarmImporter,
+            EventImageImporter, EventLayoutImporter, EventShortUrlsImporter)
 
 
 class EventImporter(TopLevelMigrationStep):
@@ -95,13 +97,14 @@ class EventImporter(TopLevelMigrationStep):
                           title=title,
                           description=convert_to_unicode(conf.__dict__['description']) or '',
                           timezone=tz,
-                          start_dt=self._fix_naive(conf, conf.__dict__['startDate'], tz),
-                          end_dt=self._fix_naive(conf, conf.__dict__['endDate'], tz),
+                          start_dt=self._fix_naive(conf.__dict__['startDate'], tz),
+                          end_dt=self._fix_naive(conf.__dict__['endDate'], tz),
                           is_locked=conf._closed,
                           category=parent_category,
                           is_deleted=False)
 
             self._migrate_location(conf, event)
+            self._migrate_keywords_visibility(conf, event)
 
             for importer in importers:
                 with db.session.no_autoflush:
@@ -111,6 +114,25 @@ class EventImporter(TopLevelMigrationStep):
                 db.session.add(LegacyEventMapping(legacy_event_id=conf.id, event_id=event_id))
                 if not self.quiet:
                     self.print_success(cformat('-> %{cyan}{}').format(event_id), event_id=conf.id)
+
+    def _convert_keywords(self, old_keywords):
+        return filter(None, map(unicode.strip, map(convert_to_unicode, old_keywords.splitlines())))
+
+    def _convert_visibility(self, old_visibility):
+        return None if old_visibility > 900 else old_visibility
+
+    def _migrate_keywords_visibility(self, conf, event):
+        event.created_dt = self._fix_naive(conf._creationDS, event.timezone)
+        event.visibility = self._convert_visibility(conf._visibility)
+        old_keywords = getattr(conf, '_keywords', None)
+        if old_keywords is None:
+            self.print_warning("Conference object has no '_keywords' attribute")
+            return
+        keywords = self._convert_keywords(old_keywords)
+        if keywords:
+            event.keywords = keywords
+            if not self.quiet:
+                self.print_success('Keywords: {}'.format(repr(keywords)))
 
     def _migrate_location(self, old_event, new_event):
         custom_location = old_event.places[0] if getattr(old_event, 'places', None) else None
@@ -152,9 +174,9 @@ class EventImporter(TopLevelMigrationStep):
         for old_event in self.flushing_iterator(it):
             yield old_event
 
-    def _fix_naive(self, old_event, dt, tz):
+    def _fix_naive(self, dt, tz):
         if dt.tzinfo is None:
-            self.print_warning('Naive datetime converted ({})'.format(dt), old_event.id)
+            self.print_warning('Naive datetime converted ({})'.format(dt))
             return pytz.timezone(tz).localize(dt)
         else:
             return dt

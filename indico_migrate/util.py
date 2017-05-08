@@ -119,7 +119,7 @@ def get_archived_file(f, archive_paths):
     archive_id = f._LocalFile__archivedId
     repo = f._LocalFile__repository
     for archive_path in archive_paths:
-        path = os.path.join(archive_path, repo._MaterialLocalRepository__files[archive_id])
+        path = os.path.join(archive_path.encode('ascii'), repo._MaterialLocalRepository__files[archive_id])
         if os.path.exists(path):
             return f.fileName, path
         for mode, enc in (('strict', 'iso-8859-1'), ('replace', sys.getfilesystemencoding()), ('replace', 'ascii')):
@@ -162,27 +162,6 @@ class LocalFileImporterMixin(object):
         if bool(self.symlink_target) != bool(self.symlink_backend):
             raise click.exceptions.UsageError('Both or none of --symlink-target and --symlink-backend must be used.')
         return kwargs
-
-    @staticmethod
-    def decorate_command(command):
-        command = click.option('--archive-dir', required=True, multiple=True,
-                               help="The base path where materials are stored (ArchiveDir in indico.conf). "
-                                    "When used multiple times, the dirs are checked in order until a file is "
-                                    "found.")(command)
-        command = click.option('--avoid-storage-check', is_flag=True,
-                               help="Avoid checking files in storage unless absolutely necessary due to encoding "
-                                    "issues. This will migrate all files with size=0.  When this option is specified, "
-                                    "--archive-dir must be used exactly once.")(command)
-        command = click.option('--symlink-backend',
-                               help="The name of the storage backend used for symlinks.")(command)
-        command = click.option('--symlink-target',
-                               help="If set, any files with a non-UTF8 path will be symlinked in this location and "
-                                    "store the path to the symlink instead (relative to the archive dir). "
-                                    "When this option is specified, --archive-dir must be used exactly once."
-                               )(command)
-        command = click.option('--storage-backend', required=True,
-                               help="The name of the storage backend used for attachments.")(command)
-        return command
 
     def _get_local_file_info(self, resource):
         archive_id = resource._LocalFile__archivedId

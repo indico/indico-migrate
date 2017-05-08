@@ -37,9 +37,12 @@ ALARM_SENT_THRESHOLD = now_utc() - timedelta(days=1)
 
 
 class EventTypeImporter(EventMigrationStep):
+    def initialize_global_maps(self, g):
+        g.wf_registry = {}
+
     def setup(self):
         self.print_info("Fetching data from WF registry")
-        self.wf_registry = {}
+        self.global_maps.wf_registry = {}
         for event_id, wf in self._iter_wfs():
             if wf is None:
                 # conferences that have been lectures/meetings in the past
@@ -47,12 +50,12 @@ class EventTypeImporter(EventMigrationStep):
 
             wf_id = WEBFACTORY_NAME_RE.match(wf.__module__).group(1)
             if wf_id in ('simple_event', 'meeting'):
-                self.wf_registry[event_id] = wf_id
+                self.global_maps.wf_registry[event_id] = wf_id
             else:
                 self.print_error('Unexpected WF ID: {}'.format(wf_id))
 
     def migrate(self, conf, event):
-        wf_entry = self.wf_registry.get(conf.id)
+        wf_entry = self.global_maps.wf_registry.get(conf.id)
         if wf_entry is None:
             event._type = EventType.conference
         else:
@@ -112,7 +115,7 @@ class EventAlarmImporter(EventMigrationStep):
                 is_sent = True
                 is_overdue = True
             recipients = filter(None, {convert_to_unicode(x).strip().lower() for x in alarm.toAddr})
-            reminder = EventReminder(event_id=int(event.id), creator=self.janitor,
+            reminder = EventReminder(event_new=event, creator=self.janitor,
                                      created_dt=alarm.createdOn, scheduled_dt=start_dt, is_sent=is_sent,
                                      event_start_delta=getattr(alarm, '_relative', None), recipients=recipients,
                                      send_to_participants=alarm.toAllParticipants,
@@ -124,3 +127,49 @@ class EventAlarmImporter(EventMigrationStep):
                       cformat('%{green!}SENT%{reset}') if is_sent else
                       cformat('%{yellow}PENDING%{reset}'))
             self.print_success(cformat('%{cyan}{}%{reset} {}').format(reminder.scheduled_dt, status))
+
+
+class EventShortUrlsImporter(EventMigrationStep):
+    def initialize_global_maps(self, g):
+        g.used_short_urls = {}
+
+    def _validate_shorturl(self, shorturl):
+        if shorturl.isdigit():
+            return 'only-digits'
+        if 'http://' in shorturl or 'https://' in shorturl:
+            return 'url'
+        # XXX: we allow spaces and similar harmless garbage here. it's awful but no need in breaking existing urls
+        if not re.match(r'^[-a-zA-Z0-9/._ &@]+$', shorturl) or '//' in shorturl:
+            return 'invalid-chars'
+        if shorturl[0] == '/':
+            return 'leading-slash'
+        if shorturl[-1] == '/':
+            return 'trailing-slash'
+        return None
+
+    def migrate(self, conf, event):
+        if not getattr(conf, '_sortUrlTag', None):
+            return
+        shorturl = convert_to_unicode(conf._sortUrlTag)
+        error = self._validate_shorturl(shorturl)
+        if error == 'url':
+            # show obvious garbage in a less prominent way
+            self.print_warning(cformat('%{yellow}Shorturl %{yellow!}{}%{reset}%{yellow} is invalid: %{yellow!}{}')
+                               .format(shorturl, error), event_id=event.id)
+            return
+        elif error:
+            self.print_warning(cformat('%{red}Shorturl %{yellow!}{}%{reset}%{red} is invalid: %{red!}{}')
+                               .format(shorturl, error), event_id=event.id)
+            return
+        conflict = self.global_maps.used_short_urls.get(shorturl.lower())
+        if conflict:
+            # if there's a conflict caused by the previously case-sensitive url shortcuts,
+            # discard them in both events - it's better to get a 404 error than a wrong event
+            self.print_error(cformat('%{red!}Shorturl %{reset}%{red}{}%{red!} collides with '
+                                     'that of event %{reset}%{red}{}%{red!}; discarding both')
+                             .format(shorturl, conflict))
+            conflict.url_shortcut = None
+            return
+        self.global_maps.used_short_urls[shorturl.lower()] = event
+        event.url_shortcut = shorturl
+        self.print_success('{} -> {}'.format(shorturl, event.title))

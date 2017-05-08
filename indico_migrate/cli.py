@@ -58,6 +58,16 @@ click.disable_unicode_literals_warning = True
 @click.option('--archive-dir', required=True, multiple=True,
               help="The base path where resources are stored (ArchiveDir in indico.conf). When used multiple times, "
                    "the dirs are checked in order until a file is found.")
+@click.option('--storage-backend', required=True,
+              help="The name of the storage backend used for attachments.")
+@click.option('--avoid-storage-check', is_flag=True,
+              help="Avoid checking files in storage unless absolutely necessary due to encoding issues. This will "
+                   "migrate all files with size=0.  When this option is specified, --archive-dir must be used exactly "
+                   "once.")
+@click.option('--symlink-backend', help="The name of the storage backend used for symlinks.")
+@click.option('--symlink-target', help="If set, any files with a non-UTF8 path will be symlinked in this location and "
+                                       "store the path to the symlink instead (relative to the archive dir). "
+                                       "When this option is specified, --archive-dir must be used exactly once.")
 @click.option('--rb-zodb-uri', required=False, help="ZODB URI for the room booking database")
 @click.option('--photo-path', type=click.Path(exists=True, file_okay=False),
               help="path to the folder containing room photos")

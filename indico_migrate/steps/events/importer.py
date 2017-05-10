@@ -36,10 +36,11 @@ def _get_all_steps():
     from indico_migrate.steps.events.acls import EventACLImporter
     from indico_migrate.steps.events.layout import EventLayoutImporter, EventImageImporter
     from indico_migrate.steps.events.logs import EventLogImporter
+    from indico_migrate.steps.events.menus import EventMenuImporter
     from indico_migrate.steps.events.misc import (EventTypeImporter, EventSettingsImporter, EventAlarmImporter,
                                                   EventShortUrlsImporter)
     return (EventTypeImporter, EventACLImporter, EventLogImporter, EventSettingsImporter, EventAlarmImporter,
-            EventImageImporter, EventLayoutImporter, EventShortUrlsImporter)
+            EventImageImporter, EventLayoutImporter, EventShortUrlsImporter, EventMenuImporter)
 
 
 class EventImporter(TopLevelMigrationStep):

@@ -155,11 +155,11 @@ class EventShortUrlsImporter(EventMigrationStep):
         if error == 'url':
             # show obvious garbage in a less prominent way
             self.print_warning(cformat('%{yellow}Shorturl %{yellow!}{}%{reset}%{yellow} is invalid: %{yellow!}{}')
-                               .format(shorturl, error), event_id=event.id)
+                               .format(shorturl, error))
             return
         elif error:
             self.print_warning(cformat('%{red}Shorturl %{yellow!}{}%{reset}%{red} is invalid: %{red!}{}')
-                               .format(shorturl, error), event_id=event.id)
+                               .format(shorturl, error))
             return
         conflict = self.global_maps.used_short_urls.get(shorturl.lower())
         if conflict:

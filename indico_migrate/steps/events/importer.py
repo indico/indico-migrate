@@ -39,8 +39,9 @@ def _get_all_steps():
     from indico_migrate.steps.events.menus import EventMenuImporter
     from indico_migrate.steps.events.misc import (EventTypeImporter, EventSettingsImporter, EventAlarmImporter,
                                                   EventShortUrlsImporter)
+    from indico_migrate.steps.events.surveys import EventSurveyImporter
     return (EventTypeImporter, EventACLImporter, EventLogImporter, EventSettingsImporter, EventAlarmImporter,
-            EventImageImporter, EventLayoutImporter, EventShortUrlsImporter, EventMenuImporter)
+            EventImageImporter, EventLayoutImporter, EventShortUrlsImporter, EventMenuImporter, EventSurveyImporter)
 
 
 class EventImporter(TopLevelMigrationStep):

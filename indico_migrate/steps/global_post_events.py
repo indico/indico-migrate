@@ -16,7 +16,9 @@
 
 from __future__ import unicode_literals
 
+import itertools
 import re
+from datetime import date
 
 from HTMLParser import HTMLParser
 from indico.modules.categories import upcoming_events_settings
@@ -34,6 +36,7 @@ def _sanitize_title(title, _ws_re=re.compile(r'\s+')):
 class GlobalPostEventsImporter(TopLevelMigrationStep):
     def migrate(self):
         self.migrate_upcoming_event_settings()
+        self.migrate_survey_tasks()
 
     def migrate_upcoming_event_settings(self):
         self.print_step('Upcoming event settings')
@@ -45,3 +48,20 @@ class GlobalPostEventsImporter(TopLevelMigrationStep):
                     'id': int(entry.obj.id)}
                    for entry in mod._objects]
         upcoming_events_settings.set('entries', entries)
+
+    def migrate_survey_tasks(self):
+        scheduler_root = self.zodb_root['modules']['scheduler']
+        it = (t for t in itertools.chain.from_iterable(scheduler_root._waitingQueue._container.itervalues())
+              if t.typeId == 'EvalutationAlarm')
+
+        today = date.today()
+        for task in it:
+            survey = self.global_maps.legacy_survey_mapping[task.conf]
+            start_date = task.conf._evaluations[0].startDate.date()
+            if start_date < today:
+                self.print_warning('evaluation starts in the past ({})'.format(start_date))
+                survey.start_notification_sent = True
+            elif not task.conf._evaluations[0].visible:
+                self.print_warning('evaluation is disabled')
+            else:
+                self.print_success('survey notification task [{}]'.format(start_date))

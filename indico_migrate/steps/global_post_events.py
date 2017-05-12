@@ -42,17 +42,23 @@ class GlobalPostEventsImporter(TopLevelMigrationStep):
         self.print_step('Upcoming event settings')
         mod = self.zodb_root['modules']['upcoming_events']
         upcoming_events_settings.set('max_entries', int(mod._maxEvents))
-        entries = [{'weight': float(entry.weight),
-                    'days': entry.advertisingDelta.days,
-                    'type': 'category' if type(entry.obj).__name__ == 'Category' else 'event',
-                    'id': int(entry.obj.id)}
-                   for entry in mod._objects]
+        entries = []
+        for entry in mod._objects:
+            is_category = type(entry.obj).__name__ == 'Category'
+            obj_id = (self.global_maps.legacy_category_ids[entry.obj.id].id if is_category
+                      else self.global_maps.event_ids[entry.obj.id].id)
+            entries.append({
+                'weight': float(entry.weight),
+                'days': entry.advertisingDelta.days,
+                'type': 'category' if is_category else 'event',
+                'id': obj_id
+            })
         upcoming_events_settings.set('entries', entries)
 
     def migrate_survey_tasks(self):
         scheduler_root = self.zodb_root['modules']['scheduler']
         it = (t for t in itertools.chain.from_iterable(scheduler_root._waitingQueue._container.itervalues())
-              if t.typeId == 'EvalutationAlarm')
+              if t.__class__.__name__ == 'EvalutationAlarm')
 
         today = date.today()
         for task in it:

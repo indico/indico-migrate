@@ -58,6 +58,9 @@ class EventImporter(TopLevelMigrationStep):
         return (EventSetting.query.filter(EventSetting.module.in_(['core', 'contact'])).has_rows() or
                 Event.query.filter_by(is_locked=True).has_rows())
 
+    def initialize_global_maps(self, g):
+        g.legacy_event_ids = {}
+
     def migrate(self):
         self.migrate_event_data()
         db.session.commit()
@@ -105,6 +108,7 @@ class EventImporter(TopLevelMigrationStep):
                           category=parent_category,
                           is_deleted=False)
 
+            self.global_maps.legacy_event_ids[conf.id] = event
             self._migrate_location(conf, event)
             self._migrate_keywords_visibility(conf, event)
 

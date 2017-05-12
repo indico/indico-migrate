@@ -173,13 +173,13 @@ def _sanitize_title(title):
 
 
 class EventMenuImporter(EventMigrationStep):
-    def migrate(self, conf, event):
-        dmgr = self.zodb_root['displayRegistery'][conf.id]
+    def migrate(self):
+        dmgr = self.zodb_root['displayRegistery'][self.conf.id]
         if _get_menu_structure(dmgr) in DEFAULT_MENU_STRUCTURES:
             return
         self.print_success('Custom menu')
-        db.session.add_all(self._migrate_menu(event, dmgr._menu))
-        layout_settings.set(event, 'use_custom_menu', True)
+        db.session.add_all(self._migrate_menu(self.event, dmgr._menu))
+        layout_settings.set(self.event, 'use_custom_menu', True)
 
     def _migrate_menu(self, event, container, parent=None, used=None):
         if used is None:

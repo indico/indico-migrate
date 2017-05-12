@@ -45,8 +45,8 @@ class EventImageImporter(LocalFileImporterMixin, EventMigrationStep):
         super(EventImageImporter, self).__init__(*args, **kwargs)
         self._set_config_options(**kwargs)
 
-    def migrate(self, conf, event):
-        for picture in self._iter_pictures(conf):
+    def migrate(self):
+        for picture in self._iter_pictures(self.conf):
             local_file = picture._localFile
             content_type = mimetypes.guess_type(local_file.fileName)[0] or 'application/octet-stream'
             storage_backend, storage_path, size = self._get_local_file_info(local_file)
@@ -57,7 +57,7 @@ class EventImageImporter(LocalFileImporterMixin, EventMigrationStep):
                 continue
 
             filename = secure_filename(convert_to_unicode(local_file.fileName), 'image')
-            image = ImageFile(event_id=event.id,
+            image = ImageFile(event_id=self.event.id,
                               filename=filename,
                               content_type=content_type,
                               created_dt=now_utc(),
@@ -65,7 +65,7 @@ class EventImageImporter(LocalFileImporterMixin, EventMigrationStep):
                               storage_backend=storage_backend,
                               storage_file_id=storage_path)
 
-            map_entry = LegacyImageMapping(event_id=event.id, legacy_image_id=local_file.id, image=image)
+            map_entry = LegacyImageMapping(event_id=self.event.id, legacy_image_id=local_file.id, image=image)
             db.session.add(image)
             db.session.add(map_entry)
 
@@ -93,7 +93,7 @@ class EventLayoutImporter(EventMigrationStep):
         self.default_styles = self.zodb_root['MaKaCInfo']['main']._styleMgr._defaultEventStylesheet
         self.archive_dirs = kwargs.pop('archive_dir')
 
-    def _process_logo(self, logo, event):
+    def _process_logo(self, logo):
         path = get_archived_file(logo, self.archive_dirs)[1]
         if path is None:
             self.print_error(cformat('%{red!}Logo not found on disk; skipping it'))
@@ -116,17 +116,17 @@ class EventLayoutImporter(EventMigrationStep):
         logo_content = logo_bytes.read()
         logo_filename = secure_filename(convert_to_unicode(logo.fileName), 'logo')
         logo_filename = os.path.splitext(logo_filename)[0] + '.png'
-        event.logo_metadata = {
+        self.event.logo_metadata = {
             'size': len(logo_content),
             'hash': crc32(logo_content),
             'filename': logo_filename,
             'content_type': 'image/png'
         }
-        event.logo = logo_content
+        self.event.logo = logo_content
         if not self.quiet:
             self.print_success(cformat('- %{cyan}[Logo] {}').format(logo.fileName))
 
-    def _process_css(self, css, event):
+    def _process_css(self, css):
         stylesheet = css._localFile
         path = get_archived_file(stylesheet, self.archive_dirs)[1]
         if path is None:
@@ -134,37 +134,37 @@ class EventLayoutImporter(EventMigrationStep):
             return
         with open(path, 'rb') as f:
             stylesheet_content = convert_to_unicode(f.read())
-        event.stylesheet_metadata = {
+        self.event.stylesheet_metadata = {
             'size': len(stylesheet_content),
             'hash': crc32(stylesheet_content),
             'filename': secure_filename(convert_to_unicode(stylesheet.fileName), 'stylesheet.css'),
             'content_type': 'text/css'
         }
-        event.stylesheet = stylesheet_content
+        self.event.stylesheet = stylesheet_content
         if not self.quiet:
             self.print_success(cformat('- %{cyan}[CSS] {}').format(stylesheet.fileName))
 
-    def migrate(self, conf, event):
-        dmgr = self.zodb_root['displayRegistery'][conf.id]
+    def migrate(self):
+        dmgr = self.zodb_root['displayRegistery'][self.conf.id]
 
-        style_mgr = getattr(dmgr, '_styleMngr', None) if event._type == EventType.conference else None
-        custom_css = getattr(style_mgr, '_css', None) if event._type == EventType.conference else None
+        style_mgr = getattr(dmgr, '_styleMngr', None) if self.event._type == EventType.conference else None
+        custom_css = getattr(style_mgr, '_css', None) if self.event._type == EventType.conference else None
 
-        if event._type == EventType.conference:
-            logo = conf._logo
+        if self.event._type == EventType.conference:
+            logo = self.conf._logo
             settings = self._get_event_settings(dmgr)
-            layout_settings.set_multi(event, settings)
+            layout_settings.set_multi(self.event, settings)
             if not self.quiet:
                 self.print_success(cformat('- %{cyan}Layout settings'))
             if logo:
-                self._process_logo(logo, event)
+                self._process_logo(logo)
             if custom_css:
-                self._process_css(custom_css, event)
+                self._process_css(custom_css)
         else:
             theme = dmgr._defaultstyle
-            if not theme or theme == self.default_styles[event._type.legacy_name]:
+            if not theme or theme == self.default_styles[self.event._type.legacy_name]:
                 return
-            layout_settings.set(event, 'timetable_theme', theme)
+            layout_settings.set(self.event, 'timetable_theme', theme)
             if not self.quiet:
                 self.print_success(cformat('- %{cyan}Default timetable theme: {}').format(theme))
 

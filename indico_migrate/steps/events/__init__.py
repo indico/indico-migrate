@@ -16,6 +16,8 @@
 
 from __future__ import unicode_literals
 
+from pytz import utc as utc_tz
+
 from indico.core.db.sqlalchemy.protection import ProtectionMode
 from indico.util.console import cformat
 from indico_migrate.cli import Importer
@@ -28,12 +30,29 @@ class EventMigrationStep(Importer):
 
     def __init__(self, *args, **kwargs):
         super(EventMigrationStep, self).__init__(*args, **kwargs)
-        self.conf = None
         self.janitor = kwargs.pop('janitor')
+        self.context = None
 
-    def run(self, conf, event):
-        self.conf = conf
-        self.migrate(conf, event)
+    def bind(self, context):
+        """Bind importer to a given EventContext"""
+        self.context = context
+
+    @property
+    def conf(self):
+        """Get legacy Conference object"""
+        return self.context.conf if self.context else None
+
+    @property
+    def event(self):
+        """Get new SQLAlchemy Event object"""
+        return self.context.event if self.context else None
+
+    @property
+    def is_legacy_event(self):
+        return self.context.is_legacy
+
+    def run(self):
+        self.migrate()
 
     @property
     def prefix(self):
@@ -42,7 +61,7 @@ class EventMigrationStep(Importer):
         else:
             return ''
 
-    def migrate(self, conf, event):
+    def migrate(self):
         raise NotImplementedError
 
     def setup(self):
@@ -74,5 +93,6 @@ class EventMigrationStep(Importer):
         else:
             raise ValueError('Unexpected protection: {}'.format(ac._accessProtection))
 
-    def _naive_to_aware(self, event, dt):
-        return event.tzinfo.localize(dt) if dt.tzinfo is None else dt
+    def _naive_to_aware(self, dt, utc=False):
+        dt_aware = self.event.tzinfo.localize(dt) if dt.tzinfo is None else dt
+        return dt_aware.astimezone(utc_tz) if utc else dt_aware

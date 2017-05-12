@@ -22,10 +22,12 @@ from operator import itemgetter
 
 from indico.core.db import db
 from indico.modules.events.models.events import EventType
+from indico.modules.events.models.legacy_mapping import LegacyEventMapping
 from indico.modules.events.reminders.models.reminders import EventReminder
 from indico.modules.events.settings import event_core_settings, event_contact_settings
 from indico.util.console import cformat, verbose_iterator
 from indico.util.date_time import now_utc
+from indico.util.string import fix_broken_string
 from indico_migrate import convert_to_unicode
 from indico_migrate.steps.events import EventMigrationStep
 
@@ -54,12 +56,12 @@ class EventTypeImporter(EventMigrationStep):
             else:
                 self.print_error('Unexpected WF ID: {}'.format(wf_id))
 
-    def migrate(self, conf, event):
-        wf_entry = self.global_maps.wf_registry.get(conf.id)
+    def migrate(self):
+        wf_entry = self.global_maps.wf_registry.get(self.conf.id)
         if wf_entry is None:
-            event._type = EventType.conference
+            self.event._type = EventType.conference
         else:
-            event._type = EventType.lecture if wf_entry == 'simple_event' else EventType.meeting
+            self.event._type = EventType.lecture if wf_entry == 'simple_event' else EventType.meeting
 
     def _iter_wfs(self):
         it = self.zodb_root['webfactoryregistry'].iteritems()
@@ -72,39 +74,38 @@ class EventTypeImporter(EventMigrationStep):
 
 
 class EventSettingsImporter(EventMigrationStep):
-    def migrate(self, conf, event):
-        if getattr(conf, '_screenStartDate', None):
-            event_core_settings.set(event, 'start_dt_override', conf._screenStartDate)
-        if getattr(conf, '_screenEndDate', None):
-            event_core_settings.set(event, 'end_dt_override', conf._screenEndDate)
-        organizer_info = convert_to_unicode(getattr(conf, '._orgText', ''))
+    def migrate(self):
+        if getattr(self.conf, '_screenStartDate', None):
+            event_core_settings.set(self.event, 'start_dt_override', self.conf._screenStartDate)
+        if getattr(self.conf, '_screenEndDate', None):
+            event_core_settings.set(self.event, 'end_dt_override', self.conf._screenEndDate)
+        organizer_info = convert_to_unicode(getattr(self.conf, '._orgText', ''))
         if organizer_info:
-            event_core_settings.set(event, 'organizer_info', organizer_info)
-        additional_info = convert_to_unicode(getattr(conf, 'contactInfo', ''))
+            event_core_settings.set(self.event, 'organizer_info', organizer_info)
+        additional_info = convert_to_unicode(getattr(self.conf, 'contactInfo', ''))
         if additional_info:
-            event_core_settings.set(event, 'additional_info', additional_info)
-        si = conf._supportInfo
+            event_core_settings.set(self.event, 'additional_info', additional_info)
+        si = self.conf._supportInfo
         contact_title = convert_to_unicode(si._caption)
         contact_email = convert_to_unicode(si._email)
         contact_phone = convert_to_unicode(si._telephone)
         contact_emails = map(unicode.strip, SPLIT_EMAILS_RE.split(contact_email)) if contact_email else []
         contact_phones = map(unicode.strip, SPLIT_PHONES_RE.split(contact_phone)) if contact_phone else []
         if contact_title:
-            event_contact_settings.set(event, 'title', contact_title)
+            event_contact_settings.set(self.event, 'title', contact_title)
         if contact_emails:
-            event_contact_settings.set(event, 'emails', contact_emails)
+            event_contact_settings.set(self.event, 'emails', contact_emails)
         if contact_phones:
-            event_contact_settings.set(event, 'phones', contact_phones)
+            event_contact_settings.set(self.event, 'phones', contact_phones)
 
 
 class EventAlarmImporter(EventMigrationStep):
-    def migrate(self, conf, event):
-
-        for alarm in conf.alarmList.itervalues():
+    def migrate(self):
+        for alarm in self.conf.alarmList.itervalues():
             if not alarm.startDateTime:
                 self.print_error('Alarm has no start time')
                 continue
-            start_dt = self._naive_to_aware(event, alarm.startDateTime).replace(second=0, microsecond=0)
+            start_dt = self._naive_to_aware(alarm.startDateTime).replace(second=0, microsecond=0)
             if not hasattr(alarm, 'status'):
                 # Those ancient alarms can be safely assumed to be sent
                 is_sent = True
@@ -115,7 +116,7 @@ class EventAlarmImporter(EventMigrationStep):
                 is_sent = True
                 is_overdue = True
             recipients = filter(None, {convert_to_unicode(x).strip().lower() for x in alarm.toAddr})
-            reminder = EventReminder(event_new=event, creator=self.janitor,
+            reminder = EventReminder(event_new=self.event, creator=self.janitor,
                                      created_dt=alarm.createdOn, scheduled_dt=start_dt, is_sent=is_sent,
                                      event_start_delta=getattr(alarm, '_relative', None), recipients=recipients,
                                      send_to_participants=alarm.toAllParticipants,
@@ -147,10 +148,10 @@ class EventShortUrlsImporter(EventMigrationStep):
             return 'trailing-slash'
         return None
 
-    def migrate(self, conf, event):
-        if not getattr(conf, '_sortUrlTag', None):
+    def migrate(self):
+        if not getattr(self.conf, '_sortUrlTag', None):
             return
-        shorturl = convert_to_unicode(conf._sortUrlTag)
+        shorturl = convert_to_unicode(self.conf._sortUrlTag)
         error = self._validate_shorturl(shorturl)
         if error == 'url':
             # show obvious garbage in a less prominent way
@@ -170,6 +171,68 @@ class EventShortUrlsImporter(EventMigrationStep):
                              .format(shorturl, conflict))
             conflict.url_shortcut = None
             return
-        self.global_maps.used_short_urls[shorturl.lower()] = event
-        event.url_shortcut = shorturl
-        self.print_success('{} -> {}'.format(shorturl, event.title))
+        self.global_maps.used_short_urls[shorturl.lower()] = self.event
+        self.event.url_shortcut = shorturl
+        self.print_success('{} -> {}'.format(shorturl, self.event.title))
+
+
+class EventMiscImporter(EventMigrationStep):
+    def migrate(self):
+        self.global_maps.legacy_event_ids[self.conf.id] = self.event
+        self._migrate_location()
+        self._migrate_keywords_visibility()
+
+    def _migrate_keywords_visibility(self):
+        self.event.created_dt = self._naive_to_aware(self.conf._creationDS)
+        self.event.visibility = self._convert_visibility(self.conf._visibility)
+        old_keywords = getattr(self.conf, '_keywords', None)
+        if old_keywords is None:
+            self.print_warning("Conference object has no '_keywords' attribute")
+            return
+        keywords = self._convert_keywords(old_keywords)
+        if keywords:
+            self.event.keywords = keywords
+            if not self.quiet:
+                self.print_success('Keywords: {}'.format(repr(keywords)))
+
+    def _migrate_location(self):
+        custom_location = self.conf.places[0] if getattr(self.conf, 'places', None) else None
+        custom_room = self.conf.rooms[0] if getattr(self.conf, 'rooms', None) else None
+        location_name = None
+        room_name = None
+        has_room = False
+        if custom_location:
+            location_name = convert_to_unicode(fix_broken_string(custom_location.name, True))
+            if custom_location.address:
+                self.event.own_address = convert_to_unicode(fix_broken_string(custom_location.address, True))
+        if custom_room:
+            room_name = convert_to_unicode(fix_broken_string(custom_room.name, True))
+        if location_name and room_name:
+            mapping = self.global_maps.room_mapping.get((location_name, room_name))
+            if mapping:
+                has_room = True
+                self.event.own_venue_id = mapping[0]
+                self.event.own_room_id = mapping[1]
+        # if we don't have a RB room set, use whatever location/room name we have
+        if not has_room:
+            venue_id = self.global_maps.venue_mapping.get(location_name)
+            if venue_id is not None:
+                self.event.own_venue_id = venue_id
+                self.event.own_venue_name = ''
+            else:
+                self.event.own_venue_name = location_name or ''
+            self.event.own_room_name = room_name or ''
+
+    def _convert_visibility(self, old_visibility):
+        return None if old_visibility > 900 else old_visibility
+
+    def _convert_keywords(self, old_keywords):
+        return filter(None, map(unicode.strip, map(convert_to_unicode, old_keywords.splitlines())))
+
+
+class EventLegacyIdImporter(EventMigrationStep):
+    def migrate(self):
+        if self.is_legacy_event:
+            db.session.add(LegacyEventMapping(legacy_event_id=self.conf.id, event_id=self.event.id))
+            if not self.quiet:
+                self.print_success(cformat('-> %{cyan}{}').format(self.event.id))

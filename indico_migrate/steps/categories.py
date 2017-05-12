@@ -32,7 +32,6 @@ from indico.modules.categories.models.categories import Category
 from indico.modules.categories.models.legacy_mapping import LegacyCategoryMapping
 from indico.modules.events.layout import theme_settings
 from indico.modules.networks.models.networks import IPNetworkGroup
-from indico.modules.users import User
 from indico.util.console import cformat
 from indico.util.fs import secure_filename
 from indico.util.string import crc32, sanitize_email, is_valid_mail, is_legacy_id

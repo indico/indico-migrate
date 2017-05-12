@@ -48,18 +48,18 @@ class EventSurveyImporter(EventMigrationStep):
     def initialize_global_maps(self, g):
         g.legacy_survey_mapping = {}
 
-    def migrate(self, conf, event):
-        evaluations = getattr(conf, '_evaluations', [])
+    def migrate(self):
+        evaluations = getattr(self.conf, '_evaluations', [])
         assert len(evaluations) < 2
 
         if evaluations and evaluations[0]._questions:
-            survey = self.migrate_survey(evaluations[0], conf, event)
-            self.global_maps.legacy_survey_mapping[conf] = survey
+            survey = self.migrate_survey(evaluations[0])
+            self.global_maps.legacy_survey_mapping[self.conf] = survey
             db.session.add(survey)
             db.session.flush()
 
-    def migrate_survey(self, evaluation, conf, event):
-        survey = Survey(event_new=event)
+    def migrate_survey(self, evaluation):
+        survey = Survey(event_new=self.event)
         title = convert_to_unicode(evaluation.title)
         if title and not title.startswith('Evaluation for '):
             survey.title = _sanitize(title)
@@ -75,11 +75,11 @@ class EventSurveyImporter(EventMigrationStep):
         survey.require_user = not survey.anonymous or evaluation.mandatoryAccount
 
         if evaluation.startDate.date() == date.min or evaluation.endDate.date() == date.min:
-            survey.start_dt = event.end_dt
+            survey.start_dt = self.event.end_dt
             survey.end_dt = survey.start_dt + timedelta(days=7)
         else:
-            survey.start_dt = self._naive_to_aware(event, evaluation.startDate).astimezone(utc)
-            survey.end_dt = self._naive_to_aware(event, evaluation.endDate).astimezone(utc)
+            survey.start_dt = self._naive_to_aware(evaluation.startDate).astimezone(utc)
+            survey.end_dt = self._naive_to_aware(evaluation.endDate).astimezone(utc)
         if survey.end_dt < survey.start_dt:
             survey.end_dt = survey.end_dt + timedelta(days=7)
 
@@ -101,7 +101,7 @@ class EventSurveyImporter(EventMigrationStep):
             section.children.append(question)
 
         for old_submission in evaluation._submissions:
-            submission = self.migrate_submission(old_submission, question_map, event)
+            submission = self.migrate_submission(old_submission, question_map)
             survey.submissions.append(submission)
 
         return survey
@@ -136,7 +136,7 @@ class EventSurveyImporter(EventMigrationStep):
         self.print_success(" - Question: {}".format(question.title))
         return question
 
-    def migrate_submission(self, old_submission, question_map, event):
+    def migrate_submission(self, old_submission, question_map):
         submitter = old_submission._submitter
         if not old_submission.anonymous and submitter is not None:
             user = self.global_maps.avatar_merged_user[submitter.id]
@@ -146,7 +146,7 @@ class EventSurveyImporter(EventMigrationStep):
         submission = SurveySubmission(is_submitted=True, is_anonymous=(user is None), user=user)
         submitted_dt = old_submission.submissionDate
         submission.submitted_dt = (submitted_dt if submitted_dt.tzinfo
-                                   else self._naive_to_aware(event, submitted_dt).astimezone(utc))
+                                   else self._naive_to_aware(submitted_dt).astimezone(utc))
         self.print_success(" - Submission from user {}".format(submission.user or 'anonymous'))
         for old_answer in old_submission._answers:
             question = question_map[old_answer._question]

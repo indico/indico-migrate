@@ -21,11 +21,10 @@ from operator import attrgetter
 import pytz
 from indico.core.db import db
 from indico.modules.events.models.events import Event
-from indico.modules.events.models.legacy_mapping import LegacyEventMapping
 from indico.modules.events.models.settings import EventSetting
 from indico.modules.users import User
 from indico.util.console import cformat, verbose_iterator
-from indico.util.string import is_legacy_id, fix_broken_string
+from indico.util.string import is_legacy_id
 from indico.util.struct.iterables import committing_iterator
 
 from indico_migrate import TopLevelMigrationStep, convert_to_unicode
@@ -38,10 +37,75 @@ def _get_all_steps():
     from indico_migrate.steps.events.logs import EventLogImporter
     from indico_migrate.steps.events.menus import EventMenuImporter
     from indico_migrate.steps.events.misc import (EventTypeImporter, EventSettingsImporter, EventAlarmImporter,
-                                                  EventShortUrlsImporter)
+                                                  EventShortUrlsImporter, EventMiscImporter, EventLegacyIdImporter)
     from indico_migrate.steps.events.surveys import EventSurveyImporter
-    return (EventTypeImporter, EventACLImporter, EventLogImporter, EventSettingsImporter, EventAlarmImporter,
-            EventImageImporter, EventLayoutImporter, EventShortUrlsImporter, EventMenuImporter, EventSurveyImporter)
+    return (EventMiscImporter, EventTypeImporter, EventACLImporter, EventLogImporter, EventSettingsImporter,
+            EventAlarmImporter, EventImageImporter, EventLayoutImporter, EventShortUrlsImporter, EventMenuImporter,
+            EventSurveyImporter, EventLegacyIdImporter)
+
+
+class SkipEvent(Exception):
+    pass
+
+
+class _EventContextBase(object):
+    def __init__(self, conf):
+        self.conf = conf
+        self.is_legacy = False
+
+    def create_event(self):
+        if is_legacy_id(self.conf.id):
+            event_id = int(self.gen_event_id())
+            self.is_legacy = True
+        else:
+            event_id = int(self.conf.id)
+
+        if 'title' not in self.conf.__dict__:
+            self.importer.print_error('Event has no title in ZODB', self.conf.id)
+            raise SkipEvent
+
+        try:
+            parent_category = self.importer.global_maps.legacy_category_ids[self.conf._Conference__owners[0].id]
+        except (IndexError, KeyError):
+            self.importer.print_error(cformat('%{red!}Event has no category!'), event_id=self.conf.id)
+            raise SkipEvent
+
+        title = convert_to_unicode(self.conf.__dict__['title']) or '(no title)'
+        self.importer.print_success(title)
+
+        tz = self.conf.__dict__.get('timezone', 'UTC')
+        self.event = Event(id=event_id,
+                           title=title,
+                           description=convert_to_unicode(self.conf.__dict__['description']) or '',
+                           timezone=tz,
+                           start_dt=self._fix_naive(self.conf.__dict__['startDate'], tz),
+                           end_dt=self._fix_naive(self.conf.__dict__['endDate'], tz),
+                           is_locked=self.conf._closed,
+                           category=parent_category,
+                           is_deleted=False)
+
+    def run_step(self, importer):
+        importer.bind(self)
+        importer.run()
+
+    def _fix_naive(self, dt, tz):
+        if dt.tzinfo is None:
+            self.importer.print_warning('Naive datetime converted ({})'.format(dt))
+            return pytz.timezone(tz).localize(dt)
+        else:
+            return dt
+
+
+def EventContextFactory(counter, _importer):
+    class _EventContext(_EventContextBase):
+        event_id_counter = counter._Counter__count
+        importer = _importer
+
+        @classmethod
+        def gen_event_id(cls):
+            cls.event_id_counter += 1
+            return cls.event_id_counter
+    return _EventContext
 
 
 class EventImporter(TopLevelMigrationStep):
@@ -50,7 +114,6 @@ class EventImporter(TopLevelMigrationStep):
         self.janitor_user_id = kwargs.pop('janitor_user_id')
         self.janitor = User.get_one(self.janitor_user_id)
         super(EventImporter, self).__init__(*args, **kwargs)
-        self.event_id_counter = self.zodb_root['counters']['CONFERENCE']._Counter__count
         self.kwargs = kwargs
         self.kwargs['janitor'] = self.janitor
 
@@ -73,100 +136,18 @@ class EventImporter(TopLevelMigrationStep):
         for importer in importers:
             importer.setup()
 
+        EventContext = EventContextFactory(self.zodb_root['counters']['CONFERENCE'], self)
+
         self.print_step("Event data")
         for conf in committing_iterator(self._iter_events()):
-            is_legacy = False
-
-            if is_legacy_id(conf.id):
-                event_id = int(self.gen_event_id())
-                is_legacy = True
-            else:
-                event_id = int(conf.id)
-
-            if 'title' not in conf.__dict__:
-                self.print_error('Event has no title in ZODB', conf.id)
-                continue
-
+            context = EventContext(conf)
             try:
-                parent_category = self.global_maps.legacy_category_ids[conf._Conference__owners[0].id]
-            except (IndexError, KeyError):
-                self.print_error(cformat('%{red!}Event has no category!'), event_id=conf.id)
+                context.create_event()
+            except SkipEvent:
                 continue
-
-            title = convert_to_unicode(conf.__dict__['title']) or '(no title)'
-            if not self.quiet:
-                self.print_success(title)
-
-            tz = conf.__dict__.get('timezone', 'UTC')
-            event = Event(id=event_id,
-                          title=title,
-                          description=convert_to_unicode(conf.__dict__['description']) or '',
-                          timezone=tz,
-                          start_dt=self._fix_naive(conf.__dict__['startDate'], tz),
-                          end_dt=self._fix_naive(conf.__dict__['endDate'], tz),
-                          is_locked=conf._closed,
-                          category=parent_category,
-                          is_deleted=False)
-
-            self.global_maps.legacy_event_ids[conf.id] = event
-            self._migrate_location(conf, event)
-            self._migrate_keywords_visibility(conf, event)
-
             for importer in importers:
                 with db.session.no_autoflush:
-                    importer.run(conf, event)
-
-            if is_legacy:
-                db.session.add(LegacyEventMapping(legacy_event_id=conf.id, event_id=event_id))
-                if not self.quiet:
-                    self.print_success(cformat('-> %{cyan}{}').format(event_id), event_id=conf.id)
-
-    def _convert_keywords(self, old_keywords):
-        return filter(None, map(unicode.strip, map(convert_to_unicode, old_keywords.splitlines())))
-
-    def _convert_visibility(self, old_visibility):
-        return None if old_visibility > 900 else old_visibility
-
-    def _migrate_keywords_visibility(self, conf, event):
-        event.created_dt = self._fix_naive(conf._creationDS, event.timezone)
-        event.visibility = self._convert_visibility(conf._visibility)
-        old_keywords = getattr(conf, '_keywords', None)
-        if old_keywords is None:
-            self.print_warning("Conference object has no '_keywords' attribute")
-            return
-        keywords = self._convert_keywords(old_keywords)
-        if keywords:
-            event.keywords = keywords
-            if not self.quiet:
-                self.print_success('Keywords: {}'.format(repr(keywords)))
-
-    def _migrate_location(self, old_event, new_event):
-        custom_location = old_event.places[0] if getattr(old_event, 'places', None) else None
-        custom_room = old_event.rooms[0] if getattr(old_event, 'rooms', None) else None
-        location_name = None
-        room_name = None
-        has_room = False
-        if custom_location:
-            location_name = convert_to_unicode(fix_broken_string(custom_location.name, True))
-            if custom_location.address:
-                new_event.own_address = convert_to_unicode(fix_broken_string(custom_location.address, True))
-        if custom_room:
-            room_name = convert_to_unicode(fix_broken_string(custom_room.name, True))
-        if location_name and room_name:
-            mapping = self.global_maps.room_mapping.get((location_name, room_name))
-            if mapping:
-                has_room = True
-                new_event.own_venue_id = mapping[0]
-                new_event.own_room_id = mapping[1]
-        # if we don't have a RB room set, use whatever location/room name we have
-        if not has_room:
-            venue_id = self.global_maps.venue_mapping.get(location_name)
-            if venue_id is not None:
-                new_event.own_venue_id = venue_id
-                new_event.own_venue_name = ''
-            else:
-                new_event.own_venue_name = location_name or ''
-            new_event.own_room_name = room_name or ''
+                    context.run_step(importer)
 
     def _iter_events(self):
         def _it():
@@ -179,14 +160,3 @@ class EventImporter(TopLevelMigrationStep):
             it = verbose_iterator(it, total, attrgetter('id'), lambda x: x.__dict__.get('title', ''))
         for old_event in self.flushing_iterator(it):
             yield old_event
-
-    def _fix_naive(self, dt, tz):
-        if dt.tzinfo is None:
-            self.print_warning('Naive datetime converted ({})'.format(dt))
-            return pytz.timezone(tz).localize(dt)
-        else:
-            return dt
-
-    def gen_event_id(self):
-        self.event_id_counter += 1
-        return self.event_id_counter

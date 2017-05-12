@@ -20,7 +20,6 @@ from datetime import timedelta, datetime
 
 from indico.core.db import db
 from indico.modules.events.logs import EventLogEntry, EventLogRealm, EventLogKind
-from indico.util.console import cformat
 from indico.util.date_time import format_human_timedelta, format_datetime
 from indico.util.string import seems_html
 from indico_migrate import convert_to_unicode
@@ -40,22 +39,22 @@ def _convert_data(conf, value):
 
 
 class EventLogImporter(EventMigrationStep):
-    def migrate(self, conf, event):
-        if not hasattr(conf, '_logHandler'):
+    def migrate(self):
+        if not hasattr(self.conf, '_logHandler'):
             self.print_error('Event has no log handler!')
             return
-        for item in conf._logHandler._logLists['emailLog']:
-            entry = self._migrate_email_log(conf, event, item)
+        for item in self.conf._logHandler._logLists['emailLog']:
+            entry = self._migrate_email_log(item)
             db.session.add(entry)
             if not self.quiet:
                 self.print_success(str(entry))
-        for item in conf._logHandler._logLists['actionLog']:
-            entry = self._migrate_action_log(conf, event, item)
+        for item in self.conf._logHandler._logLists['actionLog']:
+            entry = self._migrate_action_log(item)
             db.session.add(entry)
             if not self.quiet:
                 self.print_success(str(entry))
 
-    def _migrate_log(self, conf, event, item):
+    def _migrate_log(self, item):
         user = None
         if (item._responsibleUser and item._responsibleUser.__class__.__name__ in {'Avatar', 'AvatarUserWrapper'} and
                 unicode(item._responsibleUser.id).isdigit()):
@@ -71,13 +70,13 @@ class EventLogImporter(EventMigrationStep):
             module = 'Timetable/Subcontribution'
         elif module.islower():
             module = module.title()
-        entry = EventLogEntry(event_new=event, logged_dt=self._naive_to_aware(event, item._logDate), module=module,
-                              user=user, kind=EventLogKind.other)
+        entry = EventLogEntry(event_new=self.event, logged_dt=self._naive_to_aware(item._logDate),
+                              module=module, user=user, kind=EventLogKind.other)
         return entry
 
-    def _migrate_email_log(self, conf, event, item):
+    def _migrate_email_log(self, item):
         info = item._logInfo
-        entry = self._migrate_log(conf, event, item)
+        entry = self._migrate_log(item)
         entry.realm = EventLogRealm.emails
         entry.type = 'email'
         entry.summary = 'Sent email: {}'.format(convert_to_unicode(info['subject']).strip())
@@ -94,11 +93,11 @@ class EventLogImporter(EventMigrationStep):
         }
         return entry
 
-    def _migrate_action_log(self, conf, event, item):
+    def _migrate_action_log(self, item):
         info = item._logInfo
-        entry = self._migrate_log(conf, event, item)
+        entry = self._migrate_log(item)
         entry.realm = EventLogRealm.event
         entry.type = 'simple'
         entry.summary = convert_to_unicode(info['subject']).strip()
-        entry.data = {convert_to_unicode(k): _convert_data(conf, v) for k, v in info.iteritems() if k != 'subject'}
+        entry.data = {convert_to_unicode(k): _convert_data(self.conf, v) for k, v in info.iteritems() if k != 'subject'}
         return entry

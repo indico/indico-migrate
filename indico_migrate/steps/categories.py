@@ -181,8 +181,7 @@ class CategoryImporter(TopLevelMigrationStep):
         title = _ws_re.sub(' ', title).strip()
         if title != orig:
             self.print_warning('Sanitized category title', event_id=categ_id)
-            self.print_warning(cformat('%{red!}OLD: {}').format(orig))
-            self.print_warning(cformat('%{green!}NEW: {}').format(title))
+            self.print_warning(cformat('%{red!}{}%{reset} => %{green!}{}%{reset}').format(orig, title))
         return title
 
     def _migrate_category(self, old_cat, position):

@@ -47,12 +47,6 @@ class CategoryImporter(TopLevelMigrationStep):
         super(CategoryImporter, self).__init__(*args, **kwargs)
         self.categ_id_counter = self.zodb_root['counters']['CATEGORY']._Counter__count
 
-    def has_data(self):
-        return Category.query.has_rows()
-
-    def initialize_global_maps(self, g):
-        g.legacy_category_ids = {}
-
     @no_autoflush
     def migrate(self):
         self.domain_mapping = {ipng.name.lower(): ipng for ipng in IPNetworkGroup.query}
@@ -224,9 +218,9 @@ class CategoryImporter(TopLevelMigrationStep):
                         for i, old_subcat in enumerate(sorted(old_cat.subcategories.itervalues(),
                                                               key=attrgetter('_order')), 1)]
         # add to user favorites
-        for user in self.global_maps.user_favorite_categories[old_cat.id]:
+        for user in self.global_ns.user_favorite_categories[old_cat.id]:
             user.favorite_categories.add(cat)
-        self.global_maps.legacy_category_ids[old_cat.id] = cat
+        self.global_ns.legacy_category_ids[old_cat.id] = cat
         return cat
 
     def gen_categ_id(self):

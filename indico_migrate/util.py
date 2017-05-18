@@ -18,6 +18,7 @@ import errno
 import os
 import re
 import sys
+import yaml
 from contextlib import contextmanager
 from urlparse import urlparse
 
@@ -212,3 +213,35 @@ class LocalFileImporterMixin(object):
                 return self.symlink_backend, symlink_name, size
             else:
                 return self.storage_backend, rel_path, size
+
+
+class MigrationStateManager(object):
+    _namespaces = {}
+    _steps = []
+
+    @classmethod
+    def register_step(cls, step):
+        cls._steps.append(step.__name__)
+
+    @classmethod
+    def has_already_run(cls, step):
+        return step.__name__ in cls._steps
+
+    @classmethod
+    def register_ns(cls, ns):
+        cls._namespaces[ns.name] = ns
+
+    @classmethod
+    def save_restore_point(cls):
+        ns_data = {ns.name: ns.serialize() for ns in cls._namespaces.viewvalues()}
+        with open('indico-migration.yaml', 'w') as f:
+            yaml.dump({
+                'namespaces': ns_data,
+                'steps': cls._steps
+            }, f)
+
+    @classmethod
+    def load_restore_point(cls, data):
+        cls._steps = data['steps']
+        for name, ns in cls._namespaces.viewitems():
+            ns.load(data['namespaces'][name])

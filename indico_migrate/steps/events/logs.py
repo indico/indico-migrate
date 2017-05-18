@@ -58,7 +58,7 @@ class EventLogImporter(EventMigrationStep):
         user = None
         if (item._responsibleUser and item._responsibleUser.__class__.__name__ in {'Avatar', 'AvatarUserWrapper'} and
                 unicode(item._responsibleUser.id).isdigit()):
-            user = self.global_maps.avatar_merged_user.get(item._responsibleUser.id)
+            user = self.global_ns.avatar_merged_user.get(item._responsibleUser.id)
         module = item._module or 'Unknown'
         if module.startswith('MaKaC/plugins/Collaboration'):
             module = 'Collaboration'

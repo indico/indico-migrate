@@ -57,9 +57,6 @@ class GlobalPreEventsImporter(TopLevelMigrationStep):
         self.migrate_networks()
         db.session.commit()
 
-    def initialize_global_maps(self, g):
-        g.ip_domains = {}
-
     def migrate_api_settings(self):
         self.print_step('API settings')
         settings_map = {
@@ -135,7 +132,7 @@ class GlobalPreEventsImporter(TopLevelMigrationStep):
             network = IPNetworkGroup(name=convert_to_unicode(domain.name),
                                      description=convert_to_unicode(domain.description), networks=ip_networks)
             db.session.add(network)
-            self.global_maps.ip_domains[convert_to_unicode(domain.name).lower()] = network
+            self.global_ns.ip_domains[convert_to_unicode(domain.name).lower()] = network
             self.print_success(repr(network))
         db.session.flush()
 

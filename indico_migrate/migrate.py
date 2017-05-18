@@ -18,6 +18,7 @@ from __future__ import unicode_literals
 
 import os
 import sys
+import yaml
 
 import pytz
 from sqlalchemy.orm import configure_mappers
@@ -29,7 +30,7 @@ from indico.core.db.sqlalchemy.util.models import import_all_models
 from indico.core.plugins import plugin_engine
 from indico.util.console import cformat
 from indico.web.flask.wrappers import IndicoFlask
-from indico_migrate.util import UnbreakingDB, get_storage
+from indico_migrate.util import UnbreakingDB, get_storage, MigrationStateManager
 
 # TODO: handle plugins
 
@@ -43,7 +44,7 @@ def _monkeypatch_config():
     Config.getInstance = staticmethod(_raise_method)
 
 
-def migrate(zodb_uri, zodb_rb_uri, sqlalchemy_uri, verbose=False, dblog=False, **kwargs):
+def migrate(zodb_root, zodb_rb_uri, sqlalchemy_uri, verbose=False, dblog=False, restore_file=None, **kwargs):
     from indico_migrate.steps.events import EventImporter
     from indico_migrate.steps.categories import CategoryImporter
     from indico_migrate.steps.global_post_events import GlobalPostEventsImporter
@@ -54,25 +55,33 @@ def migrate(zodb_uri, zodb_rb_uri, sqlalchemy_uri, verbose=False, dblog=False, *
     steps = (GlobalPreEventsImporter, UserImporter, RoomsLocationsImporter, CategoryImporter, EventImporter,
              RoomBookingsImporter, GlobalPostEventsImporter)
 
-    zodb_root = UnbreakingDB(get_storage(zodb_uri)).open().root()
     app, tz = setup(zodb_root, sqlalchemy_uri)
 
     default_group_provider = kwargs.pop('default_group_provider')
 
     with app.app_context():
-        # XXX: this is quite dirty. we should make it more elegant
-        if not zodb_rb_uri:
-            EventImporter._global_maps.room_mapping = {}
-            EventImporter._global_maps.venue_mapping = {}
+        if restore_file:
+            data = yaml.load(restore_file)
+            MigrationStateManager.load_restore_point(data)
 
-        for step in steps:
-            if step in (RoomsLocationsImporter, RoomBookingsImporter):
-                if zodb_rb_uri:
-                    zodb_rb_root = UnbreakingDB(get_storage(zodb_rb_uri)).open().root()
-                    step(app, sqlalchemy_uri, zodb_root, verbose, dblog, default_group_provider, tz,
-                         rb_root=zodb_rb_root, **kwargs).run()
-            else:
-                step(app, sqlalchemy_uri, zodb_root, verbose, dblog, default_group_provider, tz, **kwargs).run()
+        try:
+            for step in steps:
+                if MigrationStateManager.has_already_run(step):
+                    continue
+                if step in (RoomsLocationsImporter, RoomBookingsImporter):
+                    if zodb_rb_uri:
+                        zodb_rb_root = UnbreakingDB(get_storage(zodb_rb_uri)).open().root()
+                        step(app, sqlalchemy_uri, zodb_root, verbose, dblog, default_group_provider, tz,
+                             rb_root=zodb_rb_root, **kwargs).run()
+                else:
+                    step(app, sqlalchemy_uri, zodb_root, verbose, dblog, default_group_provider, tz, **kwargs).run()
+                MigrationStateManager.register_step(step)
+        except:
+            if kwargs.get('debug'):
+                print cformat('%{yellow}Saving restore point...'),
+                MigrationStateManager.save_restore_point()
+                print cformat('%{green!}DONE')
+            raise
 
 
 def db_has_data():

@@ -61,14 +61,6 @@ class UserImporter(TopLevelMigrationStep):
         self.ignore_local_accounts = kwargs.pop('ignore_local_accounts')
         super(UserImporter, self).__init__(*args, **kwargs)
 
-    def initialize_global_maps(self, g):
-        g.user_favorite_categories = defaultdict(set)
-        g.avatar_merged_user = {}
-        g.all_groups = {}
-        g.users_by_primary_email = {}
-        g.users_by_secondary_email = {}
-        g.users_by_email = {}
-
     def migrate(self):
         self.unresolved_merge_targets = defaultdict(set)
         self.favorite_avatars = {}
@@ -78,8 +70,8 @@ class UserImporter(TopLevelMigrationStep):
         self.migrate_admins()
         self.migrate_groups()
         self.fix_sequences('users', {'groups'})
-        self.global_maps.users_by_email = dict(self.global_maps.users_by_primary_email)
-        self.global_maps.users_by_email.update(self.global_maps.users_by_secondary_email)
+        self.global_ns.users_by_email = dict(self.global_ns.users_by_primary_email)
+        self.global_ns.users_by_email.update(self.global_ns.users_by_secondary_email)
         db.session.commit()
 
     def migrate_users(self):
@@ -89,9 +81,9 @@ class UserImporter(TopLevelMigrationStep):
         for avatar in committing_iterator(self._iter_avatars(), 5000):
             if getattr(avatar, '_mergeTo', None):
                 self.print_warning('Skipping {} - merged into {}'.format(avatar.id, avatar._mergeTo.id))
-                merged_user = self.global_maps.avatar_merged_user.get(avatar._mergeTo.id)
+                merged_user = self.global_ns.avatar_merged_user.get(avatar._mergeTo.id)
                 if merged_user:
-                    self.global_maps.avatar_merged_user[avatar.id] = merged_user
+                    self.global_ns.avatar_merged_user[avatar.id] = merged_user
                 else:
                     # if the merge target hasn't yet been migrated, keep track of it
                     self.unresolved_merge_targets[avatar._mergeTo.id].add(avatar.id)
@@ -116,7 +108,7 @@ class UserImporter(TopLevelMigrationStep):
             # favorite users cannot be migrated here since the target user might not have been migrated yet
             for old_categ in avatar.linkedTo['category']['favorite']:
                 if old_categ:
-                    self.global_maps.user_favorite_categories[old_categ.id].add(user)
+                    self.global_ns.user_favorite_categories[old_categ.id].add(user)
             db.session.flush()
             self.print_success(cformat('%{white!}{:6d}%{reset} %{cyan}{}%{reset} [%{blue!}{}%{reset}] '
                                        '{{%{cyan!}{}%{reset}}}').format(user.id, user.full_name, user.email,
@@ -175,17 +167,18 @@ class UserImporter(TopLevelMigrationStep):
             # to newly created user
             for merged_avatar in getattr(avatar, '_mergeFrom', ()):
                 if merged_avatar.id != avatar.id:
-                    self.global_maps.avatar_merged_user[merged_avatar.id] = user
+                    self.global_ns.avatar_merged_user[merged_avatar.id] = user
 
-            self.global_maps.avatar_merged_user[avatar.id] = user
+            self.global_ns.avatar_merged_user[avatar.id] = user
             if avatar.id in self.unresolved_merge_targets:
                 del self.unresolved_merge_targets[avatar.id]
                 self._resolve_merge_targets(avatar.id, user)
+        db.session.flush()
 
     def _resolve_merge_targets(self, avatar_id, user):
         for source_av, target_av in self.unresolved_merge_targets.items():
             if target_av == avatar_id:
-                self.global_maps.avatar_merged_user[source_av] = user
+                self.global_ns.avatar_merged_user[source_av] = user
                 del self.unresolved_merge_targets[source_av]
                 self._resolve_merge_targets(source_av, user)
 
@@ -221,7 +214,7 @@ class UserImporter(TopLevelMigrationStep):
             user = users[user_id]
             self.print_success(cformat('%{white!}{:6d}%{reset} %{cyan}{}%{reset}').format(user_id, user.full_name))
             for avatar_id in avatars:
-                fav_user = self.global_maps.avatar_merged_user.get(avatar_id)
+                fav_user = self.global_ns.avatar_merged_user.get(avatar_id)
                 if not fav_user:
                     self.print_warning('User not found: {} (in {})'.format(avatar_id, user_id))
                     continue
@@ -230,18 +223,20 @@ class UserImporter(TopLevelMigrationStep):
                                         '%{cyan}{}%{reset}').format(fav_user.id, fav_user.full_name))
             # add the user to his/her own favorites
             user.favorite_users.add(user)
+        db.session.flush()
 
     def migrate_admins(self):
         self.print_step('Admins')
         for avatar in committing_iterator(self.zodb_root['adminlist']._AdminList__list):
             try:
-                user = self.global_maps.avatar_merged_user[avatar.id]
+                user = self.global_ns.avatar_merged_user[avatar.id]
             except ValueError:
                 continue
             if user is None or user.is_deleted:
                 continue
             user.is_admin = True
             self.print_success(cformat('%{cyan}{}').format(user))
+        db.session.flush()
 
     def migrate_groups(self):
         self.print_step('Groups')
@@ -255,7 +250,7 @@ class UserImporter(TopLevelMigrationStep):
                 if old_member.__class__.__name__ != 'Avatar':
                     self.print_warning('Unsupported group member type: {}'.format(old_member.__class__.__name__))
                     continue
-                user = self.global_maps.avatar_merged_user.get(old_member.id)
+                user = self.global_ns.avatar_merged_user.get(old_member.id)
                 if user is None:
                     self.print_warning('User not found: {}'.format(old_member.id))
                     continue
@@ -264,8 +259,9 @@ class UserImporter(TopLevelMigrationStep):
                 self.print_info(cformat('%{blue!}<->%{reset}        %{white!}{:6d} %{yellow}{} ({})').format(
                                     member.id, member.full_name, member.email))
             group.members = members
-            self.global_maps.all_groups[group.id] = group
+            self.global_ns.all_groups[group.id] = group
             db.session.add(group)
+        db.session.flush()
 
     def _user_from_avatar(self, avatar, **kwargs):
         email = sanitize_email(convert_to_unicode(avatar.email).lower().strip())
@@ -319,7 +315,7 @@ class UserImporter(TopLevelMigrationStep):
     def _fix_collisions(self, user, avatar):
         is_deleted = user.is_deleted
         # Mark both users as deleted if there's a primary email collision
-        coll = self.global_maps.users_by_primary_email.get(user.email)
+        coll = self.global_ns.users_by_primary_email.get(user.email)
         if coll and not is_deleted:
             if bool(avatar.identities) ^ bool(coll.identities):
                 # exactly one of them has identities - keep the one that does
@@ -334,22 +330,22 @@ class UserImporter(TopLevelMigrationStep):
                 db.session.flush()
         # if the user was already deleted we don't care about primary email collisions
         if not is_deleted:
-            self.global_maps.users_by_primary_email[user.email] = user
+            self.global_ns.users_by_primary_email[user.email] = user
 
         # Remove primary email from another user's secondary email list
-        coll = self.global_maps.users_by_secondary_email.get(user.email)
+        coll = self.global_ns.users_by_secondary_email.get(user.email)
         if coll and user.merged_into_id != coll.id:
             self.print_msg(cformat('%{magenta!}---%{reset} '
                                    '%{yellow!}1 Removing colliding secondary email (P/S) from {}%{reset} '
                                    '[%{blue!}{}%{reset}]').format(coll, user.email))
             coll.secondary_emails.remove(user.email)
-            del self.global_maps.users_by_secondary_email[user.email]
+            del self.global_ns.users_by_secondary_email[user.email]
             db.session.flush()
 
         # Remove email from both users if there's a collision
         for email in list(user.secondary_emails):
             # colliding with primary email
-            coll = self.global_maps.users_by_primary_email.get(email)
+            coll = self.global_ns.users_by_primary_email.get(email)
             if coll:
                 self.print_msg(cformat('%{magenta!}---%{reset} '
                                        '%{yellow!}Removing colliding secondary email (S/P) from {}%{reset} '
@@ -357,17 +353,17 @@ class UserImporter(TopLevelMigrationStep):
                 user.secondary_emails.remove(email)
                 db.session.flush()
             # colliding with a secondary email
-            coll = self.global_maps.users_by_secondary_email.get(email)
+            coll = self.global_ns.users_by_secondary_email.get(email)
             if coll:
                 self.print_msg(cformat('%{magenta!}---%{reset} '
                                        '%{yellow!}Removing colliding secondary email (S/S) from {}%{reset} '
                                        '[%{blue!}{}%{reset}]').format(user, email))
                 user.secondary_emails.remove(email)
                 db.session.flush()
-                self.global_maps.users_by_secondary_email[email] = coll
+                self.global_ns.users_by_secondary_email[email] = coll
             # if the user was already deleted we don't care about secondary email collisions
             if not is_deleted and email in user.secondary_emails:
-                self.global_maps.users_by_secondary_email[email] = user
+                self.global_ns.users_by_secondary_email[email] = user
 
     def _to_utc(self, dt):
         if dt is None:

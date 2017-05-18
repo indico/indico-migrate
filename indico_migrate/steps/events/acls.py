@@ -35,7 +35,7 @@ class EventACLImporter(EventMigrationStep):
     def process_principal(self, principals, legacy_principal, name, color, full_access=None, roles=None,
                           read_access=None):
         if isinstance(legacy_principal, basestring):
-            user = self.global_maps.users_by_email.get(legacy_principal)
+            user = self.global_ns.users_by_email.get(legacy_principal)
             principal = user or EmailPrincipal(legacy_principal)
         else:
             principal = self.convert_principal(legacy_principal)
@@ -123,7 +123,7 @@ class EventACLImporter(EventMigrationStep):
     def _migrate_domains(self, old_domains):
         for old_domain in old_domains:
             domain_name = convert_to_unicode(old_domain.name).lower()
-            network = self.global_maps.ip_domains.get(domain_name)
+            network = self.global_ns.ip_domains.get(domain_name)
             if not network:
                 self.print_warning('Skipping unknown protection domain: {}'.format(domain_name))
                 continue

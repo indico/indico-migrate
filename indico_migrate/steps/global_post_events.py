@@ -45,8 +45,8 @@ class GlobalPostEventsImporter(TopLevelMigrationStep):
         entries = []
         for entry in mod._objects:
             is_category = type(entry.obj).__name__ == 'Category'
-            obj_id = (self.global_maps.legacy_category_ids[entry.obj.id].id if is_category
-                      else self.global_maps.event_ids[entry.obj.id].id)
+            obj_id = (self.global_ns.legacy_category_ids[entry.obj.id].id if is_category
+                      else self.global_ns.event_ids[entry.obj.id].id)
             entries.append({
                 'weight': float(entry.weight),
                 'days': entry.advertisingDelta.days,
@@ -62,7 +62,7 @@ class GlobalPostEventsImporter(TopLevelMigrationStep):
 
         today = date.today()
         for task in it:
-            survey = self.global_maps.legacy_survey_mapping[task.conf]
+            survey = self.global_ns.legacy_survey_mapping[task.conf]
             start_date = task.conf._evaluations[0].startDate.date()
             if start_date < today:
                 self.print_warning('evaluation starts in the past ({})'.format(start_date))

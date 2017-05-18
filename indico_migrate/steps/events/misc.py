@@ -39,12 +39,8 @@ ALARM_SENT_THRESHOLD = now_utc() - timedelta(days=1)
 
 
 class EventTypeImporter(EventMigrationStep):
-    def initialize_global_maps(self, g):
-        g.wf_registry = {}
-
     def setup(self):
         self.print_info("Fetching data from WF registry")
-        self.global_maps.wf_registry = {}
         for event_id, wf in self._iter_wfs():
             if wf is None:
                 # conferences that have been lectures/meetings in the past
@@ -52,12 +48,12 @@ class EventTypeImporter(EventMigrationStep):
 
             wf_id = WEBFACTORY_NAME_RE.match(wf.__module__).group(1)
             if wf_id in ('simple_event', 'meeting'):
-                self.global_maps.wf_registry[event_id] = wf_id
+                self.global_ns.wf_registry[event_id] = wf_id
             else:
                 self.print_error('Unexpected WF ID: {}'.format(wf_id))
 
     def migrate(self):
-        wf_entry = self.global_maps.wf_registry.get(self.conf.id)
+        wf_entry = self.global_ns.wf_registry.get(self.conf.id)
         if wf_entry is None:
             self.event._type = EventType.conference
         else:
@@ -131,9 +127,6 @@ class EventAlarmImporter(EventMigrationStep):
 
 
 class EventShortUrlsImporter(EventMigrationStep):
-    def initialize_global_maps(self, g):
-        g.used_short_urls = {}
-
     def _validate_shorturl(self, shorturl):
         if shorturl.isdigit():
             return 'only-digits'
@@ -162,7 +155,7 @@ class EventShortUrlsImporter(EventMigrationStep):
             self.print_warning(cformat('%{red}Shorturl %{yellow!}{}%{reset}%{red} is invalid: %{red!}{}')
                                .format(shorturl, error))
             return
-        conflict = self.global_maps.used_short_urls.get(shorturl.lower())
+        conflict = self.global_ns.used_short_urls.get(shorturl.lower())
         if conflict:
             # if there's a conflict caused by the previously case-sensitive url shortcuts,
             # discard them in both events - it's better to get a 404 error than a wrong event
@@ -171,14 +164,14 @@ class EventShortUrlsImporter(EventMigrationStep):
                              .format(shorturl, conflict))
             conflict.url_shortcut = None
             return
-        self.global_maps.used_short_urls[shorturl.lower()] = self.event
+        self.global_ns.used_short_urls[shorturl.lower()] = self.event
         self.event.url_shortcut = shorturl
         self.print_success('{} -> {}'.format(shorturl, self.event.title))
 
 
 class EventMiscImporter(EventMigrationStep):
     def migrate(self):
-        self.global_maps.legacy_event_ids[self.conf.id] = self.event
+        self.global_ns.legacy_event_ids[self.conf.id] = self.event
         self._migrate_location()
         self._migrate_keywords_visibility()
 
@@ -208,14 +201,14 @@ class EventMiscImporter(EventMigrationStep):
         if custom_room:
             room_name = convert_to_unicode(fix_broken_string(custom_room.name, True))
         if location_name and room_name:
-            mapping = self.global_maps.room_mapping.get((location_name, room_name))
+            mapping = self.global_ns.room_mapping.get((location_name, room_name))
             if mapping:
                 has_room = True
                 self.event.own_venue_id = mapping[0]
                 self.event.own_room_id = mapping[1]
         # if we don't have a RB room set, use whatever location/room name we have
         if not has_room:
-            venue_id = self.global_maps.venue_mapping.get(location_name)
+            venue_id = self.global_ns.venue_mapping.get(location_name)
             if venue_id is not None:
                 self.event.own_venue_id = venue_id
                 self.event.own_venue_name = ''

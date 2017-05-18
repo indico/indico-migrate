@@ -45,7 +45,7 @@ class EventSurveyImporter(EventMigrationStep):
     def __init__(self, *args, **kwargs):
         super(EventSurveyImporter, self).__init__(*args, **kwargs)
 
-    def initialize_global_maps(self, g):
+    def initialize_global_ns(self, g):
         g.legacy_survey_mapping = {}
 
     def migrate(self):
@@ -54,7 +54,7 @@ class EventSurveyImporter(EventMigrationStep):
 
         if evaluations and evaluations[0]._questions:
             survey = self.migrate_survey(evaluations[0])
-            self.global_maps.legacy_survey_mapping[self.conf] = survey
+            self.global_ns.legacy_survey_mapping[self.conf] = survey
             db.session.add(survey)
             db.session.flush()
 
@@ -139,7 +139,7 @@ class EventSurveyImporter(EventMigrationStep):
     def migrate_submission(self, old_submission, question_map):
         submitter = old_submission._submitter
         if not old_submission.anonymous and submitter is not None:
-            user = self.global_maps.avatar_merged_user[submitter.id]
+            user = self.global_ns.avatar_merged_user[submitter.id]
         else:
             user = None
 

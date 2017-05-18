@@ -51,6 +51,10 @@ class EventMigrationStep(Importer):
     def is_legacy_event(self):
         return self.context.is_legacy
 
+    @property
+    def event_ns(self):
+        return self.context.event_ns
+
     def run(self):
         self.migrate()
 

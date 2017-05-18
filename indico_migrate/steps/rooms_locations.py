@@ -72,10 +72,6 @@ class RoomsLocationsImporter(TopLevelMigrationStep):
         self.migrate_blockings()
         db.session.commit()
 
-    def initialize_global_maps(self, g):
-        self.global_maps.room_mapping = {}
-        self.global_maps.venue_mapping = {}
-
     def migrate_settings(self):
         rb_settings.delete_all()
         opts = self.zodb_root['plugins']['RoomBooking']._PluginBase__options
@@ -135,7 +131,7 @@ class RoomsLocationsImporter(TopLevelMigrationStep):
                 location.attributes.append(attr)
                 self.print_info(cformat('  %{blue!}Attribute:%{reset} {}').format(attr.title))
 
-            self.global_maps.venue_mapping[location.name] = location.id
+            self.global_ns.venue_mapping[location.name] = location.id
             # add new created location
             db.session.add(location)
         db.session.flush()
@@ -212,7 +208,7 @@ class RoomsLocationsImporter(TopLevelMigrationStep):
 
                 comments=convert_to_unicode(getattr(old_room, 'comments', None)),
 
-                owner=self.global_maps.avatar_merged_user[old_room.responsibleId],
+                owner=self.global_ns.avatar_merged_user[old_room.responsibleId],
 
                 is_active=old_room.isActive,
                 is_reservable=old_room.isReservable,
@@ -284,7 +280,7 @@ class RoomsLocationsImporter(TopLevelMigrationStep):
                 self.print_info(cformat('  %{blue!}Attribute:%{reset} {} = {}')
                                 .format(attr.attribute.title, attr.value))
 
-            self.global_maps.room_mapping[(location.name, r.name)] = (location.id, r.id)
+            self.global_ns.room_mapping[(location.name, r.name)] = (location.id, r.id)
             db.session.add(location)
         db.session.flush()
 
@@ -300,7 +296,7 @@ class RoomsLocationsImporter(TopLevelMigrationStep):
         for old_blocking_id, old_blocking in self.rb_root['RoomBlocking']['Blockings'].iteritems():
             b = Blocking(
                 id=old_blocking.id,
-                created_by_user=self.global_maps.avatar_merged_user[old_blocking._createdBy],
+                created_by_user=self.global_ns.avatar_merged_user[old_blocking._createdBy],
                 created_dt=as_utc(old_blocking._utcCreatedDT),
                 start_date=old_blocking.startDate,
                 end_date=old_blocking.endDate,
@@ -322,9 +318,9 @@ class RoomsLocationsImporter(TopLevelMigrationStep):
 
             for old_principal in old_blocking.allowed:
                 if old_principal._type == 'Avatar':
-                    principal = self.global_maps.avatar_merged_user[old_principal._id]
+                    principal = self.global_ns.avatar_merged_user[old_principal._id]
                 elif old_principal._type == 'Group':
-                    assert int(old_principal.id) in self.global_maps.all_groups
+                    assert int(old_principal.id) in self.global_ns.all_groups
                     principal = GroupProxy(int(old_principal._id))
                 elif old_principal._type in {'CERNGroup', 'LDAPGroup', 'NiceGroup'}:
                     principal = GroupProxy(old_principal._id, self.default_group_provider)

@@ -19,6 +19,7 @@ from __future__ import unicode_literals
 from operator import attrgetter
 
 import pytz
+
 from indico.core.db import db
 from indico.modules.events.models.events import Event
 from indico.modules.events.models.settings import EventSetting
@@ -28,6 +29,7 @@ from indico.util.string import is_legacy_id
 from indico.util.struct.iterables import committing_iterator
 
 from indico_migrate import TopLevelMigrationStep, convert_to_unicode
+from indico_migrate.namespaces import SharedNamespace
 
 
 # this function is here only to avoid import loops
@@ -49,9 +51,22 @@ class SkipEvent(Exception):
 
 
 class _EventContextBase(object):
-    def __init__(self, conf):
+    def __init__(self, conf, debug=False):
         self.conf = conf
         self.is_legacy = False
+        self.event_ns = SharedNamespace('event_ns', None, {
+            'event_persons_by_email': 'dict',
+            'event_persons_by_user': 'dict',
+            'event_persons_by_data': 'dict',
+            'legacy_contribution_type_map': 'dict',
+            'abstract_map': 'dict',
+            'old_abstract_state_map': 'dict',
+            'as_duplicate_reviews': 'dict',
+            'track_map': 'dict',
+            'track_map_by_id': 'dict',
+            'legacy_contribution_field_map': 'dict',
+            'legacy_field_option_id_map': 'dict'
+        })
 
     def create_event(self):
         if is_legacy_id(self.conf.id):
@@ -65,7 +80,7 @@ class _EventContextBase(object):
             raise SkipEvent
 
         try:
-            parent_category = self.importer.global_maps.legacy_category_ids[self.conf._Conference__owners[0].id]
+            parent_category = self.importer.global_ns.legacy_category_ids[self.conf._Conference__owners[0].id]
         except (IndexError, KeyError):
             self.importer.print_error(cformat('%{red!}Event has no category!'), event_id=self.conf.id)
             raise SkipEvent
@@ -113,6 +128,7 @@ class EventImporter(TopLevelMigrationStep):
     def __init__(self, *args, **kwargs):
         self.janitor_user_id = kwargs.pop('janitor_user_id')
         self.janitor = User.get_one(self.janitor_user_id)
+        self.debug = kwargs.get('debug')
         super(EventImporter, self).__init__(*args, **kwargs)
         self.kwargs = kwargs
         self.kwargs['janitor'] = self.janitor
@@ -120,9 +136,6 @@ class EventImporter(TopLevelMigrationStep):
     def has_data(self):
         return (EventSetting.query.filter(EventSetting.module.in_(['core', 'contact'])).has_rows() or
                 Event.query.filter_by(is_locked=True).has_rows())
-
-    def initialize_global_maps(self, g):
-        g.legacy_event_ids = {}
 
     def migrate(self):
         self.migrate_event_data()
@@ -140,7 +153,7 @@ class EventImporter(TopLevelMigrationStep):
 
         self.print_step("Event data")
         for conf in committing_iterator(self._iter_events()):
-            context = EventContext(conf)
+            context = EventContext(conf, self.debug)
             try:
                 context.create_event()
             except SkipEvent:

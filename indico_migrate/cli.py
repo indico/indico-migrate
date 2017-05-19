@@ -48,7 +48,8 @@ click.disable_unicode_literals_warning = True
 
 def except_hook(exc_class, exception, tb):
     from IPython.core import ultratb
-    return ultratb.FormattedTB(mode='Verbose', color_scheme='Linux', call_pdb=1)(exc_class, exception, tb)
+    tb = ultratb.FormattedTB(mode='Verbose', color_scheme='Linux', call_pdb=1, include_vars=False)
+    return tb(exc_class, exception, tb)
 
 
 @click.command()

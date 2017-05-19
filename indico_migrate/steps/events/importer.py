@@ -162,6 +162,9 @@ class EventImporter(TopLevelMigrationStep):
                 with db.session.no_autoflush:
                     context.run_step(importer)
 
+        for importer in importers:
+            importer.teardown()
+
     def _iter_events(self):
         def _it():
             for conf in self.zodb_root['conferences'].itervalues():

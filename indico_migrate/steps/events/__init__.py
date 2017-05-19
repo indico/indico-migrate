@@ -71,6 +71,9 @@ class EventMigrationStep(Importer):
     def setup(self):
         pass
 
+    def teardown(self):
+        pass
+
     def _protection_from_ac(self, target, ac, acl_attr='acl', ac_attr='allowed', allow_public=False):
         """Convert AccessController data to ProtectionMixin style.
 

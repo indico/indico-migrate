@@ -52,8 +52,7 @@ Loader.add_constructor('!zodb', zodb_constructor)
 
 
 STORE_MAP = {
-    'set': lambda x: defaultdict(set, x),
-    'dict': dict
+    'setdict': lambda: defaultdict(set)
 }
 
 
@@ -61,7 +60,7 @@ class SharedNamespace(object):
     def __init__(self, name, zodb_root, store_types):
         self.name = name
         self._store_types = store_types
-        self._stores = {k: STORE_MAP[ktype]({}) for k, ktype in store_types.viewitems()}
+        self._stores = {k: STORE_MAP.get(ktype, ktype)() for k, ktype in store_types.viewitems()}
         MigrationStateManager.register_ns(self)
 
     def __getattr__(self, key):

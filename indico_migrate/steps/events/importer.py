@@ -56,17 +56,20 @@ class _EventContextBase(object):
         self.conf = conf
         self.is_legacy = False
         self.event_ns = SharedNamespace('event_ns', None, {
-            'event_persons_by_email': 'dict',
-            'event_persons_by_user': 'dict',
-            'event_persons_by_data': 'dict',
-            'legacy_contribution_type_map': 'dict',
-            'abstract_map': 'dict',
-            'old_abstract_state_map': 'dict',
-            'as_duplicate_reviews': 'dict',
-            'track_map': 'dict',
-            'track_map_by_id': 'dict',
-            'legacy_contribution_field_map': 'dict',
-            'legacy_field_option_id_map': 'dict'
+            'event_persons_by_email': dict,
+            'event_persons_by_user': dict,
+            'event_persons_by_data': dict,
+            'legacy_contribution_type_map': dict,
+            'abstract_map': dict,
+            'old_abstract_state_map': dict,
+            'as_duplicate_reviews': dict,
+            'track_map': dict,
+            'track_map_by_id': dict,
+            'legacy_contribution_field_map': dict,
+            'legacy_field_option_id_map': dict,
+            'participant_list_disabled': lambda: None,
+            'payment_messages': dict,
+            'payment_currency': lambda: None
         })
 
     def create_event(self):

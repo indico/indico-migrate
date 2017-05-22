@@ -19,7 +19,6 @@ from __future__ import print_function, unicode_literals
 import sys
 import time
 import warnings
-from collections import defaultdict
 from operator import itemgetter
 
 import click
@@ -99,20 +98,20 @@ def cli(sqlalchemy_uri, zodb_uri, rb_zodb_uri, verbose, dblog, debug, restore_fi
     zodb_root = UnbreakingDB(get_storage(zodb_uri)).open().root()
 
     Importer._global_ns = SharedNamespace('global_ns', zodb_root, {
-        'user_favorite_categories': 'set',
-        'room_mapping': 'dict',
-        'venue_mapping': 'dict',
-        'legacy_event_ids': 'dict',
-        'legacy_category_ids': 'dict',
-        'wf_registry': 'dict',
-        'used_short_urls': 'dict',
-        'legacy_survey_mapping': 'dict',
-        'ip_domains': 'dict',
-        'avatar_merged_user': 'dict',
-        'all_groups': 'dict',
-        'users_by_primary_email': 'dict',
-        'users_by_secondary_email': 'dict',
-        'users_by_email': 'dict'
+        'user_favorite_categories': 'setdict',
+        'room_mapping': dict,
+        'venue_mapping': dict,
+        'legacy_event_ids': dict,
+        'legacy_category_ids': dict,
+        'wf_registry': dict,
+        'used_short_urls': dict,
+        'legacy_survey_mapping': dict,
+        'ip_domains': dict,
+        'avatar_merged_user': dict,
+        'all_groups': dict,
+        'users_by_primary_email': dict,
+        'users_by_secondary_email': dict,
+        'users_by_email': dict
     })
 
     migrate(zodb_root, rb_zodb_uri, sqlalchemy_uri, verbose=verbose, dblog=dblog, restore_file=restore_file,

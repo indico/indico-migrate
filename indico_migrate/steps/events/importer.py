@@ -127,10 +127,10 @@ def EventContextFactory(counter, _importer):
 class EventImporter(TopLevelMigrationStep):
 
     def __init__(self, *args, **kwargs):
-        self.janitor_user_id = kwargs.pop('janitor_user_id')
-        self.janitor = User.get_one(self.janitor_user_id)
-        self.debug = kwargs.get('debug')
         super(EventImporter, self).__init__(*args, **kwargs)
+        del kwargs['janitor_user_id']
+        self.janitor = User.get_system_user()
+        self.debug = kwargs.get('debug')
         self.kwargs = kwargs
         self.kwargs['janitor'] = self.janitor
 

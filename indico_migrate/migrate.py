@@ -55,15 +55,20 @@ def migrate(zodb_root, zodb_rb_uri, sqlalchemy_uri, verbose=False, dblog=False, 
     steps = (GlobalPreEventsImporter, UserImporter, RoomsLocationsImporter, CategoryImporter, EventImporter,
              RoomBookingsImporter, GlobalPostEventsImporter)
 
-    app, tz = setup(zodb_root, sqlalchemy_uri)
+    app, tz = setup(zodb_root, sqlalchemy_uri, dblog=dblog)
 
     default_group_provider = kwargs.pop('default_group_provider')
+    save_restore = kwargs.pop('save_restore')
 
     with app.app_context():
         if restore_file:
+            # preload some data, so that we don't have to
+            # retrieve it from the DB later
+            all_users = db.m.User.query.all()
+            all_categories = db.m.Category.query.all()
+            print '{} users, {} categories preloaded'.format(len(all_users), len(all_categories))
             data = yaml.load(restore_file)
             MigrationStateManager.load_restore_point(data)
-
         try:
             for step in steps:
                 if MigrationStateManager.has_already_run(step):
@@ -77,7 +82,7 @@ def migrate(zodb_root, zodb_rb_uri, sqlalchemy_uri, verbose=False, dblog=False, 
                     step(app, sqlalchemy_uri, zodb_root, verbose, dblog, default_group_provider, tz, **kwargs).run()
                 MigrationStateManager.register_step(step)
         except:
-            if kwargs.get('debug'):
+            if save_restore:
                 print cformat('%{yellow}Saving restore point...'),
                 MigrationStateManager.save_restore_point()
                 print cformat('%{green!}DONE')
@@ -110,6 +115,7 @@ def setup(zodb_root, sqlalchemy_uri, dblog=False):
     if dblog:
         app.debug = True
         apply_db_loggers(app)
+
     import_all_models()
     configure_mappers()
     alembic_migrate.init_app(app, db, os.path.join(app.root_path, 'migrations'))

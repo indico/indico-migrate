@@ -48,8 +48,8 @@ click.disable_unicode_literals_warning = True
 
 def except_hook(exc_class, exception, tb):
     from IPython.core import ultratb
-    tb = ultratb.FormattedTB(mode='Verbose', color_scheme='Linux', call_pdb=1, include_vars=False)
-    return tb(exc_class, exception, tb)
+    ftb = ultratb.FormattedTB(mode='Verbose', color_scheme='Linux', call_pdb=1, include_vars=False)
+    return ftb(exc_class, exception, tb)
 
 
 @click.command()
@@ -79,6 +79,7 @@ def except_hook(exc_class, exception, tb):
 @click.option('--photo-path', type=click.Path(exists=True, file_okay=False),
               help="path to the folder containing room photos")
 @click.option('--debug', is_flag=True, default=False, help="Run migration in debug mode (requires ipython)")
+@click.option('--save-restore', is_flag=True, default=False, help="Save a restore point in case of failure")
 @click.option('--restore-file', type=click.File('r'), help="Restore migration from a file (enables debug)")
 def cli(sqlalchemy_uri, zodb_uri, rb_zodb_uri, verbose, dblog, debug, restore_file, **kwargs):
     """
@@ -114,8 +115,8 @@ def cli(sqlalchemy_uri, zodb_uri, rb_zodb_uri, verbose, dblog, debug, restore_fi
         'users_by_email': 'dict'
     })
 
-    migrate(zodb_root, rb_zodb_uri, sqlalchemy_uri, verbose=verbose, dblog=dblog, restore_file=restore_file, debug=debug,
-            **kwargs)
+    migrate(zodb_root, rb_zodb_uri, sqlalchemy_uri, verbose=verbose, dblog=dblog, restore_file=restore_file,
+            debug=debug, **kwargs)
 
 
 class Importer(object):

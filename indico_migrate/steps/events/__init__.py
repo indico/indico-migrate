@@ -19,9 +19,12 @@ from __future__ import unicode_literals
 from pytz import utc as utc_tz
 
 from indico.core.db.sqlalchemy.protection import ProtectionMode
+from indico.modules.events.models.persons import EventPerson
+from indico.modules.users.models.users import UserTitle
 from indico.util.console import cformat
 from indico_migrate.cli import Importer
 from indico_migrate.steps.events.importer import EventImporter
+from indico_migrate.util import strict_sanitize_email, convert_to_unicode
 
 __all__ = ('EventImporter', 'EventMigrationStep')
 
@@ -101,5 +104,32 @@ class EventMigrationStep(Importer):
             raise ValueError('Unexpected protection: {}'.format(ac._accessProtection))
 
     def _naive_to_aware(self, dt, utc=False):
+        """Convert a naive date to a TZ-aware one, using the event's TZ."""
         dt_aware = self.event.tzinfo.localize(dt) if dt.tzinfo is None else dt
         return dt_aware.astimezone(utc_tz) if utc else dt_aware
+
+    def event_person_from_legacy(self, old_person):
+        """Translate an old participation-like object to an EventPerson."""
+        data = dict(first_name=convert_to_unicode(old_person._firstName),
+                    last_name=convert_to_unicode(old_person._surName),
+                    _title=self.USER_TITLE_MAP.get(getattr(old_person, '_title', ''), UserTitle.none),
+                    affiliation=convert_to_unicode(old_person._affilliation),
+                    address=convert_to_unicode(old_person._address),
+                    phone=convert_to_unicode(old_person._telephone))
+        email = strict_sanitize_email(old_person._email)
+        if email:
+            person = (self.event_ns.event_persons_by_email.get(email) or
+                      self.event_ns.event_persons_by_user.get(self.global_ns.users_by_email.get(email)))
+        else:
+            person = self.event_ns.event_persons_by_data.get((data['first_name'], data['last_name'],
+                                                              data['affiliation']))
+        if not person:
+            user = self.global_ns.users_by_email.get(email)
+            person = EventPerson(event_new=self.event, user=user, email=email, **data)
+            if email:
+                self.event_ns.event_persons_by_email[email] = person
+            if user:
+                self.event_ns.event_persons_by_user[user] = person
+            if not email and not user:
+                self.event_ns.event_persons_by_data[person.first_name, person.last_name, person.affiliation] = person
+        return person

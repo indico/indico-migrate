@@ -34,6 +34,7 @@ from indico_migrate.namespaces import SharedNamespace
 
 # this function is here only to avoid import loops
 def _get_all_steps():
+    from indico_migrate.steps.events.abstracts import EventAbstractImporter
     from indico_migrate.steps.events.acls import EventACLImporter
     from indico_migrate.steps.events.layout import EventLayoutImporter, EventImageImporter
     from indico_migrate.steps.events.logs import EventLogImporter
@@ -43,7 +44,7 @@ def _get_all_steps():
     from indico_migrate.steps.events.surveys import EventSurveyImporter
     return (EventMiscImporter, EventTypeImporter, EventACLImporter, EventLogImporter, EventSettingsImporter,
             EventAlarmImporter, EventImageImporter, EventLayoutImporter, EventShortUrlsImporter, EventMenuImporter,
-            EventSurveyImporter, EventLegacyIdImporter)
+            EventSurveyImporter, EventAbstractImporter, EventLegacyIdImporter)
 
 
 class SkipEvent(Exception):

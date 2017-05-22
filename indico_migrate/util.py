@@ -30,6 +30,7 @@ from uuid import uuid4
 
 from indico.core.auth import IndicoMultipass
 from indico.util.console import cformat
+from indico.util.string import sanitize_email
 
 
 class NotBroken(Broken):
@@ -213,6 +214,10 @@ class LocalFileImporterMixin(object):
                 return self.symlink_backend, symlink_name, size
             else:
                 return self.storage_backend, rel_path, size
+
+
+def strict_sanitize_email(email, fallback=None):
+    return sanitize_email(convert_to_unicode(email).lower(), require_valid=True) or fallback
 
 
 class MigrationStateManager(object):

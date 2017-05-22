@@ -56,7 +56,7 @@ class EventLogImporter(EventMigrationStep):
 
     def _migrate_log(self, item):
         user = None
-        if (item._responsibleUser and item._responsibleUser.__class__.__name__ in {'Avatar', 'AvatarUserWrapper'} and
+        if (item._responsibleUser and item._responsibleUser.__class__.__name__ == 'Avatar' and
                 unicode(item._responsibleUser.id).isdigit()):
             user = self.global_ns.avatar_merged_user.get(item._responsibleUser.id)
         module = item._module or 'Unknown'

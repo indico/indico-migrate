@@ -6,6 +6,7 @@ __pycache__/
 
 # configs
 *.conf
+stellar.yaml
 
 # python packaging
 /dist

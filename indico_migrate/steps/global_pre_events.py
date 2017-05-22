@@ -23,9 +23,9 @@ from ipaddress import ip_network
 from operator import attrgetter
 
 from indico.core.db import db
-from indico.modules.api import settings as api_settings
+from indico.modules.api import api_settings
 from indico.modules.core.settings import core_settings, social_settings
-from indico.modules.events.payment import settings as payment_settings
+from indico.modules.events.payment import payment_settings
 from indico.modules.legal import legal_settings
 from indico.modules.networks.models.networks import IPNetworkGroup
 from indico.modules.news import news_settings

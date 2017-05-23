@@ -72,6 +72,7 @@ def migrate(zodb_root, zodb_rb_uri, sqlalchemy_uri, verbose=False, dblog=False, 
         try:
             for step in steps:
                 if MigrationStateManager.has_already_run(step):
+                    print cformat('%{blue!}Skipping previously-run step {}...').format(step.__name__)
                     continue
                 if step in (RoomsLocationsImporter, RoomBookingsImporter):
                     if zodb_rb_uri:
@@ -81,12 +82,11 @@ def migrate(zodb_root, zodb_rb_uri, sqlalchemy_uri, verbose=False, dblog=False, 
                 else:
                     step(app, sqlalchemy_uri, zodb_root, verbose, dblog, default_group_provider, tz, **kwargs).run()
                 MigrationStateManager.register_step(step)
-        except:
+        finally:
             if save_restore:
                 print cformat('%{yellow}Saving restore point...'),
                 MigrationStateManager.save_restore_point()
                 print cformat('%{green!}DONE')
-            raise
 
 
 def db_has_data():

@@ -77,6 +77,8 @@ def except_hook(exc_class, exception, tb):
 @click.option('--rb-zodb-uri', required=False, help="ZODB URI for the room booking database")
 @click.option('--photo-path', type=click.Path(exists=True, file_okay=False),
               help="path to the folder containing room photos")
+@click.option('--reference-type', 'reference_types', multiple=True,
+              help="Reference types ('report numbers'). Can be used multiple times to specify multiple reference types")
 @click.option('--debug', is_flag=True, default=False, help="Run migration in debug mode (requires ipython)")
 @click.option('--save-restore', is_flag=True, default=False, help="Save a restore point in case of failure")
 @click.option('--restore-file', type=click.File('r'), help="Restore migration from a file (enables debug)")
@@ -111,7 +113,8 @@ def cli(sqlalchemy_uri, zodb_uri, rb_zodb_uri, verbose, dblog, debug, restore_fi
         'all_groups': dict,
         'users_by_primary_email': dict,
         'users_by_secondary_email': dict,
-        'users_by_email': dict
+        'users_by_email': dict,
+        'reference_types': dict,
     })
 
     migrate(zodb_root, rb_zodb_uri, sqlalchemy_uri, verbose=verbose, dblog=dblog, restore_file=restore_file,

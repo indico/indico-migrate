@@ -25,6 +25,7 @@ from operator import attrgetter
 from indico.core.db import db
 from indico.modules.api import api_settings
 from indico.modules.core.settings import core_settings, social_settings
+from indico.modules.events.models.references import ReferenceType
 from indico.modules.events.payment import payment_settings
 from indico.modules.legal import legal_settings
 from indico.modules.networks.models.networks import IPNetworkGroup
@@ -44,6 +45,9 @@ def _sanitize_title(title, _ws_re=re.compile(r'\s+')):
 
 
 class GlobalPreEventsImporter(TopLevelMigrationStep):
+    def __init__(self, *args, **kwargs):
+        self.reference_types = kwargs.pop('reference_types')
+        super(GlobalPreEventsImporter, self).__init__(*args, **kwargs)
 
     def migrate(self):
         self.migrate_global_ip_acl()
@@ -55,6 +59,7 @@ class GlobalPreEventsImporter(TopLevelMigrationStep):
         self.migrate_news_settings()
         self.migrate_news()
         self.migrate_networks()
+        self.migrate_reference_types()
         db.session.commit()
 
     def migrate_api_settings(self):
@@ -151,6 +156,14 @@ class GlobalPreEventsImporter(TopLevelMigrationStep):
         mod = self.zodb_root['modules']['news']
         news_settings.set('show_recent', bool(self.makac_info._newsActive))
         news_settings.set('new_days', int(mod._recentDays))
+
+    def migrate_reference_types(self):
+        self.print_step("Migrating reference types")
+        for name in self.reference_types:
+            self.global_ns.reference_types[name] = reftype = ReferenceType(name=name)
+            db.session.add(reftype)
+            self.print_success(name)
+        db.session.commit()
 
     def _iter_domains(self):
         return self.zodb_root['domains'].itervalues()

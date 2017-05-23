@@ -103,7 +103,7 @@ class EventMigrationStep(Importer):
         else:
             raise ValueError('Unexpected protection: {}'.format(ac._accessProtection))
 
-    def _naive_to_aware(self, dt, utc=False):
+    def _naive_to_aware(self, dt, utc=True):
         """Convert a naive date to a TZ-aware one, using the event's TZ."""
         dt_aware = self.event.tzinfo.localize(dt) if dt.tzinfo is None else dt
         return dt_aware.astimezone(utc_tz) if utc else dt_aware

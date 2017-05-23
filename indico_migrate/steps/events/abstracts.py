@@ -191,9 +191,9 @@ class EventAbstractImporter(LocalFileImporterMixin, EventMigrationStep):
         })
 
     def _migrate_settings(self):
-        start_dt = self._naive_to_aware(self.amgr._submissionStartDate, utc=True)
-        end_dt = self._naive_to_aware(self.amgr._submissionEndDate, utc=True)
-        modification_end_dt = (self._naive_to_aware(self.amgr._modifDeadline, utc=True)
+        start_dt = self._naive_to_aware(self.amgr._submissionStartDate)
+        end_dt = self._naive_to_aware(self.amgr._submissionEndDate)
+        modification_end_dt = (self._naive_to_aware(self.amgr._modifDeadline)
                                if getattr(self.amgr, '_modifDeadline', None)
                                else None)
         assert start_dt < end_dt

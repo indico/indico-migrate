@@ -78,8 +78,8 @@ class EventSurveyImporter(EventMigrationStep):
             survey.start_dt = self.event.end_dt
             survey.end_dt = survey.start_dt + timedelta(days=7)
         else:
-            survey.start_dt = self._naive_to_aware(evaluation.startDate).astimezone(utc)
-            survey.end_dt = self._naive_to_aware(evaluation.endDate).astimezone(utc)
+            survey.start_dt = self._naive_to_aware(evaluation.startDate)
+            survey.end_dt = self._naive_to_aware(evaluation.endDate)
         if survey.end_dt < survey.start_dt:
             survey.end_dt = survey.end_dt + timedelta(days=7)
 
@@ -145,8 +145,7 @@ class EventSurveyImporter(EventMigrationStep):
 
         submission = SurveySubmission(is_submitted=True, is_anonymous=(user is None), user=user)
         submitted_dt = old_submission.submissionDate
-        submission.submitted_dt = (submitted_dt if submitted_dt.tzinfo
-                                   else self._naive_to_aware(submitted_dt).astimezone(utc))
+        submission.submitted_dt = submitted_dt if submitted_dt.tzinfo else self._naive_to_aware(submitted_dt)
         self.print_success(" - Submission from user {}".format(submission.user or 'anonymous'))
         for old_answer in old_submission._answers:
             question = question_map[old_answer._question]

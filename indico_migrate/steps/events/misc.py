@@ -21,8 +21,10 @@ from datetime import timedelta
 from operator import itemgetter
 
 from indico.core.db import db
+from indico.modules.events.features.util import set_feature_enabled
 from indico.modules.events.models.events import EventType
 from indico.modules.events.models.legacy_mapping import LegacyEventMapping
+from indico.modules.events.payment import payment_settings, payment_event_settings
 from indico.modules.events.reminders.models.reminders import EventReminder
 from indico.modules.events.settings import event_core_settings, event_contact_settings
 from indico.util.console import cformat, verbose_iterator
@@ -229,3 +231,38 @@ class EventLegacyIdImporter(EventMigrationStep):
             db.session.add(LegacyEventMapping(legacy_event_id=self.conf.id, event_id=self.event.id))
             if not self.quiet:
                 self.print_success(cformat('-> %{cyan}{}').format(self.event.id))
+
+
+class EventPaymentSettingsImporter(EventMigrationStep):
+    def migrate(self):
+        old_payment = self.conf._modPay
+        default_conditions = payment_settings.get('conditions')
+        conditions = (getattr(old_payment, 'paymentConditions', default_conditions)
+                      if (getattr(old_payment, 'paymentConditionsEnabled', False) and
+                          convert_to_unicode(getattr(old_payment, 'specificPaymentConditions', '')).strip() == '')
+                      else getattr(old_payment, 'specificPaymentConditions', ''))
+        # Get rid of the most terrible part of the old default conditions
+        conditions = convert_to_unicode(conditions).replace('CANCELLATION :', 'CANCELLATION:')
+        payment_enabled = getattr(old_payment, 'activated', False)
+        if payment_enabled:
+            set_feature_enabled(self.event, 'payment', True)
+
+        payment_event_settings.set(self.event, 'conditions', conditions)
+
+        register_email = getattr(old_payment, 'receiptMsg', '')
+        success_email = getattr(old_payment, 'successMsg', '')
+
+        # The new messages are shown in an "additional info" section, so the old defaults can always go away
+        if convert_to_unicode(register_email) == 'Please, see the summary of your order:':
+            register_email = ''
+        if convert_to_unicode(success_email) == 'Congratulations, your payment was successful.':
+            success_email = ''
+
+        # save these messages for later, since the settings
+        # are now part of the reg. form
+        self.event_ns.misc_data['payment_currency'] = self.conf._registrationForm._currency
+        self.event_ns.payment_messages['register'] = register_email
+        self.event_ns.payment_messages['success'] = success_email
+
+        self.print_success("Payment enabled={0}, currency={1}".format(payment_enabled,
+                                                                      self.conf._registrationForm._currency))

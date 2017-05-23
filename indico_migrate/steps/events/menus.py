@@ -175,11 +175,19 @@ def _sanitize_title(title):
 class EventMenuImporter(EventMigrationStep):
     def migrate(self):
         dmgr = self.zodb_root['displayRegistery'][self.conf.id]
-        if _get_menu_structure(dmgr) in DEFAULT_MENU_STRUCTURES:
-            return
-        self.print_success('Custom menu')
-        db.session.add_all(self._migrate_menu(self.event, dmgr._menu))
-        layout_settings.set(self.event, 'use_custom_menu', True)
+        if _get_menu_structure(dmgr) not in DEFAULT_MENU_STRUCTURES:
+            self.print_success('Custom menu')
+            new_menu_data = list(self._migrate_menu(self.event, dmgr._menu))
+            db.session.add_all(new_menu_data)
+            layout_settings.set(self.event, 'use_custom_menu', True)
+
+        # set on event context whether "participants" item is enabled
+        # this is used later in the registration form migration
+        entries = [entry for entry in new_menu_data if entry.name == 'participants']
+        assert(len(entries) < 2)
+        self.event_ns.misc_data['participant_list_disabled'] = False
+        if entries:
+            self.event_ns.misc_data['participant_list_disabled'] = entries[0].is_disabled
 
     def _migrate_menu(self, event, container, parent=None, used=None):
         if used is None:

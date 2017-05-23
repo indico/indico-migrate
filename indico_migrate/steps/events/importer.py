@@ -40,11 +40,14 @@ def _get_all_steps():
     from indico_migrate.steps.events.logs import EventLogImporter
     from indico_migrate.steps.events.menus import EventMenuImporter
     from indico_migrate.steps.events.misc import (EventTypeImporter, EventSettingsImporter, EventAlarmImporter,
-                                                  EventShortUrlsImporter, EventMiscImporter, EventLegacyIdImporter)
+                                                  EventShortUrlsImporter, EventMiscImporter, EventLegacyIdImporter,
+                                                  EventPaymentSettingsImporter)
+    from indico_migrate.steps.events.registration import EventRegFormImporter
     from indico_migrate.steps.events.surveys import EventSurveyImporter
     return (EventMiscImporter, EventTypeImporter, EventACLImporter, EventLogImporter, EventSettingsImporter,
-            EventAlarmImporter, EventImageImporter, EventLayoutImporter, EventShortUrlsImporter, EventMenuImporter,
-            EventSurveyImporter, EventAbstractImporter, EventLegacyIdImporter)
+            EventPaymentSettingsImporter, EventAlarmImporter, EventImageImporter, EventLayoutImporter,
+            EventShortUrlsImporter, EventMenuImporter, EventSurveyImporter, EventRegFormImporter,
+            EventAbstractImporter, EventLegacyIdImporter)
 
 
 class SkipEvent(Exception):
@@ -67,9 +70,10 @@ class _EventContextBase(object):
             'track_map_by_id': dict,
             'legacy_contribution_field_map': dict,
             'legacy_field_option_id_map': dict,
-            'participant_list_disabled': lambda: None,
             'payment_messages': dict,
-            'payment_currency': lambda: None
+            'misc_data': dict
+            # -> 'payment_currency': str
+            # -> 'participant_list_disabled': bool
         })
 
     def create_event(self):

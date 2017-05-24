@@ -152,9 +152,16 @@ class EventRegFormImporter(LocalFileImporterMixin, EventMigrationStep):
         self.past_event = self.event.end_dt < now_utc()
 
         try:
-            self.old_regform = self.conf._registrationForm
+            regform = self.conf._registrationForm
         except AttributeError:
             self.print_warning('Event has no regform')
+            return
+
+        self.old_regform = regform
+
+        if (not self.conf._registrants and
+            (not regform.activated or
+             regform.startRegistrationDate.date() == regform.endRegistrationDate.date())):
             return
 
         self.migrate_regform()

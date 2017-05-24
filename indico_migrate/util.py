@@ -20,6 +20,7 @@ import re
 import sys
 import yaml
 from contextlib import contextmanager
+from HTMLParser import HTMLParser
 from urlparse import urlparse
 
 import click
@@ -29,8 +30,13 @@ from ZEO.ClientStorage import ClientStorage
 from uuid import uuid4
 
 from indico.core.auth import IndicoMultipass
+from indico.util.caching import memoize
 from indico.util.console import cformat
 from indico.util.string import sanitize_email
+from indico.web.flask.templating import strip_tags
+
+
+WHITESPACE_RE = re.compile(r'\s+')
 
 
 class NotBroken(Broken):
@@ -218,6 +224,14 @@ class LocalFileImporterMixin(object):
 
 def strict_sanitize_email(email, fallback=None):
     return sanitize_email(convert_to_unicode(email).lower(), require_valid=True) or fallback
+
+
+@memoize
+def sanitize_user_input(string, html=False):
+    string = convert_to_unicode(string)
+    if not html:
+        string = HTMLParser().unescape(strip_tags(string))
+    return WHITESPACE_RE.sub(' ', string).strip()
 
 
 class MigrationStateManager(object):

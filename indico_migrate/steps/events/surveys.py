@@ -18,10 +18,8 @@ from __future__ import unicode_literals
 
 import re
 from datetime import date, timedelta
-from HTMLParser import HTMLParser
 from uuid import uuid4
 
-from pytz import utc
 from sqlalchemy.dialects.postgresql import JSON
 
 from indico.core.db import db
@@ -29,16 +27,9 @@ from indico.modules.events.surveys.models.surveys import Survey
 from indico.modules.events.surveys.models.items import SurveyQuestion, SurveySection
 from indico.modules.events.surveys.models.submissions import SurveySubmission, SurveyAnswer
 from indico.util.console import cformat
-from indico.web.flask.templating import strip_tags
 from indico_migrate import convert_to_unicode
 from indico_migrate.steps.events import EventMigrationStep
-
-
-WHITESPACE_RE = re.compile(r'\s+')
-
-
-def _sanitize(title):
-    return WHITESPACE_RE.sub(' ', HTMLParser().unescape(strip_tags(convert_to_unicode(title)))).strip()
+from indico_migrate.util import sanitize_user_input
 
 
 class EventSurveyImporter(EventMigrationStep):
@@ -62,12 +53,12 @@ class EventSurveyImporter(EventMigrationStep):
         survey = Survey(event_new=self.event)
         title = convert_to_unicode(evaluation.title)
         if title and not title.startswith('Evaluation for '):
-            survey.title = _sanitize(title)
+            survey.title = sanitize_user_input(title)
         if not survey.title:
             survey.title = "Evaluation"
-        survey.introduction = _sanitize(evaluation.announcement)
+        survey.introduction = sanitize_user_input(evaluation.announcement)
         if evaluation.contactInfo:
-            contact_text = "Contact: ".format(_sanitize(evaluation.contactInfo))
+            contact_text = "Contact: ".format(sanitize_user_input(evaluation.contactInfo))
             survey.introduction += "\n\n{}".format(contact_text) if survey.introduction else contact_text
         survey.submission_limit = evaluation.submissionsLimit if evaluation.submissionsLimit else None
         survey.anonymous = evaluation.anonymous
@@ -109,10 +100,10 @@ class EventSurveyImporter(EventMigrationStep):
     def migrate_question(self, old_question, position):
         question = SurveyQuestion()
         question.position = position
-        question.title = _sanitize(old_question.questionValue)
-        question.description = _sanitize(old_question.description)
+        question.title = sanitize_user_input(old_question.questionValue)
+        question.description = sanitize_user_input(old_question.description)
         if old_question.help:
-            help_text = _sanitize(old_question.help)
+            help_text = sanitize_user_input(old_question.help)
             question.description += "\n\nHelp: {}".format(help_text) if question.description else help_text
         question.is_required = old_question.required
         question.field_data = {}
@@ -164,7 +155,7 @@ class EventSurveyImporter(EventMigrationStep):
             if old_answer._answerValue:
                 answer.data = self._get_option_id(question, old_answer._answerValue)
         else:
-            answer.data = _sanitize(old_answer._answerValue)
+            answer.data = sanitize_user_input(old_answer._answerValue)
         self.print_success("   - Answer: {}".format(answer.data))
         return answer
 

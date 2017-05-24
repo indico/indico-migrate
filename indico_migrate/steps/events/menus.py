@@ -17,16 +17,14 @@
 from __future__ import unicode_literals
 
 import re
-from HTMLParser import HTMLParser
 
 from indico.core.db import db
 from indico.modules.events.layout import layout_settings
 from indico.modules.events.layout.models.legacy_mapping import LegacyPageMapping
 from indico.modules.events.layout.models.menu import MenuEntry, MenuEntryType, EventPage
 from indico.util.console import cformat
-from indico.web.flask.templating import strip_tags
-from indico_migrate import convert_to_unicode
 from indico_migrate.steps.events import EventMigrationStep
+from indico_migrate.util import sanitize_user_input
 
 
 class _AltString(object):
@@ -152,8 +150,6 @@ REMOVED_MENU_NAMES = {'ViewMyRegistration', 'NewRegistration', 'downloadETicket'
                       'collaboration', 'instantMessaging'}
 NOT_TOP_LEVEL_NAMES = {'program_my_tracks', 'evaluation_form', 'evaluation_edit'}
 
-WHITESPACE_RE = re.compile(r'\s+')
-
 
 def _menu_item_data(entry, children=True):
     if entry._name in REMOVED_MENU_NAMES:
@@ -166,10 +162,6 @@ def _menu_item_data(entry, children=True):
 
 def _get_menu_structure(display_mgr):
     return filter(None, map(_menu_item_data, display_mgr._menu._listLink))
-
-
-def _sanitize_title(title):
-    return WHITESPACE_RE.sub(' ', HTMLParser().unescape(strip_tags(convert_to_unicode(title)))).strip()
 
 
 class EventMenuImporter(EventMigrationStep):
@@ -210,7 +202,7 @@ class EventMenuImporter(EventMigrationStep):
                     self.print_error(cformat('%{red!}duplicate menu entry name {}; skipping').format(data['name']))
                     continue
                 used.add(data['name'])
-                data['title'] = _sanitize_title(item._caption)
+                data['title'] = sanitize_user_input(item._caption)
                 if not data['title']:
                     data['title'] = None
                     self.print_warning(cformat('%{yellow!}Menu entry {} has no title; using default').format(
@@ -226,7 +218,7 @@ class EventMenuImporter(EventMigrationStep):
                 data['type'] = MenuEntryType.separator
             elif item_type == 'ExternLink':
                 data['type'] = MenuEntryType.user_link
-                data['title'] = _sanitize_title(item._caption)
+                data['title'] = sanitize_user_input(item._caption)
                 data['link_url'] = item._URL.strip()
                 if not data['link_url']:
                     if getattr(item, '_listLink', None):
@@ -242,7 +234,7 @@ class EventMenuImporter(EventMigrationStep):
                         continue
             elif item_type == 'PageLink':
                 data['type'] = MenuEntryType.page
-                data['title'] = _sanitize_title(item._caption)
+                data['title'] = sanitize_user_input(item._caption)
                 data['page'] = EventPage(event_new=event, html=item._page._content)
                 data['page'].legacy_mapping = LegacyPageMapping(event_id=event.id, legacy_page_id=item._page._id)
                 if item._page._isHome:

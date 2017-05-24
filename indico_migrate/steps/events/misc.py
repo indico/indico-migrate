@@ -235,12 +235,15 @@ class EventLegacyIdImporter(EventMigrationStep):
 
 class EventPaymentSettingsImporter(EventMigrationStep):
     def migrate(self):
-        if not hasattr(self.conf, '_modPay'):
-            self.print_warning('Event has no legacy payment data')
+        if not hasattr(self.conf, '_registrationForm') or not hasattr(self.conf, '_modPay'):
+            self.event_ns.misc_data['payment_currency'] = payment_settings.get('currency')
+            self.event_ns.payment_messages.update({
+                'register': '',
+                'success': ''
+            })
+            self.print_info('Event has no legacy payment/registration data')
             return
-        if not hasattr(self.conf, '_registrationForm'):
-            self.print_warning('Event has no legacy registration data')
-            return
+
         old_payment = self.conf._modPay
         default_conditions = payment_settings.get('conditions')
         conditions = (getattr(old_payment, 'paymentConditions', default_conditions)

@@ -528,6 +528,8 @@ class EventRegFormImporter(LocalFileImporterMixin, EventMigrationStep):
         for old_reg in sorted(self.conf._registrants.itervalues(), key=attrgetter('_id')):
             registration = self._migrate_registration(old_reg)
             self._migrate_payment_transaction(old_reg, registration)
+            self.event_ns.misc_data['last_registrant_friendly_id'] = max(
+                int(registration.friendly_id), self.event_ns.misc_data.get('last_registrant_friendly_id', 0))
             self.regform.registrations.append(registration)
 
     def _migrate_registration(self, old_reg):
@@ -605,13 +607,14 @@ class EventRegFormImporter(LocalFileImporterMixin, EventMigrationStep):
                 return
             self.users.add(user)
             registration.user = user
-        if not self.past_event and old_reg._avatar and old_reg._avatar.user:
+        user = self.global_ns.avatar_merged_user.get(old_reg._avatar)
+        if not self.past_event and old_reg._avatar and user:
             if not registration.user:
                 self.print_warning(cformat('No email match; discarding association between {} and {}')
-                                   .format(old_reg._avatar.user, registration))
-            elif registration.user != old_reg._avatar.user:
+                                   .format(user, registration))
+            elif registration.user != user:
                 self.print_warning(cformat('Email matches other user; associating {} with {} instead of {}')
-                                   .format(registration, registration.user, old_reg._avatar.user))
+                                   .format(registration, registration.user, old_reg._avatar))
 
     def _migrate_registration_statuses(self, old_reg, registration):
         for old_status in getattr(old_reg, '_statuses', {}).itervalues():

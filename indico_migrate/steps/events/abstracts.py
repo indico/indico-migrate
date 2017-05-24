@@ -14,7 +14,7 @@
 # You should have received a copy of the GNU General Public License
 # along with Indico; if not, see <http://www.gnu.org/licenses/>.
 
-from __future__ import unicode_literals, division
+from __future__ import division, unicode_literals
 
 import mimetypes
 import textwrap
@@ -33,15 +33,13 @@ from indico.modules.events.abstracts.models.files import AbstractFile
 from indico.modules.events.abstracts.models.persons import AbstractPersonLink
 from indico.modules.events.abstracts.models.review_questions import AbstractReviewQuestion
 from indico.modules.events.abstracts.models.review_ratings import AbstractReviewRating
-from indico.modules.events.abstracts.models.reviews import AbstractReview, AbstractAction
-from indico.modules.events.abstracts.settings import (abstracts_settings, boa_settings, abstracts_reviewing_settings,
-                                                      BOACorrespondingAuthorType, BOASortField)
+from indico.modules.events.abstracts.models.reviews import AbstractAction, AbstractReview
+from indico.modules.events.abstracts.settings import (BOACorrespondingAuthorType, BOASortField,
+                                                      abstracts_reviewing_settings, abstracts_settings, boa_settings)
 from indico.modules.events.contributions.models.fields import ContributionField
 from indico.modules.events.contributions.models.persons import AuthorType
 from indico.modules.events.contributions.models.types import ContributionType
 from indico.modules.events.features.util import set_feature_enabled
-from indico.modules.events.tracks.models.tracks import Track
-from indico.modules.events.tracks.settings import track_settings
 from indico.modules.users.models.users import UserTitle
 from indico.util.console import cformat
 from indico.util.date_time import as_utc
@@ -50,10 +48,6 @@ from indico.util.fs import secure_filename
 from indico_migrate import convert_to_unicode
 from indico_migrate.steps.events import EventMigrationStep
 from indico_migrate.util import LocalFileImporterMixin, strict_sanitize_email
-
-
-# TODO: Contribution tracks
-# TODO: Set abstract contributions
 
 
 class EventAbstractImporter(LocalFileImporterMixin, EventMigrationStep):
@@ -115,7 +109,6 @@ class EventAbstractImporter(LocalFileImporterMixin, EventMigrationStep):
             return
         with db.session.no_autoflush:
             self._migrate_feature()
-            self._migrate_tracks()
             self._migrate_boa_settings()
             self._migrate_settings()
             self._migrate_review_settings()
@@ -123,15 +116,7 @@ class EventAbstractImporter(LocalFileImporterMixin, EventMigrationStep):
             self._migrate_contribution_types()
             self._migrate_contribution_fields()
             self._migrate_abstracts()
-            self._migrate_contribution_tracks()
         db.session.flush()
-
-    def _user_from_legacy(self, legacy_user, janitor=False):
-        user = self.convert_principal(legacy_user)
-        if user:
-            return user
-        self.print_error(cformat('%{red!}Invalid legacy user: {}').format(legacy_user))
-        return self.janitor if janitor else None
 
     def _migrate_feature(self):
         if self.amgr._activated:
@@ -152,29 +137,6 @@ class EventAbstractImporter(LocalFileImporterMixin, EventMigrationStep):
                 self.print_info(cformat('%{cyan}Contribution type%{reset} {}').format(ct.name))
             self.event_ns.legacy_contribution_type_map[old_ct] = ct
             self.event.contribution_types.append(ct)
-
-    def _migrate_tracks(self):
-        program = convert_to_unicode(getattr(self.conf, 'programDescription', ''))
-        if program:
-            track_settings.set_multi(self.event, {'program_render_mode': RenderMode.html, 'program': program})
-        for pos, old_track in enumerate(self.conf.program, 1):
-            track = Track(title=convert_to_unicode(old_track.title),
-                          description=convert_to_unicode(old_track.description),
-                          code=convert_to_unicode(old_track._code),
-                          position=pos,
-                          abstract_reviewers=set())
-            self.print_info(cformat('%{white!}Track:%{reset} {}').format(track.title))
-            for coordinator in old_track._coordinators:
-                user = self._user_from_legacy(coordinator)
-                if user is None:
-                    continue
-                self.print_info(cformat('%{blue!}  Coordinator:%{reset} {}').format(user))
-                track.conveners.add(user)
-                track.abstract_reviewers.add(user)
-                self.event.update_principal(user, add_roles={'abstract_reviewer', 'track_convener'}, quiet=True)
-            self.event_ns.track_map[old_track] = track
-            self.event_ns.track_map_by_id[int(old_track.id)] = track
-            self.event.tracks.append(track)
 
     def _migrate_boa_settings(self):
         boa_config = self.conf._boa
@@ -214,7 +176,7 @@ class EventAbstractImporter(LocalFileImporterMixin, EventMigrationStep):
             'allow_attachments': bool(getattr(self.amgr, '_attachFiles', False)),
             'allow_speakers': bool(getattr(self.amgr, '_showSelectAsSpeaker', True)),
             'speakers_required': bool(getattr(self.amgr, '_selectSpeakerMandatory', True)),
-            'authorized_submitters': set(filter(None, map(self._user_from_legacy, self.amgr._authorizedSubmitter)))
+            'authorized_submitters': set(filter(None, map(self.user_from_legacy, self.amgr._authorizedSubmitter)))
         })
 
     def _migrate_review_settings(self):
@@ -365,7 +327,7 @@ class EventAbstractImporter(LocalFileImporterMixin, EventMigrationStep):
         self.event.abstract_email_templates.append(tpl)
 
     def _migrate_abstract(self, old_abstract):
-        submitter = self._user_from_legacy(old_abstract._submitter._user, janitor=True)
+        submitter = self.user_from_legacy(old_abstract._submitter._user, janitor=True)
         submitted_dt = old_abstract._submissionDate
         modified_dt = (old_abstract._modificationDate
                        if (submitted_dt - old_abstract._modificationDate) > timedelta(seconds=10)
@@ -412,9 +374,8 @@ class EventAbstractImporter(LocalFileImporterMixin, EventMigrationStep):
                 old_accepted_track = old_abstract._currentStatus._track
                 accepted_track_id = int(old_accepted_track.id) if old_accepted_track else None
 
-        # XXX: When contribution migration works
-        # if old_contribution and old_contribution.id:
-        #     abstract.contribution = self.legacy_contribution_map[old_contribution]
+        if old_contribution and old_contribution.id is not None:
+            self.event_ns.legacy_contribution_abstracts[old_contribution] = abstract
 
         try:
             accepted_track = (self.event_ns.track_map_by_id.get(accepted_track_id)
@@ -436,7 +397,7 @@ class EventAbstractImporter(LocalFileImporterMixin, EventMigrationStep):
             abstract.accepted_track = accepted_track
 
         if abstract.state in self.JUDGED_STATES:
-            abstract.judge = self._user_from_legacy(old_state._responsible, janitor=True)
+            abstract.judge = self.user_from_legacy(old_state._responsible, janitor=True)
             abstract.judgment_dt = as_utc(old_state._date)
 
         # files
@@ -454,7 +415,7 @@ class EventAbstractImporter(LocalFileImporterMixin, EventMigrationStep):
 
         # internal comments
         for old_comment in old_abstract._intComments:
-            comment = AbstractComment(user=self._user_from_legacy(old_comment._responsible),
+            comment = AbstractComment(user=self.user_from_legacy(old_comment._responsible),
                                       text=convert_to_unicode(old_comment._content),
                                       created_dt=old_comment._creationDate,
                                       modified_dt=old_comment._modificationDate)
@@ -503,20 +464,6 @@ class EventAbstractImporter(LocalFileImporterMixin, EventMigrationStep):
                 # not needed but avoids some warnings about the object not in the session
                 review.track = None
                 review.user = None
-
-    def _migrate_contribution_tracks(self):
-        # for contrib in Contribution.find(Contribution.event_new == event, ~Contribution.legacy_track_id.is_(None)):
-        #     if contrib.legacy_track_id not in self.track_map_by_id:
-        #         self.print_warning(cformat(
-        #             "%{yellow!}{} %{reset}assigned to track %{yellow!}{}%{reset} which doesn't exist. Unassigning it.")
-        #             .format(contrib, contrib.track_id))
-        #         contrib.track = None
-        #         continue
-        #
-        #     track = self.track_map_by_id[contrib.legacy_track_id]
-        #     contrib.track = track
-        #     self.print_success(cformat('%{blue!}{} %{reset}-> %{yellow!}{}').format(contrib, track))
-        pass
 
     def _migrate_abstract_reviews(self, abstract, old_abstract):
         if not hasattr(old_abstract, '_trackJudgementsHistorical'):
@@ -643,7 +590,7 @@ class EventAbstractImporter(LocalFileImporterMixin, EventMigrationStep):
             email_template = self.email_template_map.get(old_entry._tpl)
             email_template_name = email_template.title if email_template else convert_to_unicode(old_entry._tpl._name)
             entry = AbstractEmailLogEntry(email_template=email_template, sent_dt=old_entry._date,
-                                          user=self._user_from_legacy(old_entry._responsible),
+                                          user=self.user_from_legacy(old_entry._responsible),
                                           recipients=[], subject='<not available>', body='<not available>',
                                           data={'_legacy': True, 'template_name': email_template_name or '<unnamed>'})
             abstract.email_logs.append(entry)

@@ -22,9 +22,11 @@ from indico.core.db.sqlalchemy.protection import ProtectionMode
 from indico.modules.events.models.persons import EventPerson
 from indico.modules.users.models.users import UserTitle
 from indico.util.console import cformat
+
 from indico_migrate.cli import Importer
 from indico_migrate.steps.events.importer import EventImporter
-from indico_migrate.util import strict_sanitize_email, convert_to_unicode
+from indico_migrate.util import convert_to_unicode, strict_sanitize_email
+
 
 __all__ = ('EventImporter', 'EventMigrationStep')
 
@@ -78,6 +80,13 @@ class EventMigrationStep(Importer):
 
     def teardown(self):
         pass
+
+    def user_from_legacy(self, legacy_user, janitor=False):
+        user = self.convert_principal(legacy_user)
+        if user:
+            return user
+        self.print_error(cformat('%{red!}Invalid legacy user: {}').format(legacy_user))
+        return self.janitor if janitor else None
 
     def _protection_from_ac(self, target, ac, acl_attr='acl', ac_attr='allowed', allow_public=False):
         """Convert AccessController data to ProtectionMixin style.

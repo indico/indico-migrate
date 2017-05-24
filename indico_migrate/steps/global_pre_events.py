@@ -17,10 +17,10 @@
 from __future__ import unicode_literals
 
 import re
-
 from HTMLParser import HTMLParser
-from ipaddress import ip_network
 from operator import attrgetter
+
+from ipaddress import ip_network
 
 from indico.core.db import db
 from indico.modules.api import api_settings
@@ -47,6 +47,7 @@ def _sanitize_title(title, _ws_re=re.compile(r'\s+')):
 class GlobalPreEventsImporter(TopLevelMigrationStep):
     def __init__(self, *args, **kwargs):
         self.reference_types = kwargs.pop('reference_types')
+        self.default_currency = kwargs.pop('default_currency')
         super(GlobalPreEventsImporter, self).__init__(*args, **kwargs)
 
     def migrate(self):
@@ -111,6 +112,8 @@ class GlobalPreEventsImporter(TopLevelMigrationStep):
         payment_settings.set('currencies', currencies)
         for currency in currencies:
             self.print_info(("saving currency: name='{name}', code={code}").format(**currency))
+        payment_settings.set('currency', self.default_currency)
+        self.print_info(("default currency: {}").format(self.default_currency))
 
         db.session.commit()
 

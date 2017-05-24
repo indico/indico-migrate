@@ -55,7 +55,7 @@ def migrate(zodb_root, zodb_rb_uri, sqlalchemy_uri, verbose=False, dblog=False, 
     steps = (GlobalPreEventsImporter, UserImporter, RoomsLocationsImporter, CategoryImporter, EventImporter,
              RoomBookingsImporter, GlobalPostEventsImporter)
 
-    app, tz = setup(zodb_root, sqlalchemy_uri, dblog=dblog)
+    app, tz = setup(zodb_root, sqlalchemy_uri, dblog=dblog, restore=(restore_file is not None))
 
     default_group_provider = kwargs.pop('default_group_provider')
     save_restore = kwargs.pop('save_restore')
@@ -99,7 +99,7 @@ def db_has_data():
     return False
 
 
-def setup(zodb_root, sqlalchemy_uri, dblog=False):
+def setup(zodb_root, sqlalchemy_uri, dblog=False, restore=False):
     app = IndicoFlask('indico_migrate')
     app.config['PLUGINENGINE_NAMESPACE'] = 'indico.plugins'
     app.config['SQLALCHEMY_DATABASE_URI'] = sqlalchemy_uri
@@ -126,7 +126,7 @@ def setup(zodb_root, sqlalchemy_uri, dblog=False):
         tz = pytz.utc
 
     with app.app_context():
-        if db_has_data():
+        if db_has_data() and not restore:
             # Usually there's no good reason to migrate with data in the DB. However, during development one might
             # comment out some migration tasks and run the migration anyway.
             print(cformat('%{yellow!}*** WARNING'))

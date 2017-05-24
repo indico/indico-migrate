@@ -23,11 +23,9 @@ from decimal import Decimal
 from operator import attrgetter
 from uuid import uuid4
 
-from sqlalchemy.dialects.postgresql import JSON
 from sqlalchemy.orm.attributes import flag_modified
 
 from indico.core.db import db
-from indico.core.db.sqlalchemy import UTCDateTime, PyIntEnum
 from indico.modules.events import Event
 from indico.modules.events.features.util import set_feature_enabled
 from indico.modules.events.registration.models.form_fields import (RegistrationFormPersonalDataField,
@@ -41,7 +39,7 @@ from indico.modules.events.payment.models.transactions import TransactionStatus,
 from indico.util.console import cformat
 from indico.util.date_time import now_utc, as_utc
 from indico.util.fs import secure_filename
-from indico.util.string import normalize_phone_number, format_repr
+from indico.util.string import normalize_phone_number
 
 from indico_migrate import convert_to_unicode
 from indico_migrate.steps.events import EventMigrationStep
@@ -120,24 +118,6 @@ def _get_worldpay_data(ti_data):
             '_old_provider': 'worldpay'
         }
     }
-
-
-class OldPaymentTransaction(db.Model):
-    __tablename__ = 'payment_transactions_old'
-    __table_args__ = {'schema': 'events'}
-
-    id = db.Column(db.Integer, primary_key=True)
-    event_id = db.Column(db.Integer)
-    registrant_id = db.Column(db.Integer)
-    status = db.Column(PyIntEnum(TransactionStatus))
-    amount = db.Column(db.Numeric(8, 2))
-    currency = db.Column(db.String)
-    provider = db.Column(db.String)
-    timestamp = db.Column(UTCDateTime)
-    data = db.Column(JSON)
-
-    def __repr__(self):
-        return format_repr(self, 'id', 'registrant_id', 'status', 'provider', 'amount', 'currency', 'timestamp')
 
 
 class EventRegFormImporter(LocalFileImporterMixin, EventMigrationStep):

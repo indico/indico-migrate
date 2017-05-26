@@ -30,7 +30,7 @@ from indico.util.console import cformat, clear_line
 
 from indico_migrate.migrate import migrate
 from indico_migrate.namespaces import SharedNamespace
-from indico_migrate.util import UnbreakingDB, convert_to_unicode, get_storage
+from indico_migrate.util import UnbreakingDB, convert_to_unicode, get_storage, MigrationStateManager
 
 
 click.disable_unicode_literals_warning = True
@@ -110,6 +110,10 @@ def cli(sqlalchemy_uri, zodb_uri, rb_zodb_uri, verbose, dblog, debug, restore_fi
         'users_by_email': dict,
         'reference_types': dict,
     })
+
+    # register the global namespace, so that it gets dumped to disk
+    # in the event of a failure
+    MigrationStateManager.register_ns(Importer._global_ns)
 
     migrate(zodb_root, rb_zodb_uri, sqlalchemy_uri, verbose=verbose, dblog=dblog, restore_file=restore_file,
             debug=debug, **kwargs)

@@ -23,8 +23,6 @@ from yaml import Dumper, Loader
 
 from indico.core.db import db
 
-from indico_migrate.util import MigrationStateManager
-
 
 def sqlalchemy_representer(dumper, obj):
     return dumper.represent_sequence('!sqlalchemy', [obj.__class__.__name__,
@@ -62,7 +60,6 @@ class SharedNamespace(object):
         self.name = name
         self._store_types = store_types
         self._stores = {k: STORE_MAP.get(ktype, ktype)() for k, ktype in store_types.viewitems()}
-        MigrationStateManager.register_ns(self)
 
     def __getattr__(self, key):
         return self._stores[key]

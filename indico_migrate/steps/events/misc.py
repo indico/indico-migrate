@@ -192,7 +192,7 @@ class EventMiscImporter(EventMigrationStep):
         self.event.visibility = self._convert_visibility(self.conf._visibility)
         old_keywords = getattr(self.conf, '_keywords', None)
         if old_keywords is None:
-            self.print_warning("Conference object has no '_keywords' attribute")
+            self.print_info("Conference object has no '_keywords' attribute")
             return
         keywords = self._convert_keywords(old_keywords)
         if keywords:

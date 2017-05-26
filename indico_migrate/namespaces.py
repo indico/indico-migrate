@@ -39,9 +39,9 @@ def sqlalchemy_constructor(loader, node):
 
 
 def zodb_constructor(loader, node):
-    oid = loader.construct_scalar(node)
+    oid = loader.construct_sequence(node)[0]
     # XXX: somehow retrieve the zodb root here
-    return zodb_root._p_jar[oid]
+    return loader.zodb_root._p_jar[oid]
 
 
 Dumper.add_multi_representer(db.Model, sqlalchemy_representer)

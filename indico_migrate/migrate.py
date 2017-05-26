@@ -46,6 +46,13 @@ def _monkeypatch_config():
     Config.getInstance = staticmethod(_raise_method)
 
 
+def _zodb_powered_loader(_zodb_root):
+    class _ZODBLoader(yaml.Loader):
+        zodb_root = _zodb_root
+
+    return _ZODBLoader
+
+
 def migrate(zodb_root, zodb_rb_uri, sqlalchemy_uri, verbose=False, dblog=False, restore_file=None, **kwargs):
     from indico_migrate.steps.events import EventImporter
     from indico_migrate.steps.categories import CategoryImporter
@@ -69,7 +76,7 @@ def migrate(zodb_root, zodb_rb_uri, sqlalchemy_uri, verbose=False, dblog=False, 
             all_users = db.m.User.query.all()
             all_categories = db.m.Category.query.all()
             print '{} users, {} categories preloaded'.format(len(all_users), len(all_categories))
-            data = yaml.load(restore_file)
+            data = yaml.load(restore_file, Loader=_zodb_powered_loader(zodb_root))
             MigrationStateManager.load_restore_point(data)
         try:
             for step in steps:

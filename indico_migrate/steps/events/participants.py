@@ -168,6 +168,7 @@ class EventParticipantsImporter(EventMigrationStep):
             registration = self._migrate_participant(old_part)
             registration.friendly_id = n
             self.regform.registrations.append(registration)
+        db.session.flush()
 
     def _migrate_participant(self, old_part):
         state = PARTICIPANT_STATUS_MAP.get(old_part._status, RegistrationState.complete)

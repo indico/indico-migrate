@@ -167,6 +167,7 @@ class EventRegFormImporter(LocalFileImporterMixin, EventMigrationStep):
 
         self.migrate_regform()
         set_feature_enabled(self.event, 'registration', True)
+        db.session.flush()
 
     def migrate_regform(self):
         self.regform = RegistrationForm(event_id=int(self.event.id), base_price=0,

@@ -33,6 +33,8 @@ from indico_migrate.util import sanitize_user_input
 
 
 class EventSurveyImporter(EventMigrationStep):
+    step_id = 'survey'
+
     def __init__(self, *args, **kwargs):
         super(EventSurveyImporter, self).__init__(*args, **kwargs)
 

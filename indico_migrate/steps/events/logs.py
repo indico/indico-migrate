@@ -39,6 +39,8 @@ def _convert_data(conf, value):
 
 
 class EventLogImporter(EventMigrationStep):
+    step_id = 'logs'
+
     def migrate(self):
         if not hasattr(self.conf, '_logHandler'):
             self.print_error('Event has no log handler!')

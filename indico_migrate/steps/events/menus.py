@@ -165,6 +165,8 @@ def _get_menu_structure(display_mgr):
 
 
 class EventMenuImporter(EventMigrationStep):
+    step_id = 'menus'
+
     def migrate(self):
         dmgr = self.zodb_root['displayRegistery'][self.conf.id]
         if _get_menu_structure(dmgr) not in DEFAULT_MENU_STRUCTURES:

@@ -30,6 +30,7 @@ __all__ = ('EventImporter', 'EventMigrationStep')
 
 
 class EventMigrationStep(Importer):
+    step_id = '?'
 
     def __init__(self, *args, **kwargs):
         super(EventMigrationStep, self).__init__(*args, **kwargs)
@@ -64,7 +65,8 @@ class EventMigrationStep(Importer):
     @property
     def prefix(self):
         if self.conf:
-            return cformat('%{grey!}{:<12}%{reset}').format('[' + self.conf.id + ']')
+            return cformat('%{cyan}{:<12}%{reset} %{grey!}{:<10}%{reset}').format(
+                '[{}]'.format(self.conf.id), '[{}]'.format(self.step_id))
         else:
             return ''
 

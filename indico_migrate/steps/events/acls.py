@@ -32,6 +32,8 @@ PROTECTION_MODE_MAP = {-1: ProtectionMode.public, 0: ProtectionMode.inheriting, 
 
 
 class EventACLImporter(EventMigrationStep):
+    step_id = 'acl'
+
     def process_principal(self, principals, legacy_principal, name, color, full_access=None, roles=None,
                           read_access=None):
         if isinstance(legacy_principal, basestring):

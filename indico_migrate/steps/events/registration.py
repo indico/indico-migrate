@@ -121,6 +121,7 @@ def _get_worldpay_data(ti_data):
 
 
 class EventRegFormImporter(LocalFileImporterMixin, EventMigrationStep):
+    step_id = 'regform'
 
     def teardown(self):
         # sync friendly ids

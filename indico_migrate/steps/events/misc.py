@@ -41,6 +41,8 @@ ALARM_SENT_THRESHOLD = now_utc() - timedelta(days=1)
 
 
 class EventTypeImporter(EventMigrationStep):
+    step_id = 'type'
+
     def setup(self):
         self.print_info("Fetching data from WF registry")
         for event_id, wf in self._iter_wfs():
@@ -72,6 +74,8 @@ class EventTypeImporter(EventMigrationStep):
 
 
 class EventSettingsImporter(EventMigrationStep):
+    step_id = 'settings'
+
     def migrate(self):
         if getattr(self.conf, '_screenStartDate', None):
             event_core_settings.set(self.event, 'start_dt_override', self.conf._screenStartDate)
@@ -98,6 +102,8 @@ class EventSettingsImporter(EventMigrationStep):
 
 
 class EventAlarmImporter(EventMigrationStep):
+    step_id = 'alarm'
+
     def migrate(self):
         for alarm in self.conf.alarmList.itervalues():
             if not alarm.startDateTime:
@@ -129,6 +135,8 @@ class EventAlarmImporter(EventMigrationStep):
 
 
 class EventShortUrlsImporter(EventMigrationStep):
+    step_id = 'shorturl'
+
     def _validate_shorturl(self, shorturl):
         if shorturl.isdigit():
             return 'only-digits'
@@ -172,6 +180,8 @@ class EventShortUrlsImporter(EventMigrationStep):
 
 
 class EventMiscImporter(EventMigrationStep):
+    step_id = 'misc'
+
     def migrate(self):
         self.global_ns.legacy_event_ids[self.conf.id] = self.event
         self._migrate_location()
@@ -226,6 +236,8 @@ class EventMiscImporter(EventMigrationStep):
 
 
 class EventLegacyIdImporter(EventMigrationStep):
+    step_id = 'legacyid'
+
     def migrate(self):
         if self.is_legacy_event:
             db.session.add(LegacyEventMapping(legacy_event_id=self.conf.id, event_id=self.event.id))
@@ -234,6 +246,8 @@ class EventLegacyIdImporter(EventMigrationStep):
 
 
 class EventPaymentSettingsImporter(EventMigrationStep):
+    step_id = 'paymsett'
+
     def migrate(self):
         if not hasattr(self.conf, '_registrationForm') or not hasattr(self.conf, '_modPay'):
             self.event_ns.misc_data['payment_currency'] = payment_settings.get('currency')

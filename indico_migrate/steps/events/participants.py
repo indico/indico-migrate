@@ -55,6 +55,8 @@ PARTICIPANT_STATUS_MAP = {
 
 
 class EventParticipantsImporter(EventMigrationStep):
+    step_id = 'part'
+
     def migrate(self):
         self.regform = None
         self.emails = set()

@@ -41,6 +41,8 @@ ALLOWED_THEMES = {'orange.css', 'brown.css', 'right_menu.css'}
 
 
 class EventImageImporter(LocalFileImporterMixin, EventMigrationStep):
+    step_id = 'image'
+
     def __init__(self, *args, **kwargs):
         super(EventImageImporter, self).__init__(*args, **kwargs)
         self._set_config_options(**kwargs)
@@ -84,10 +86,12 @@ class EventImageImporter(LocalFileImporterMixin, EventMigrationStep):
             for _, picture in imgr._picList.iteritems():
                 yield picture
         else:
-            self.print_warning('No _imagesMngr attribute!')
+            self.print_info('No _imagesMngr attribute!')
 
 
 class EventLayoutImporter(EventMigrationStep):
+    step_id = 'layout'
+
     def __init__(self, *args, **kwargs):
         super(EventLayoutImporter, self).__init__(*args, **kwargs)
         self.default_styles = self.zodb_root['MaKaCInfo']['main']._styleMgr._defaultEventStylesheet

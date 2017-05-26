@@ -57,6 +57,8 @@ from indico_migrate.util import LocalFileImporterMixin, strict_sanitize_email
 
 
 class EventAbstractImporter(LocalFileImporterMixin, EventMigrationStep):
+    step_id = 'abstract'
+
     CONDITION_MAP = {'NotifTplCondAccepted': AbstractState.accepted,
                      'NotifTplCondRejected': AbstractState.rejected,
                      'NotifTplCondMerged': AbstractState.merged}

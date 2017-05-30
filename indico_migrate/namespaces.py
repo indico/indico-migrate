@@ -35,6 +35,9 @@ def zodb_representer(dumper, obj):
 
 def sqlalchemy_constructor(loader, node):
     data = loader.construct_sequence(node)
+    if data[1] is None:
+        # object was never persisted
+        return None
     return getattr(db.m, data[0]).get(data[1])
 
 

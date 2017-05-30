@@ -529,7 +529,10 @@ class EventRegFormImporter(LocalFileImporterMixin, EventMigrationStep):
     def _migrate_registrations(self):
         for old_reg in sorted(self.conf._registrants.itervalues(), key=attrgetter('_id')):
             registration = self._migrate_registration(old_reg)
-            self._migrate_payment_transaction(old_reg, registration)
+            currency = self._migrate_payment_transaction(old_reg, registration)
+            # if no currency (or transaction) was found, use the default
+            registration.currency = currency or self.event_ns.misc_data['payment_currency']
+
             self.event_ns.misc_data['last_registrant_friendly_id'] = max(
                 int(registration.friendly_id), self.event_ns.misc_data.get('last_registrant_friendly_id', 0))
             self.regform.registrations.append(registration)
@@ -987,8 +990,6 @@ class EventRegFormImporter(LocalFileImporterMixin, EventMigrationStep):
     def _migrate_payment_transaction(self, registrant, registration):
         transaction = getattr(registrant, '_transactionInfo', None)
         if not transaction:
-            # take event payment currency by default
-            registration.currency = self.event_ns.misc_data['payment_currency']
             return
         try:
             data = self._get_transaction_data(transaction, self.event)
@@ -1003,13 +1004,13 @@ class EventRegFormImporter(LocalFileImporterMixin, EventMigrationStep):
 
         elif data['amount'] < 0.0:
             self.print_warning("Skipping {0[provider]} transaction with negative amount (reg. {1}): "
-                               "'{0[amount]} {0[currency]}").format(data, registrant._id)
+                               "'{0[amount]} {0[currency]}".format(data, registrant._id))
             return
 
         txn = PaymentTransaction(registration=registration, status=TransactionStatus.successful, **data)
-        registration.currency = data['currency']
         self.print_success(unicode(txn))
         db.session.add(txn)
+        return data['currency']
 
     def _get_transaction_data(self, ti, event):
         mapping = {

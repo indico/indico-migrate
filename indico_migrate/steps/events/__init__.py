@@ -32,6 +32,7 @@ __all__ = ('EventImporter', 'EventMigrationStep')
 
 
 class EventMigrationStep(Importer):
+    USER_TITLE_MAP = {unicode(x.title): x for x in UserTitle}
     step_id = '?'
 
     def __init__(self, *args, **kwargs):
@@ -119,28 +120,44 @@ class EventMigrationStep(Importer):
         dt_aware = self.event.tzinfo.localize(dt) if dt.tzinfo is None else dt
         return dt_aware.astimezone(utc_tz) if utc else dt_aware
 
-    def event_person_from_legacy(self, old_person):
+    def event_person_from_legacy(self, old_person, skip_empty_email=False, skip_empty_names=False):
         """Translate an old participation-like object to an EventPerson."""
         data = dict(first_name=convert_to_unicode(old_person._firstName),
                     last_name=convert_to_unicode(old_person._surName),
                     _title=self.USER_TITLE_MAP.get(getattr(old_person, '_title', ''), UserTitle.none),
-                    affiliation=convert_to_unicode(old_person._affilliation),
+                    affiliation=convert_to_unicode(getattr(old_person, '_affiliation', None) or
+                                                   getattr(old_person, '_affilliation', None)),
                     address=convert_to_unicode(old_person._address),
-                    phone=convert_to_unicode(old_person._telephone))
+                    phone=convert_to_unicode(getattr(old_person, '_telephone', None) or
+                                             getattr(old_person, '_phone', None)))
+        if skip_empty_names and not data['first_name'] and not data['last_name']:
+            self.print_warning(cformat('%{yellow!}Skipping nameless event person'))
+            return None
         email = strict_sanitize_email(old_person._email)
         if email:
             person = (self.event_ns.event_persons_by_email.get(email) or
                       self.event_ns.event_persons_by_user.get(self.global_ns.users_by_email.get(email)))
+        elif skip_empty_email:
+            return None
         else:
             person = self.event_ns.event_persons_by_data.get((data['first_name'], data['last_name'],
                                                               data['affiliation']))
         if not person:
             user = self.global_ns.users_by_email.get(email)
             person = EventPerson(event_new=self.event, user=user, email=email, **data)
-            if email:
-                self.event_ns.event_persons_by_email[email] = person
-            if user:
-                self.event_ns.event_persons_by_user[user] = person
-            if not email and not user:
-                self.event_ns.event_persons_by_data[person.first_name, person.last_name, person.affiliation] = person
+            self.add_event_person(person)
         return person
+
+    def add_event_person(self, person):
+        if person.email:
+            self.event_ns.event_persons_by_email[person.email] = person
+        if person.user:
+            self.event_ns.event_persons_by_user[person.user] = person
+        if not person.email and not person.user:
+            self.event_ns.event_persons_by_data[person.first_name, person.last_name, person.affiliation] = person
+
+    def get_event_person_by_email(self, email):
+        if not email:
+            return None
+        return (self.event_ns.event_persons_by_email.get(email) or
+                self.event_ns.event_persons_by_user.get(self.global_ns.users_by_email.get(email)))

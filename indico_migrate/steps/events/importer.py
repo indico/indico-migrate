@@ -136,7 +136,6 @@ def EventContextFactory(counter, _importer):
 
 
 class EventImporter(TopLevelMigrationStep):
-
     def __init__(self, *args, **kwargs):
         super(EventImporter, self).__init__(*args, **kwargs)
         del kwargs['janitor_user_id']
@@ -150,11 +149,19 @@ class EventImporter(TopLevelMigrationStep):
                 Event.query.filter_by(is_locked=True).has_rows())
 
     def migrate(self):
-        self.migrate_event_data()
+        tables = ('timetable_entries', 'session_blocks', 'contributions', 'breaks')
+        for table in tables:
+            db.engine.execute(db.text('ALTER TABLE events.{} DISABLE TRIGGER consistent_timetable'.format(table)))
+        try:
+            self.migrate_event_data()
+        finally:
+            for table in tables:
+                db.engine.execute(db.text('ALTER TABLE events.{} ENABLE TRIGGER consistent_timetable'.format(table)))
         db.session.commit()
 
     def migrate_event_data(self):
         all_event_steps = _get_all_steps()
+        all_event_steps = [x for x in all_event_steps if x.__name__ != 'EventLogImporter']  # XXX: remove this
 
         importers = [importer(self.app, self.sqlalchemy_uri, self.zodb_root, not self.quiet, self.dblog,
                               self.default_group_provider, self.tz, **self.kwargs) for importer in all_event_steps]

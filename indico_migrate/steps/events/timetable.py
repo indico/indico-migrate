@@ -47,12 +47,12 @@ from indico.modules.events.timetable.models.entries import TimetableEntry
 from indico.modules.events.tracks import Track
 from indico.modules.events.tracks.settings import track_settings
 from indico.modules.rb import Location, Room
-from indico.modules.users.legacy import AvatarUserWrapper
 from indico.modules.users.models.users import UserTitle
 from indico.util.console import cformat
 from indico.util.string import fix_broken_string, is_valid_mail, sanitize_email
 from indico_migrate import convert_to_unicode
 from indico_migrate.steps.events import EventMigrationStep
+from indico_migrate.util import strict_sanitize_email
 
 
 PROTECTION_MODE_MAP = {
@@ -87,6 +87,8 @@ def most_common(iterable, key=None):
 
 
 class EventTracksImporter(EventMigrationStep):
+    step_id = 'tracks'
+
     def migrate(self):
         program = convert_to_unicode(getattr(self.conf, 'programDescription', ''))
         if program:
@@ -112,19 +114,20 @@ class EventTracksImporter(EventMigrationStep):
 
 
 class EventTimetableImporter(EventMigrationStep):
+    step_id = 'timetable'
+
     def setup(self):
         self.room_mapping = {(r.location.name, r.name): r for r in Room.query.options(lazyload(Room.owner),
                                                                                       joinedload(Room.location))}
         self.venue_mapping = {location.name: location for location in Location.query}
-        self.event_person_map = {}  # XXX: should be in event_ns for sure
         self.legacy_session_map = {}
         self.legacy_session_ids_used = set()
         self.legacy_contribution_map = {}
 
     def migrate(self):
         self._migrate_references()
-        # self._migrate_event_persons()
-        # self._migrate_event_persons_links()
+        self._migrate_event_persons()
+        self._migrate_event_persons_links()
         self._migrate_sessions()
         self._migrate_contributions()
         self._migrate_timetable()
@@ -259,9 +262,8 @@ class EventTimetableImporter(EventMigrationStep):
         self._process_principal_emails(ContributionPrincipal, principals, getattr(old_contrib, '_submittersEmail', []),
                                        'Submitter', roles={'submit'})
         contrib.acl_entries = set(principals.itervalues())
-        # TODO
         # speakers, authors and co-authors
-        # contrib.person_links = list(self._migrate_contribution_person_links(old_contrib))
+        contrib.person_links = list(self._migrate_contribution_person_links(old_contrib))
         # references ("report numbers")
         contrib.references = list(self._process_references(ContributionReference, old_contrib))
         # contribution/abstract fields
@@ -281,8 +283,7 @@ class EventTimetableImporter(EventMigrationStep):
                                                                  legacy_contribution_id=old_contrib.id,
                                                                  legacy_subcontribution_id=old_subcontrib.id)
         subcontrib.references = list(self._process_references(SubContributionReference, old_subcontrib))
-        # TODO
-        # subcontrib.person_links = list(self._migrate_subcontribution_person_links(old_subcontrib))
+        subcontrib.person_links = list(self._migrate_subcontribution_person_links(old_subcontrib))
         return subcontrib
 
     def _migrate_contribution_field_values(self, old_contrib):
@@ -395,8 +396,7 @@ class EventTimetableImporter(EventMigrationStep):
                                                                      legacy_session_id=old_block.session.id,
                                                                      legacy_session_block_id=old_block.id)
         self._migrate_location(old_block, session_block)
-        # TODO
-        # session_block.person_links = list(self._migrate_session_block_person_links(old_block))
+        session_block.person_links = list(self._migrate_session_block_person_links(old_block))
         self._migrate_timetable_entries(old_block._schedule._entries, session_block)
         return session_block.timetable_entry
 
@@ -553,49 +553,6 @@ class EventTimetableImporter(EventMigrationStep):
     def _process_keywords(self, keywords):
         return map(convert_to_unicode, keywords.splitlines())
 
-
-# TODO adapt/remove old stuff
-class __Old_TimetableMigration(object):
-    def _create_person(self, old_person, with_event=False, skip_empty_email=False):
-        email = getattr(old_person, '_email', None) or getattr(old_person, 'email', None)
-        email = sanitize_email(convert_to_unicode(email).lower()) if email else email
-        if email and not is_valid_mail(email, False):
-            email = None
-            if skip_empty_email:
-                self.print_warning(cformat('%{yellow!}Skipping invalid email {}').format(email))
-        if not email and skip_empty_email:
-            return None
-        person = EventPerson(event_new=self.event if with_event else None,
-                             email=email, **self._get_person_data(old_person))
-        if not person.first_name and not person.last_name:
-            self.print_warning(cformat('%{yellow!}Skipping nameless event person'))
-            return None
-        return person
-
-    def _get_person(self, old_person):
-        email = getattr(old_person, '_email', None) or getattr(old_person, 'email', None)
-        email = sanitize_email(convert_to_unicode(email).lower()) if email else email
-        if not is_valid_mail(email, False):
-            email = None
-        return self.event_person_map.get(email) if email else self._create_person(old_person, with_event=True)
-
-    def _get_person_data(self, old_person):
-        data = {}
-        if isinstance(old_person, AvatarUserWrapper):
-            for old_meth, new_attr in AVATAR_PERSON_INFO_MAP.iteritems():
-                data[new_attr] = convert_to_unicode(getattr(old_person, old_meth)())
-        else:
-            for old_attr, new_attr in PERSON_INFO_MAP.iteritems():
-                data[new_attr] = convert_to_unicode(getattr(old_person, old_attr, ''))
-        data['_title'] = USER_TITLE_MAP.get(getattr(old_person, '_title', ''), UserTitle.none)
-        return data
-
-    def _update_link_data(self, link, data_list):
-        for attr in PERSON_INFO_MAP.itervalues():
-            value = most_common(data_list, key=itemgetter(attr))
-            if value and value != getattr(link, attr):
-                setattr(link, attr, value)
-
     def _migrate_event_persons(self):
         all_persons = defaultdict(list)
         old_people = []
@@ -618,28 +575,38 @@ class __Old_TimetableMigration(object):
                 for convener in getattr(old_block, '_conveners', []):
                     old_people.append(convener)
         for old_person in old_people:
-            person = self._create_person(old_person, skip_empty_email=True)
+            person = self.event_person_from_legacy(old_person, skip_empty_email=True, skip_empty_names=True)
             if person:
                 user = self.global_ns.users_by_email.get(person.email)
                 email = user.email if user else person.email
                 all_persons[email].append(person)
         for email, persons in all_persons.iteritems():
-            person = EventPerson(email=email,
-                                 event_new=self.event,
-                                 user=self.global_ns.users_by_email.get(email),
-                                 first_name=most_common(persons, key=attrgetter('first_name')),
-                                 last_name=most_common(persons, key=attrgetter('last_name')),
-                                 _title=most_common(persons, key=attrgetter('_title')),
-                                 affiliation=most_common(persons, key=attrgetter('affiliation')),
-                                 address=most_common(persons, key=attrgetter('address')),
-                                 phone=most_common(persons, key=attrgetter('phone')))
-            self.event_person_map[email] = person
-            if person.user:
-                for user_email in person.user.all_emails:
-                    self.event_person_map[user_email] = person
+            person = self.get_event_person_by_email(email)
+            if not person:
+                person = EventPerson(email=email,
+                                     event_new=self.event,
+                                     user=self.global_ns.users_by_email.get(email),
+                                     first_name=most_common(persons, key=attrgetter('first_name')),
+                                     last_name=most_common(persons, key=attrgetter('last_name')),
+                                     _title=most_common(persons, key=attrgetter('_title')),
+                                     affiliation=most_common(persons, key=attrgetter('affiliation')),
+                                     address=most_common(persons, key=attrgetter('address')),
+                                     phone=most_common(persons, key=attrgetter('phone')))
+                self.add_event_person(person)
             if not self.quiet:
                 msg = cformat('%{magenta!}Event Person%{reset} {}({})').format(person.full_name, person.email)
                 self.print_info(msg)
+
+    def _get_person(self, old_person):
+        email = getattr(old_person, '_email', None) or getattr(old_person, 'email', None)
+        email = strict_sanitize_email(convert_to_unicode(email).lower()) if email else email
+        return self.get_event_person_by_email(email)
+
+    def _get_person_data(self, old_person):
+        data = {new_attr: convert_to_unicode(getattr(old_person, old_attr, ''))
+                for old_attr, new_attr in PERSON_INFO_MAP.iteritems()}
+        data['_title'] = USER_TITLE_MAP.get(getattr(old_person, '_title', ''), UserTitle.none)
+        return data
 
     def _migrate_event_persons_links(self):
         person_link_map = {}
@@ -649,13 +616,17 @@ class __Old_TimetableMigration(object):
                 continue
             link = person_link_map.get(person)
             if link:
-                self.print_warning(
-                    cformat('%{yellow!}Duplicated chair "{}" for event').format(person.full_name)
-                )
+                self.print_warning(cformat('%{yellow!}Duplicated chair "{}" for event').format(person.full_name))
             else:
                 link = EventPersonLink(person=person, **self._get_person_data(chair))
                 person_link_map[person] = link
                 self.event.person_links.append(link)
+
+    def _update_link_data(self, link, data_list):
+        for attr in PERSON_INFO_MAP.itervalues():
+            value = most_common(data_list, key=itemgetter(attr))
+            if value and value != getattr(link, attr):
+                setattr(link, attr, value)
 
     def _migrate_contribution_person_links(self, old_entry):
         person_link_map = {}

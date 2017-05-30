@@ -76,8 +76,6 @@ class EventAbstractImporter(LocalFileImporterMixin, EventMigrationStep):
                   'AbstractReallocation': AbstractAction.change_tracks,
                   'AbstractMarkedAsDuplicated': AbstractAction.mark_as_duplicate}
 
-    USER_TITLE_MAP = {unicode(x.title): x for x in UserTitle}
-
     SUBMISSION_NOTIFICATION_BODY = textwrap.dedent('''
         We've received your abstract "{abstract_title}" to which we have assigned id #{abstract_id}.
 

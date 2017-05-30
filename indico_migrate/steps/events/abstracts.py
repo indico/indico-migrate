@@ -86,6 +86,7 @@ class EventAbstractImporter(LocalFileImporterMixin, EventMigrationStep):
     def __init__(self, *args, **kwargs):
         super(EventAbstractImporter, self).__init__(*args, **kwargs)
         self.default_email = kwargs.get('default_email')
+        self._set_config_options(**kwargs)
 
     def teardown(self):
         self.fix_sequences('event_abstracts', {'abstracts'})
@@ -551,7 +552,7 @@ class EventAbstractImporter(LocalFileImporterMixin, EventMigrationStep):
             if not value:
                 continue
             try:
-                new_field = self.event_ns.legacy_contribution_field_map.get(field_id)
+                new_field = self.event_ns.legacy_contribution_field_map[field_id]
             except KeyError:
                 self.print_warning(cformat('%{yellow!}Contribution field "{}" does not exist').format(field_id))
                 continue

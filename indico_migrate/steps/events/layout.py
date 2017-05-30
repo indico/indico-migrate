@@ -16,17 +16,17 @@
 
 from __future__ import unicode_literals
 
-import os
 import mimetypes
+import os
 from io import BytesIO
+
 from PIL import Image
 
 from indico.core.db import db
+from indico.modules.events.layout import layout_settings
 from indico.modules.events.layout.models.images import ImageFile
 from indico.modules.events.layout.models.legacy_mapping import LegacyImageMapping
-from indico.modules.events.layout import layout_settings
 from indico.modules.events.models.events import EventType
-
 from indico.util.console import cformat
 from indico.util.date_time import now_utc
 from indico.util.fs import secure_filename

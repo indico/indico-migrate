@@ -18,9 +18,9 @@ from __future__ import unicode_literals
 
 import os
 import sys
-import yaml
 
 import pytz
+import yaml
 from sqlalchemy.orm import configure_mappers
 
 from indico.core.db.sqlalchemy import db
@@ -30,7 +30,9 @@ from indico.core.db.sqlalchemy.util.models import import_all_models
 from indico.core.plugins import plugin_engine
 from indico.util.console import cformat
 from indico.web.flask.wrappers import IndicoFlask
-from indico_migrate.util import UnbreakingDB, get_storage, MigrationStateManager
+
+from indico_migrate.util import MigrationStateManager, UnbreakingDB, get_storage
+
 
 # TODO: handle plugins
 

@@ -22,6 +22,7 @@ from persistent import Persistent
 from yaml import Dumper, Loader
 
 from indico.core.db import db
+
 from indico_migrate.util import MigrationStateManager
 
 

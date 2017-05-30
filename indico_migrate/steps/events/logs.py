@@ -16,12 +16,13 @@
 
 from __future__ import unicode_literals
 
-from datetime import timedelta, datetime
+from datetime import datetime, timedelta
 
 from indico.core.db import db
-from indico.modules.events.logs import EventLogEntry, EventLogRealm, EventLogKind
-from indico.util.date_time import format_human_timedelta, format_datetime
+from indico.modules.events.logs import EventLogEntry, EventLogKind, EventLogRealm
+from indico.util.date_time import format_datetime, format_human_timedelta
 from indico.util.string import seems_html
+
 from indico_migrate import convert_to_unicode
 from indico_migrate.steps.events import EventMigrationStep
 

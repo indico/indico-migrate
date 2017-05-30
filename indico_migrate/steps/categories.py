@@ -15,10 +15,10 @@
 # along with Indico; if not, see <http://www.gnu.org/licenses/>.
 
 
-from __future__ import unicode_literals, division
+from __future__ import division, unicode_literals
 
-import re
 import os
+import re
 from HTMLParser import HTMLParser
 from io import BytesIO
 from operator import attrgetter
@@ -34,11 +34,11 @@ from indico.modules.events.layout import theme_settings
 from indico.modules.networks.models.networks import IPNetworkGroup
 from indico.util.console import cformat
 from indico.util.fs import secure_filename
-from indico.util.string import crc32, sanitize_email, is_valid_mail, is_legacy_id
+from indico.util.string import crc32, is_legacy_id, is_valid_mail, sanitize_email
 from indico.web.flask.templating import strip_tags
 
 from indico_migrate import TopLevelMigrationStep, convert_to_unicode
-from indico_migrate.util import patch_default_group_provider, get_archived_file
+from indico_migrate.util import get_archived_file, patch_default_group_provider
 
 
 class CategoryImporter(TopLevelMigrationStep):

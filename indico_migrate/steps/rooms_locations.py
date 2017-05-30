@@ -29,14 +29,14 @@ from indico.modules.rb.models.blockings import Blocking
 from indico.modules.rb.models.equipment import EquipmentType
 from indico.modules.rb.models.locations import Location
 from indico.modules.rb.models.photos import Photo
-from indico.modules.rb.models.room_attributes import RoomAttributeAssociation, RoomAttribute
+from indico.modules.rb.models.room_attributes import RoomAttribute, RoomAttributeAssociation
 from indico.modules.rb.models.room_bookable_hours import BookableHours
 from indico.modules.rb.models.room_nonbookable_periods import NonBookablePeriod
 from indico.modules.rb.models.rooms import Room
-
 from indico.util.console import cformat
 from indico.util.date_time import as_utc
 from indico.util.string import is_valid_mail
+
 from indico_migrate import TopLevelMigrationStep, convert_to_unicode
 
 

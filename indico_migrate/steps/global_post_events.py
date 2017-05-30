@@ -19,8 +19,8 @@ from __future__ import unicode_literals
 import itertools
 import re
 from datetime import date
-
 from HTMLParser import HTMLParser
+
 from indico.modules.categories import upcoming_events_settings
 from indico.web.flask.templating import strip_tags
 

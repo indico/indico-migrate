@@ -50,6 +50,7 @@ from indico.modules.rb import Location, Room
 from indico.modules.users.models.users import UserTitle
 from indico.util.console import cformat
 from indico.util.string import fix_broken_string, is_valid_mail, sanitize_email
+
 from indico_migrate import convert_to_unicode
 from indico_migrate.steps.events import EventMigrationStep
 from indico_migrate.util import strict_sanitize_email

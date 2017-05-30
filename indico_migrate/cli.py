@@ -18,31 +18,24 @@ from __future__ import print_function, unicode_literals
 
 import sys
 import time
-import warnings
 from operator import itemgetter
 
 import click
-from flask.exthook import ExtDeprecationWarning
 from sqlalchemy.sql import func, select
-
-warnings.simplefilter('ignore', ExtDeprecationWarning)  # some of our dependencies still use flask.ext :(
-
-def _inject_unicode_debug(s, level=1):
-    return s
-
-# inject_unicode_debug happens to access the Config object
-import indico.util.string as indico_util_string
-indico_util_string.__dict__['inject_unicode_debug'] = _inject_unicode_debug
 
 from indico.core.db.sqlalchemy import db
 from indico.modules.groups import GroupProxy
-from indico.modules.users.models.users import User
+from indico.util import string as indico_util_string
 from indico.util.console import cformat, clear_line
+
 from indico_migrate.migrate import migrate
 from indico_migrate.namespaces import SharedNamespace
-from indico_migrate.util import convert_to_unicode, MigrationStateManager, UnbreakingDB, get_storage
+from indico_migrate.util import UnbreakingDB, convert_to_unicode, get_storage
+
 
 click.disable_unicode_literals_warning = True
+# inject_unicode_debug happens to access the Config object
+indico_util_string.inject_unicode_debug = lambda s, level=1: s
 
 
 def except_hook(exc_class, exception, tb):

@@ -14,7 +14,10 @@
 # You should have received a copy of the GNU General Public License
 # along with Indico; if not, see <http://www.gnu.org/licenses/>.
 
+from __future__ import unicode_literals
+
 from .cli import Importer, TopLevelMigrationStep
 from .util import convert_to_unicode, option_value
+
 
 __all__ = ('Importer', 'TopLevelMigrationStep', 'convert_to_unicode', 'option_value')

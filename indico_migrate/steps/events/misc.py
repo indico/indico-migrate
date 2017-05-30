@@ -24,12 +24,13 @@ from indico.core.db import db
 from indico.modules.events.features.util import set_feature_enabled
 from indico.modules.events.models.events import EventType
 from indico.modules.events.models.legacy_mapping import LegacyEventMapping
-from indico.modules.events.payment import payment_settings, payment_event_settings
+from indico.modules.events.payment import payment_event_settings, payment_settings
 from indico.modules.events.reminders.models.reminders import EventReminder
-from indico.modules.events.settings import event_core_settings, event_contact_settings
+from indico.modules.events.settings import event_contact_settings, event_core_settings
 from indico.util.console import cformat, verbose_iterator
 from indico.util.date_time import now_utc
 from indico.util.string import fix_broken_string
+
 from indico_migrate import convert_to_unicode
 from indico_migrate.steps.events import EventMigrationStep
 

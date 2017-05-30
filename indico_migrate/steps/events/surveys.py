@@ -23,10 +23,11 @@ from uuid import uuid4
 from sqlalchemy.dialects.postgresql import JSON
 
 from indico.core.db import db
-from indico.modules.events.surveys.models.surveys import Survey
 from indico.modules.events.surveys.models.items import SurveyQuestion, SurveySection
-from indico.modules.events.surveys.models.submissions import SurveySubmission, SurveyAnswer
+from indico.modules.events.surveys.models.submissions import SurveyAnswer, SurveySubmission
+from indico.modules.events.surveys.models.surveys import Survey
 from indico.util.console import cformat
+
 from indico_migrate import convert_to_unicode
 from indico_migrate.steps.events import EventMigrationStep
 from indico_migrate.util import sanitize_user_input

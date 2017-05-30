@@ -1,11 +1,15 @@
-from setuptools import setup, find_packages
-from codecs import open
-from os import path
+from __future__ import unicode_literals
 
-here = path.abspath(path.dirname(__file__))
+import codecs
+import os
+
+from setuptools import find_packages, setup
+
+
+here = os.path.abspath(os.path.dirname(__file__))
 
 # Get the long description from the README file
-with open(path.join(here, 'README.rst'), encoding='utf-8') as f:
+with codecs.open(os.path.join(here, 'README.rst'), encoding='utf-8') as f:
     long_description = f.read()
 
 setup(

@@ -21,8 +21,9 @@ import re
 from indico.core.db import db
 from indico.modules.events.layout import layout_settings
 from indico.modules.events.layout.models.legacy_mapping import LegacyPageMapping
-from indico.modules.events.layout.models.menu import MenuEntry, MenuEntryType, EventPage
+from indico.modules.events.layout.models.menu import EventPage, MenuEntry, MenuEntryType
 from indico.util.console import cformat
+
 from indico_migrate.steps.events import EventMigrationStep
 from indico_migrate.util import sanitize_user_input
 

@@ -23,6 +23,7 @@ from indico.core.db.sqlalchemy.protection import ProtectionMode
 from indico.modules.events.models.principals import EventPrincipal
 from indico.util.console import cformat
 from indico.util.string import is_valid_mail, sanitize_email
+
 from indico_migrate import convert_to_unicode
 from indico_migrate.steps.events import EventMigrationStep
 from indico_migrate.util import patch_default_group_provider

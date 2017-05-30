@@ -25,11 +25,10 @@ from indico.core.db import db
 from indico.modules.events.features.util import set_feature_enabled
 from indico.modules.events.payment import payment_settings
 from indico.modules.events.registration.models.form_fields import RegistrationFormField
-from indico.modules.events.registration.models.forms import RegistrationForm, ModificationMode
-from indico.modules.events.registration.models.items import RegistrationFormSection, PersonalDataType
-from indico.modules.events.registration.models.registrations import Registration, RegistrationState, RegistrationData
+from indico.modules.events.registration.models.forms import ModificationMode, RegistrationForm
+from indico.modules.events.registration.models.items import PersonalDataType, RegistrationFormSection
+from indico.modules.events.registration.models.registrations import Registration, RegistrationData, RegistrationState
 from indico.modules.events.registration.util import create_personal_data_fields
-
 from indico.util.console import cformat
 from indico.util.date_time import now_utc
 from indico.util.string import normalize_phone_number

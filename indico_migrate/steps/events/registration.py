@@ -18,7 +18,7 @@ from __future__ import unicode_literals
 
 import mimetypes
 from copy import deepcopy
-from datetime import timedelta, datetime
+from datetime import datetime, timedelta
 from decimal import Decimal
 from operator import attrgetter
 from uuid import uuid4
@@ -28,16 +28,16 @@ from sqlalchemy.orm.attributes import flag_modified
 from indico.core.db import db
 from indico.modules.events import Event
 from indico.modules.events.features.util import set_feature_enabled
-from indico.modules.events.registration.models.form_fields import (RegistrationFormPersonalDataField,
-                                                                   RegistrationFormField, RegistrationFormFieldData)
-from indico.modules.events.registration.models.forms import RegistrationForm, ModificationMode
-from indico.modules.events.registration.models.items import (RegistrationFormSection, PersonalDataType,
-                                                             RegistrationFormPersonalDataSection, RegistrationFormText)
+from indico.modules.events.payment.models.transactions import PaymentTransaction, TransactionStatus
+from indico.modules.events.registration.models.form_fields import (RegistrationFormField, RegistrationFormFieldData,
+                                                                   RegistrationFormPersonalDataField)
+from indico.modules.events.registration.models.forms import ModificationMode, RegistrationForm
+from indico.modules.events.registration.models.items import (PersonalDataType, RegistrationFormPersonalDataSection,
+                                                             RegistrationFormSection, RegistrationFormText)
 from indico.modules.events.registration.models.legacy_mapping import LegacyRegistrationMapping
-from indico.modules.events.registration.models.registrations import Registration, RegistrationState, RegistrationData
-from indico.modules.events.payment.models.transactions import TransactionStatus, PaymentTransaction
+from indico.modules.events.registration.models.registrations import Registration, RegistrationData, RegistrationState
 from indico.util.console import cformat
-from indico.util.date_time import now_utc, as_utc
+from indico.util.date_time import as_utc, now_utc
 from indico.util.fs import secure_filename
 from indico.util.string import normalize_phone_number
 

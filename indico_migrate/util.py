@@ -14,20 +14,22 @@
 # You should have received a copy of the GNU General Public License
 # along with Indico; if not, see <http://www.gnu.org/licenses/>.
 
+from __future__ import unicode_literals
+
 import errno
 import os
 import re
 import sys
-import yaml
 from contextlib import contextmanager
 from HTMLParser import HTMLParser
 from urlparse import urlparse
+from uuid import uuid4
 
 import click
-from ZODB import DB, FileStorage
-from ZODB.broken import find_global, Broken
+import yaml
 from ZEO.ClientStorage import ClientStorage
-from uuid import uuid4
+from ZODB import DB, FileStorage
+from ZODB.broken import Broken, find_global
 
 from indico.core.auth import IndicoMultipass
 from indico.util.caching import memoize

@@ -41,7 +41,7 @@ def _get_all_steps():
     from indico_migrate.steps.events.menus import EventMenuImporter
     from indico_migrate.steps.events.misc import (EventTypeImporter, EventSettingsImporter, EventAlarmImporter,
                                                   EventShortUrlsImporter, EventMiscImporter, EventLegacyIdImporter,
-                                                  EventPaymentSettingsImporter)
+                                                  EventPaymentSettingsImporter, EventAttachmentsImporter)
     from indico_migrate.steps.events.participants import EventParticipantsImporter
     from indico_migrate.steps.events.registration import EventRegFormImporter
     from indico_migrate.steps.events.surveys import EventSurveyImporter
@@ -50,7 +50,7 @@ def _get_all_steps():
             EventPaymentSettingsImporter, EventAlarmImporter, EventImageImporter, EventLayoutImporter,
             EventShortUrlsImporter, EventMenuImporter, EventSurveyImporter, EventRegFormImporter,
             EventTracksImporter, EventParticipantsImporter, EventAbstractImporter, EventTimetableImporter,
-            EventLegacyIdImporter)
+            EventAttachmentsImporter, EventLegacyIdImporter)
 
 
 class SkipEvent(Exception):
@@ -74,6 +74,9 @@ class _EventContextBase(object):
             'legacy_contribution_field_map': dict,
             'legacy_field_option_id_map': dict,
             'legacy_contribution_abstracts': dict,
+            'legacy_session_map': dict,
+            'legacy_contribution_map': dict,
+            'legacy_subcontribution_map': dict,
             'payment_messages': dict,
             'misc_data': dict,
             # -> 'payment_currency': str

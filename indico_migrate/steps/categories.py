@@ -38,12 +38,13 @@ from indico.util.string import crc32, is_legacy_id, is_valid_mail, sanitize_emai
 from indico.web.flask.templating import strip_tags
 
 from indico_migrate import TopLevelMigrationStep, convert_to_unicode
+from indico_migrate.attachments import AttachmentMixin
 from indico_migrate.util import get_archived_file, patch_default_group_provider
 
 
-class CategoryImporter(TopLevelMigrationStep):
+class CategoryImporter(AttachmentMixin, TopLevelMigrationStep):
     def __init__(self, *args, **kwargs):
-        self.archive_dirs = kwargs.pop('archive_dir')
+        self._set_config_options(**kwargs)
         super(CategoryImporter, self).__init__(*args, **kwargs)
         self.categ_id_counter = self.zodb_root['counters']['CATEGORY']._Counter__count
 
@@ -214,6 +215,7 @@ class CategoryImporter(TopLevelMigrationStep):
         if old_cat._icon:
             self._process_icon(cat, old_cat._icon)
         self._process_protection(cat, old_cat)
+        self.migrate_category_attachments(cat, old_cat)
         cat.children = [(self._migrate_category(old_subcat, i))
                         for i, old_subcat in enumerate(sorted(old_cat.subcategories.itervalues(),
                                                               key=attrgetter('_order')), 1)]

@@ -32,6 +32,7 @@ from indico.util.date_time import now_utc
 from indico.util.string import fix_broken_string
 
 from indico_migrate import convert_to_unicode
+from indico_migrate.attachments import AttachmentMixin
 from indico_migrate.steps.events import EventMigrationStep
 
 
@@ -290,3 +291,14 @@ class EventPaymentSettingsImporter(EventMigrationStep):
 
         self.print_success("Payment enabled={0}, currency={1}".format(payment_enabled,
                                                                       self.conf._registrationForm._currency))
+
+
+class EventAttachmentsImporter(AttachmentMixin, EventMigrationStep):
+    step_id = 'attachments'
+
+    def __init__(self, *args, **kwargs):
+        self._set_config_options(**kwargs)
+        super(EventAttachmentsImporter, self).__init__(*args, **kwargs)
+
+    def migrate(self):
+        self.migrate_event_attachments()

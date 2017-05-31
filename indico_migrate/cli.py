@@ -34,7 +34,7 @@ from indico.util.console import cformat, clear_line
 
 from indico_migrate.migrate import migrate
 from indico_migrate.namespaces import SharedNamespace
-from indico_migrate.util import UnbreakingDB, convert_to_unicode, get_storage, MigrationStateManager
+from indico_migrate.util import MigrationStateManager, UnbreakingDB, convert_to_unicode, get_storage
 
 
 click.disable_unicode_literals_warning = True
@@ -294,11 +294,21 @@ class Importer(object):
 class TopLevelMigrationStep(Importer):
     def run(self):
         start = time.time()
-        self.migrate()
+        self.pre_migrate()
+        try:
+            self.migrate()
+        finally:
+            self.post_migrate()
         self.print_msg(cformat('%{cyan}{:.06f} seconds%{reset}\a').format((time.time() - start)))
+
+    def pre_migrate(self):
+        pass
 
     def migrate(self):
         raise NotImplementedError
+
+    def post_migrate(self):
+        pass
 
 
 def main():

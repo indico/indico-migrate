@@ -121,9 +121,7 @@ class EventTimetableImporter(EventMigrationStep):
         self.room_mapping = {(r.location.name, r.name): r for r in Room.query.options(lazyload(Room.owner),
                                                                                       joinedload(Room.location))}
         self.venue_mapping = {location.name: location for location in Location.query}
-        self.legacy_session_map = {}
         self.legacy_session_ids_used = set()
-        self.legacy_contribution_map = {}
 
     def migrate(self):
         self._migrate_references()
@@ -176,7 +174,7 @@ class EventTimetableImporter(EventMigrationStep):
             session.friendly_id = self.event._last_friendly_session_id
         if not self.quiet:
             self.print_info(cformat('%{blue!}Session%{reset} {}').format(session.title))
-        self.legacy_session_map[old_session] = session
+        self.event_ns.legacy_session_map[old_session] = session
         if old_session.id not in self.legacy_session_ids_used:
             session.legacy_mapping = LegacySessionMapping(event_new=self.event, legacy_session_id=old_session.id)
             self.legacy_session_ids_used.add(old_session.id)
@@ -248,7 +246,7 @@ class EventTimetableImporter(EventMigrationStep):
                 contrib.track = track
         if not self.quiet:
             self.print_info(cformat('%{cyan}Contribution%{reset} {}').format(contrib.title))
-        self.legacy_contribution_map[old_contrib] = contrib
+        self.event_ns.legacy_contribution_map[old_contrib] = contrib
         contrib.legacy_mapping = LegacyContributionMapping(event_new=self.event, legacy_contribution_id=old_contrib.id)
         # contribution type
         if old_contrib._type is not None:
@@ -285,6 +283,7 @@ class EventTimetableImporter(EventMigrationStep):
                                      description=convert_to_unicode(old_subcontrib.description))
         if not self.quiet:
             self.print_info(cformat('  %{cyan!}SubContribution%{reset} {}').format(subcontrib.title))
+        self.event_ns.legacy_subcontribution_map[old_subcontrib] = subcontrib
         subcontrib.legacy_mapping = LegacySubContributionMapping(event_new=self.event,
                                                                  legacy_contribution_id=old_contrib.id,
                                                                  legacy_subcontribution_id=old_subcontrib.id)
@@ -365,7 +364,7 @@ class EventTimetableImporter(EventMigrationStep):
 
     def _migrate_contribution_timetable_entry(self, old_entry, session_block=None):
         old_contrib = old_entry._LinkedTimeSchEntry__owner
-        contrib = self.legacy_contribution_map[old_contrib]
+        contrib = self.event_ns.legacy_contribution_map[old_contrib]
         contrib.timetable_entry = TimetableEntry(event_new=self.event, start_dt=old_contrib.startDate)
         self._migrate_location(old_contrib, contrib)
         if session_block:
@@ -390,7 +389,7 @@ class EventTimetableImporter(EventMigrationStep):
     def _migrate_block_timetable_entry(self, old_entry):
         old_block = old_entry._LinkedTimeSchEntry__owner
         try:
-            session = self.legacy_session_map[old_block.session]
+            session = self.event_ns.legacy_session_map[old_block.session]
         except KeyError:
             self.print_warning(cformat('%{yellow!}Found zombie session {}').format(old_block.session))
             session = self._migrate_session(old_block.session)

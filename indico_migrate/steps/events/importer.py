@@ -161,7 +161,6 @@ class EventImporter(TopLevelMigrationStep):
 
     def migrate_event_data(self):
         all_event_steps = _get_all_steps()
-        all_event_steps = [x for x in all_event_steps if x.__name__ != 'EventLogImporter']  # XXX: remove this
 
         importers = [importer(self.app, self.sqlalchemy_uri, self.zodb_root, not self.quiet, self.dblog,
                               self.default_group_provider, self.tz, **self.kwargs) for importer in all_event_steps]

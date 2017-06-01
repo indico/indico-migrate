@@ -240,7 +240,12 @@ class EventTimetableImporter(EventMigrationStep):
                                keywords=self._process_keywords(old_contrib._keywords),
                                is_deleted=(status_class == 'ContribStatusWithdrawn'))
         if old_contrib._track is not None:
-            contrib.track = self.event_ns.track_map[old_contrib._track]
+            track = self.event_ns.track_map.get(old_contrib._track)
+            if not track:
+                self.print_warning(cformat('Track not found: {}. Setting to None.')
+                                   .format(old_contrib._track))
+            else:
+                contrib.track = track
         if not self.quiet:
             self.print_info(cformat('%{cyan}Contribution%{reset} {}').format(contrib.title))
         self.legacy_contribution_map[old_contrib] = contrib

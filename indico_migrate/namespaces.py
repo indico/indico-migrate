@@ -43,7 +43,6 @@ def sqlalchemy_constructor(loader, node):
 
 def zodb_constructor(loader, node):
     oid = loader.construct_sequence(node)[0]
-    # XXX: somehow retrieve the zodb root here
     return loader.zodb_root._p_jar[oid]
 
 

@@ -152,11 +152,16 @@ class EventImporter(TopLevelMigrationStep):
                 Event.query.filter_by(is_locked=True).has_rows())
 
     def migrate(self):
+        db.session.commit()  # make sure there's no transaction open or the DISABLE TRIGGER may deadlock
         tables = ('timetable_entries', 'session_blocks', 'contributions', 'breaks')
         for table in tables:
             db.engine.execute(db.text('ALTER TABLE events.{} DISABLE TRIGGER consistent_timetable'.format(table)))
         try:
             self.migrate_event_data()
+            db.session.commit()
+        except:
+            db.session.rollback()
+            raise
         finally:
             for table in tables:
                 db.engine.execute(db.text('ALTER TABLE events.{} ENABLE TRIGGER consistent_timetable'.format(table)))

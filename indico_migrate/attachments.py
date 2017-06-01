@@ -19,6 +19,8 @@ from __future__ import unicode_literals
 import mimetypes
 from itertools import chain
 
+import pytz
+
 from indico.modules.attachments import Attachment, AttachmentFolder
 from indico.modules.attachments.models.attachments import AttachmentFile, AttachmentType
 from indico.modules.attachments.models.legacy_mapping import LegacyAttachmentFolderMapping, LegacyAttachmentMapping
@@ -106,6 +108,11 @@ class AttachmentMixin(LocalFileImporterMixin):
     def _attachment_from_resource(self, folder, material, resource, base_object=None):
         modified_dt = (getattr(material, '_modificationDS', None) or getattr(base_object, 'startDate', None) or
                        getattr(base_object, '_modificationDS', None) or now_utc())
+        if modified_dt.tzinfo is None:
+            if hasattr(self, 'event'):
+                modified_dt = self._naive_to_aware(modified_dt)
+            else:  # category
+                modified_dt = pytz.utc.localize(modified_dt)
         data = {'folder': folder,
                 'user': self.janitor,
                 'title': convert_to_unicode(resource.name).strip() or folder.title,

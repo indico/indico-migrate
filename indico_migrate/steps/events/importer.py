@@ -41,7 +41,8 @@ def _get_all_steps():
     from indico_migrate.steps.events.menus import EventMenuImporter
     from indico_migrate.steps.events.misc import (EventTypeImporter, EventSettingsImporter, EventAlarmImporter,
                                                   EventShortUrlsImporter, EventMiscImporter, EventLegacyIdImporter,
-                                                  EventPaymentSettingsImporter, EventAttachmentsImporter)
+                                                  EventPaymentSettingsImporter, EventAttachmentsImporter,
+                                                  EventBadgesPostersImporter)
     from indico_migrate.steps.events.notes import EventNotesImporter
     from indico_migrate.steps.events.participants import EventParticipantsImporter
     from indico_migrate.steps.events.registration import EventRegFormImporter
@@ -51,7 +52,7 @@ def _get_all_steps():
             EventPaymentSettingsImporter, EventAlarmImporter, EventImageImporter, EventLayoutImporter,
             EventShortUrlsImporter, EventMenuImporter, EventSurveyImporter, EventRegFormImporter,
             EventTracksImporter, EventParticipantsImporter, EventAbstractImporter, EventTimetableImporter,
-            EventAttachmentsImporter, EventNotesImporter, EventLegacyIdImporter)
+            EventAttachmentsImporter, EventNotesImporter, EventBadgesPostersImporter, EventLegacyIdImporter)
 
 
 class SkipEvent(Exception):

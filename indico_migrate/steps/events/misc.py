@@ -33,8 +33,9 @@ from indico.util.string import fix_broken_string
 
 from indico_migrate import convert_to_unicode
 from indico_migrate.attachments import AttachmentMixin
+from indico_migrate.badges_posters import BadgeMigration, PosterMigration
 from indico_migrate.steps.events import EventMigrationStep
-
+from indico_migrate.util import LocalFileImporterMixin
 
 WEBFACTORY_NAME_RE = re.compile(r'^MaKaC\.webinterface\.(\w+)(?:\.WebFactory)?$')
 SPLIT_EMAILS_RE = re.compile(r'[\s;,]+')
@@ -302,3 +303,15 @@ class EventAttachmentsImporter(AttachmentMixin, EventMigrationStep):
 
     def migrate(self):
         self.migrate_event_attachments()
+
+
+class EventBadgesPostersImporter(LocalFileImporterMixin, EventMigrationStep):
+    step_id = 'designer'
+
+    def __init__(self, *args, **kwargs):
+        super(EventBadgesPostersImporter, self).__init__(*args, **kwargs)
+        self._set_config_options(**kwargs)
+
+    def migrate(self):
+        BadgeMigration(self, self.conf, self.event, self.janitor).run()
+        PosterMigration(self, self.conf, self.event, self.janitor).run()

@@ -23,9 +23,13 @@ from operator import itemgetter
 import click
 from sqlalchemy.sql import func, select
 
+# inject_unicode_debug happens to access the Config object
+from indico.util import string as indico_util_string
+indico_util_string.inject_unicode_debug = lambda s, level=1: s
+
+
 from indico.core.db.sqlalchemy import db
 from indico.modules.groups import GroupProxy
-from indico.util import string as indico_util_string
 from indico.util.console import cformat, clear_line
 
 from indico_migrate.migrate import migrate
@@ -34,8 +38,6 @@ from indico_migrate.util import UnbreakingDB, convert_to_unicode, get_storage, M
 
 
 click.disable_unicode_literals_warning = True
-# inject_unicode_debug happens to access the Config object
-indico_util_string.inject_unicode_debug = lambda s, level=1: s
 
 
 def except_hook(exc_class, exception, tb):

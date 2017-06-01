@@ -54,6 +54,7 @@ def _zodb_powered_loader(_zodb_root):
 
 
 def migrate(zodb_root, zodb_rb_uri, sqlalchemy_uri, verbose=False, dblog=False, restore_file=None, **kwargs):
+    from indico_migrate.steps.event_series import EventSeriesImporter
     from indico_migrate.steps.events import EventImporter
     from indico_migrate.steps.categories import CategoryImporter
     from indico_migrate.steps.global_post_events import GlobalPostEventsImporter
@@ -62,7 +63,7 @@ def migrate(zodb_root, zodb_rb_uri, sqlalchemy_uri, verbose=False, dblog=False, 
     from indico_migrate.steps.room_bookings import RoomBookingsImporter
     from indico_migrate.steps.users_groups import UserImporter
     steps = (GlobalPreEventsImporter, UserImporter, RoomsLocationsImporter, CategoryImporter, EventImporter,
-             RoomBookingsImporter, GlobalPostEventsImporter)
+             RoomBookingsImporter, GlobalPostEventsImporter, EventSeriesImporter)
 
     app, tz = setup(zodb_root, sqlalchemy_uri, dblog=dblog, restore=(restore_file is not None))
 

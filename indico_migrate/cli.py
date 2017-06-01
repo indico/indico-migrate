@@ -318,7 +318,6 @@ class Importer(object):
             raise ValueError('Unexpected protection: {}'.format(ac._accessProtection))
 
 
-
 class TopLevelMigrationStep(Importer):
     def run(self):
         start = time.time()

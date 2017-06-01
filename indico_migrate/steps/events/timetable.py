@@ -121,9 +121,9 @@ class EventTimetableImporter(EventMigrationStep):
         self.room_mapping = {(r.location.name, r.name): r for r in Room.query.options(lazyload(Room.owner),
                                                                                       joinedload(Room.location))}
         self.venue_mapping = {location.name: location for location in Location.query}
-        self.legacy_session_ids_used = set()
 
     def migrate(self):
+        self.legacy_session_ids_used = set()
         self._migrate_references()
         self._migrate_event_persons()
         self._migrate_event_persons_links()
@@ -225,7 +225,11 @@ class EventTimetableImporter(EventMigrationStep):
 
     def _migrate_contribution(self, old_contrib, friendly_id):
         ac = old_contrib._Contribution__ac
-        description = old_contrib._fields.get('content', '')
+        try:
+            description = old_contrib._fields.get('content', '')
+        except AttributeError:
+            self.print_warning('Contribution {} has no fields'.format(old_contrib))
+            description = ''
         description = convert_to_unicode(getattr(description, 'value', description))  # str or AbstractFieldContent
         status = getattr(old_contrib, '_status', None)
         status_class = status.__class__.__name__ if status else None
@@ -235,13 +239,12 @@ class EventTimetableImporter(EventMigrationStep):
                                description=description, duration=old_contrib.duration,
                                protection_mode=PROTECTION_MODE_MAP[ac._accessProtection],
                                board_number=convert_to_unicode(getattr(old_contrib, '_boardNumber', '')),
-                               keywords=self._process_keywords(old_contrib._keywords),
+                               keywords=self._process_keywords(getattr(old_contrib, '_keywords', '')),
                                is_deleted=(status_class == 'ContribStatusWithdrawn'))
         if old_contrib._track is not None:
             track = self.event_ns.track_map.get(old_contrib._track)
             if not track:
-                self.print_warning(cformat('Track not found: {}. Setting to None.')
-                                   .format(old_contrib._track))
+                self.print_warning('Track not found: {}. Setting to None.'.format(old_contrib._track))
             else:
                 contrib.track = track
         if not self.quiet:
@@ -271,7 +274,8 @@ class EventTimetableImporter(EventMigrationStep):
         # references ("report numbers")
         contrib.references = list(self._process_references(ContributionReference, old_contrib))
         # contribution/abstract fields
-        contrib.field_values = list(self._migrate_contribution_field_values(old_contrib))
+        if hasattr(old_contrib, '_fields'):
+            contrib.field_values = list(self._migrate_contribution_field_values(old_contrib))
         contrib.subcontributions = [self._migrate_subcontribution(old_contrib, old_subcontrib, pos)
                                     for pos, old_subcontrib in enumerate(old_contrib._subConts, 1)]
         contrib._last_friendly_subcontribution_id = len(contrib.subcontributions)

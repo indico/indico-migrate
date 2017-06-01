@@ -29,6 +29,7 @@ indico_util_string.inject_unicode_debug = lambda s, level=1: s
 
 
 from indico.core.db.sqlalchemy import db
+from indico.core.db.sqlalchemy.protection import ProtectionMode
 from indico.modules.groups import GroupProxy
 from indico.util.console import cformat, clear_line
 
@@ -289,6 +290,33 @@ class Importer(object):
             query = select([func.setval(sequence_name, func.max(serial_col) + 1)], table)
             db.session.execute(query)
         db.session.commit()
+
+    def protection_from_ac(self, target, ac, acl_attr='acl', ac_attr='allowed', allow_public=False):
+        """Convert AccessController data to ProtectionMixin style.
+
+        This needs to run inside the context of `patch_default_group_provider`.
+
+        :param target: The new object that uses ProtectionMixin
+        :param ac: The old AccessController
+        :param acl_attr: The attribute name for the acl of `target`
+        :param ac_attr: The attribute name for the acl in `ac`
+        :param allow_public: If the object allows `ProtectionMode.public`.
+                             Otherwise, public is converted to inheriting.
+        """
+        if ac._accessProtection == -1:
+            target.protection_mode = ProtectionMode.public if allow_public else ProtectionMode.inheriting
+        elif ac._accessProtection == 0:
+            target.protection_mode = ProtectionMode.inheriting
+        elif ac._accessProtection == 1:
+            target.protection_mode = ProtectionMode.protected
+            acl = getattr(target, acl_attr)
+            for principal in getattr(ac, ac_attr):
+                principal = self.convert_principal(principal)
+                assert principal is not None
+                acl.add(principal)
+        else:
+            raise ValueError('Unexpected protection: {}'.format(ac._accessProtection))
+
 
 
 class TopLevelMigrationStep(Importer):

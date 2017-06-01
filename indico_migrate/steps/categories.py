@@ -32,6 +32,7 @@ from indico.modules.categories.models.categories import Category
 from indico.modules.categories.models.legacy_mapping import LegacyCategoryMapping
 from indico.modules.events.layout import theme_settings
 from indico.modules.networks.models.networks import IPNetworkGroup
+from indico.modules.users import User
 from indico.util.console import cformat
 from indico.util.fs import secure_filename
 from indico.util.string import crc32, is_legacy_id, is_valid_mail, sanitize_email
@@ -45,6 +46,7 @@ from indico_migrate.util import get_archived_file, patch_default_group_provider
 class CategoryImporter(AttachmentMixin, TopLevelMigrationStep):
     def __init__(self, *args, **kwargs):
         self._set_config_options(**kwargs)
+        self.janitor = User.get_system_user()
         super(CategoryImporter, self).__init__(*args, **kwargs)
         self.categ_id_counter = self.zodb_root['counters']['CATEGORY']._Counter__count
 

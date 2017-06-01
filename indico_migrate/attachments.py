@@ -100,7 +100,7 @@ class AttachmentMixin(LocalFileImporterMixin):
                                   object=linked_object,
                                   is_always_visible=not getattr(material._Material__ac, '_hideFromUnauthorizedUsers',
                                                                 False))
-        self._protection_from_ac(folder, material._Material__ac)
+        self.protection_from_ac(folder, material._Material__ac)
         return folder
 
     def _attachment_from_resource(self, folder, material, resource, base_object=None):
@@ -128,7 +128,7 @@ class AttachmentMixin(LocalFileImporterMixin):
                                           content_type=mimetypes.guess_type(filename)[0] or 'application/octet-stream',
                                           size=size, storage_backend=storage_backend, storage_file_id=storage_path)
         attachment = Attachment(**data)
-        self._protection_from_ac(attachment, resource._Resource__ac)
+        self.protection_from_ac(attachment, resource._Resource__ac)
         return attachment
 
     def _has_special_protection(self, material, resource):

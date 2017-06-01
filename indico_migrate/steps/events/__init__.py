@@ -18,7 +18,6 @@ from __future__ import unicode_literals
 
 from pytz import utc as utc_tz
 
-from indico.core.db.sqlalchemy.protection import ProtectionMode
 from indico.modules.events.models.persons import EventPerson
 from indico.modules.users.models.users import UserTitle
 from indico.util.console import cformat
@@ -88,32 +87,6 @@ class EventMigrationStep(Importer):
             return user
         self.print_error(cformat('%{red!}Invalid legacy user: {}').format(legacy_user))
         return self.janitor if janitor else None
-
-    def _protection_from_ac(self, target, ac, acl_attr='acl', ac_attr='allowed', allow_public=False):
-        """Convert AccessController data to ProtectionMixin style.
-
-        This needs to run inside the context of `patch_default_group_provider`.
-
-        :param target: The new object that uses ProtectionMixin
-        :param ac: The old AccessController
-        :param acl_attr: The attribute name for the acl of `target`
-        :param ac_attr: The attribute name for the acl in `ac`
-        :param allow_public: If the object allows `ProtectionMode.public`.
-                             Otherwise, public is converted to inheriting.
-        """
-        if ac._accessProtection == -1:
-            target.protection_mode = ProtectionMode.public if allow_public else ProtectionMode.inheriting
-        elif ac._accessProtection == 0:
-            target.protection_mode = ProtectionMode.inheriting
-        elif ac._accessProtection == 1:
-            target.protection_mode = ProtectionMode.protected
-            acl = getattr(target, acl_attr)
-            for principal in getattr(ac, ac_attr):
-                principal = self.convert_principal(principal)
-                assert principal is not None
-                acl.add(principal)
-        else:
-            raise ValueError('Unexpected protection: {}'.format(ac._accessProtection))
 
     def _naive_to_aware(self, dt, utc=True):
         """Convert a naive date to a TZ-aware one, using the event's TZ."""

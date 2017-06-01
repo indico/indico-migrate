@@ -313,12 +313,15 @@ class EventRegFormImporter(LocalFileImporterMixin, EventMigrationStep):
             return
         arrival_offset = getattr(form, '_arrivalOffsetDates', [-2, 0])
         departure_offset = getattr(form, '_departureOffsetDates', [1, 3])
+        no_acc_choice_id = unicode(uuid4())
         data = {
             'arrival_date_from': (self.event.start_dt + timedelta(days=arrival_offset[0])).strftime('%Y-%m-%d'),
             'arrival_date_to': (self.event.start_dt + timedelta(days=arrival_offset[1])).strftime('%Y-%m-%d'),
             'departure_date_from': (self.event.end_dt + timedelta(days=departure_offset[0])).strftime('%Y-%m-%d'),
             'departure_date_to': (self.event.end_dt + timedelta(days=departure_offset[1])).strftime('%Y-%m-%d'),
-            'captions': {}
+            'captions': {
+                no_acc_choice_id: 'No accommodation'
+            }
         }
         versioned_data = {'choices': []}
         for item in form._accommodationTypes.itervalues():
@@ -333,6 +336,17 @@ class EventRegFormImporter(LocalFileImporterMixin, EventMigrationStep):
                 'id': uuid
             })
             self.accommodation_choice_map[item] = uuid
+
+        # Add a 'No accommodation' option
+        versioned_data['choices'].append({
+            'is_no_accommodation': True,
+            'is_enabled': form._enabled,
+            'price': 0,
+            'is_billable': False,
+            'places_limit': 0,
+            'placeholder': 'Title of the "None" option',
+            'id': no_acc_choice_id
+        })
 
         section = RegistrationFormSection(registration_form=self.regform, title=sanitize_user_input(form._title),
                                           description=sanitize_user_input(form._description, html=True))

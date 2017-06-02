@@ -21,6 +21,7 @@ import os
 import re
 import sys
 from contextlib import contextmanager
+from datetime import timedelta
 from HTMLParser import HTMLParser
 from urlparse import urlparse
 from uuid import uuid4
@@ -34,11 +35,14 @@ from ZODB.broken import Broken, find_global
 from indico.core.auth import IndicoMultipass
 from indico.util.caching import memoize
 from indico.util.console import cformat
+from indico.util.date_time import now_utc
 from indico.util.string import sanitize_email
 from indico.web.flask.templating import strip_tags
 
 
 WHITESPACE_RE = re.compile(r'\s+')
+
+_last_dt = None
 
 
 class NotBroken(Broken):
@@ -234,6 +238,16 @@ def sanitize_user_input(string, html=False):
     if not html:
         string = HTMLParser().unescape(strip_tags(string))
     return WHITESPACE_RE.sub(' ', string).strip()
+
+
+def strict_now_utc():
+    """Return strictly increasing now_utc() values"""
+    global _last_dt
+    dt = now_utc()
+    if _last_dt and (dt - _last_dt) < timedelta(seconds=1):
+        dt += timedelta(seconds=1)
+    _last_dt = dt
+    return dt
 
 
 class MigrationStateManager(object):

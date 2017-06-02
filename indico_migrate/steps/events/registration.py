@@ -123,6 +123,10 @@ def _get_worldpay_data(ti_data):
 class EventRegFormImporter(LocalFileImporterMixin, EventMigrationStep):
     step_id = 'regform'
 
+    def __init__(self, *args, **kwargs):
+        super(EventRegFormImporter, self).__init__(*args, **kwargs)
+        self._set_config_options(**kwargs)
+
     def teardown(self):
         # sync friendly ids
         value = db.func.coalesce(db.session.query(db.func.max(Registration.friendly_id)).
@@ -626,13 +630,15 @@ class EventRegFormImporter(LocalFileImporterMixin, EventMigrationStep):
                 return
             self.users.add(user)
             registration.user = user
-        user = self.global_ns.avatar_merged_user.get(old_reg._avatar)
-        if not self.past_event and old_reg._avatar and user:
+        if not self.past_event and old_reg._avatar:
+            user = self.global_ns.avatar_merged_user.get(old_reg._avatar.id)
+            if not user:
+                return
             if not registration.user:
                 self.print_warning(cformat('No email match; discarding association between {} and {}')
                                    .format(user, registration))
             elif registration.user != user:
-                self.print_warning(cformat('Email matches other user; associating {} with {} instead of {}')
+                self.print_warning(cformat('Email matches another user; associating {} with {} instead of {}')
                                    .format(registration, registration.user, old_reg._avatar))
 
     def _migrate_registration_statuses(self, old_reg, registration):

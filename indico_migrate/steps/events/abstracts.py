@@ -350,7 +350,7 @@ class EventAbstractImporter(LocalFileImporterMixin, EventMigrationStep):
                             submitted_contrib_type_id=type_id,
                             submission_comment=convert_to_unicode(old_abstract._comments),
                             modified_dt=modified_dt)
-        self.print_info(cformat('%{white!}Abstract:%{reset} {}').format(abstract.title))
+        self.print_info(cformat('%{white!}Abstract %{cyan}{}%{reset}: {}').format(abstract.friendly_id, abstract.title))
         self.event.abstracts.append(abstract)
         self.event_ns.abstract_map[old_abstract] = abstract
 
@@ -434,7 +434,6 @@ class EventAbstractImporter(LocalFileImporterMixin, EventMigrationStep):
         # email log
         self._migrate_abstract_email_log(abstract, old_abstract)
 
-        self.print_info(cformat('%{cyan}Abstract%{reset} {}').format(abstract.friendly_id))
         # contribution/abstract fields
         abstract.field_values = list(self._migrate_abstract_field_values(old_abstract))
         return abstract

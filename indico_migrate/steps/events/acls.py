@@ -83,7 +83,7 @@ class EventACLImporter(EventMigrationStep):
             if user:
                 self.event.creator = user
             else:
-                self.event.creator = self.janitor
+                self.event.creator = self.system_user
                 self.print_warning('Event {} has no creator'.format(self.event.id))
 
         if old_protection_mode == ProtectionMode.public and ac.requiredDomains:

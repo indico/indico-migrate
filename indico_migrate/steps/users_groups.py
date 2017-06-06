@@ -59,7 +59,7 @@ class UserImporter(TopLevelMigrationStep):
     def __init__(self, *args, **kwargs):
         self.ldap_provider_name = kwargs.pop('ldap_provider_name')
         self.ignore_local_accounts = kwargs.pop('ignore_local_accounts')
-        self.janitor_user_id = kwargs.pop('janitor_user_id')
+        self.system_user_id = kwargs.pop('system_user_id')
         super(UserImporter, self).__init__(*args, **kwargs)
 
     def migrate(self):
@@ -71,17 +71,17 @@ class UserImporter(TopLevelMigrationStep):
         self.migrate_admins()
         self.migrate_groups()
         self.fix_sequences('users', {'groups'})
-        self.migrate_janitor()
+        self.migrate_system_user()
         self.global_ns.users_by_email = dict(self.global_ns.users_by_primary_email)
         self.global_ns.users_by_email.update(self.global_ns.users_by_secondary_email)
         db.session.commit()
 
-    def migrate_janitor(self):
-        if self.janitor_user_id is not None:
-            user = User.get(self.janitor_user_id, is_deleted=False)
+    def migrate_system_user(self):
+        if self.system_user_id is not None:
+            user = User.get(self.system_user_id, is_deleted=False)
             if not user:
-                raise Exception('Invalid janitor user id')
-            user.is_janitor = True
+                raise Exception('Invalid system_user user id')
+            user.is_system = True
             self.print_success('Using existing system user: {}'.format(user), always=True)
             return
         user_id = 0 if not User.get(0) else None

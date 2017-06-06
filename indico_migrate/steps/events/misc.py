@@ -123,7 +123,7 @@ class EventAlarmImporter(EventMigrationStep):
                 is_sent = True
                 is_overdue = True
             recipients = filter(None, {convert_to_unicode(x).strip().lower() for x in alarm.toAddr})
-            reminder = EventReminder(event_new=self.event, creator=self.janitor,
+            reminder = EventReminder(event_new=self.event, creator=self.system_user,
                                      created_dt=alarm.createdOn, scheduled_dt=start_dt, is_sent=is_sent,
                                      event_start_delta=getattr(alarm, '_relative', None), recipients=recipients,
                                      send_to_participants=alarm.toAllParticipants,
@@ -313,5 +313,5 @@ class EventBadgesPostersImporter(LocalFileImporterMixin, EventMigrationStep):
         self._set_config_options(**kwargs)
 
     def migrate(self):
-        BadgeMigration(self, self.conf, self.event, self.janitor).run()
-        PosterMigration(self, self.conf, self.event, self.janitor).run()
+        BadgeMigration(self, self.conf, self.event, self.system_user).run()
+        PosterMigration(self, self.conf, self.event, self.system_user).run()

@@ -296,7 +296,7 @@ class EventPaperReviewingImporter(LocalFileImporterMixin, EventMigrationStep):
             # Legacy didn't keep track of the submission date (nor submitter for that matter)
             # we're taking the most recent uploaded file and using that one
             # if there are no files, the event's end date will be used
-            revision = PaperRevision(state=state, submitter=self.janitor, judge=judge, judgment_dt=judgment_dt,
+            revision = PaperRevision(state=state, submitter=self.system_user, judge=judge, judgment_dt=judgment_dt,
                                      judgment_comment=convert_to_unicode(old_judgment._comments))
             self.legacy_contrib_revision_map[(old_contrib, old_revision._version)] = revision
 
@@ -362,7 +362,8 @@ class EventPaperReviewingImporter(LocalFileImporterMixin, EventMigrationStep):
         assert len(old_revision._materials) == 1
         for resource in old_revision._materials[0]._Material__resources.itervalues():
             res_file = self._migrate_resource(old_contrib, contribution, revision, resource,
-                                              getattr(reviewing, '_modificationDS', strict_now_utc()), ignored_checksums)
+                                              getattr(reviewing, '_modificationDS', strict_now_utc()),
+                                              ignored_checksums)
             if res_file:
                 last_file = res_file
 

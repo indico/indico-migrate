@@ -46,7 +46,7 @@ from indico_migrate.util import get_archived_file, patch_default_group_provider
 class CategoryImporter(AttachmentMixin, TopLevelMigrationStep):
     def __init__(self, *args, **kwargs):
         self._set_config_options(**kwargs)
-        self.janitor = User.get_system_user()
+        self.system_user = User.get_system_user()
         super(CategoryImporter, self).__init__(*args, **kwargs)
         self.categ_id_counter = self.zodb_root['counters']['CATEGORY']._Counter__count
 

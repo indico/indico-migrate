@@ -326,7 +326,7 @@ class EventAbstractImporter(LocalFileImporterMixin, EventMigrationStep):
         self.event.abstract_email_templates.append(tpl)
 
     def _migrate_abstract(self, old_abstract):
-        submitter = self.user_from_legacy(old_abstract._submitter._user, janitor=True)
+        submitter = self.user_from_legacy(old_abstract._submitter._user, system_user=True)
         submitted_dt = old_abstract._submissionDate
         modified_dt = (old_abstract._modificationDate
                        if (submitted_dt - old_abstract._modificationDate) > timedelta(seconds=10)
@@ -396,7 +396,7 @@ class EventAbstractImporter(LocalFileImporterMixin, EventMigrationStep):
             abstract.accepted_track = accepted_track
 
         if abstract.state in self.JUDGED_STATES:
-            abstract.judge = self.user_from_legacy(old_state._responsible, janitor=True)
+            abstract.judge = self.user_from_legacy(old_state._responsible, system_user=True)
             abstract.judgment_dt = as_utc(old_state._date)
 
         # files

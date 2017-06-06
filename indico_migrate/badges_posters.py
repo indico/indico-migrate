@@ -313,7 +313,7 @@ class BadgeMigration(TemplateMigrationBase):
 class BadgePosterImporter(LocalFileImporterMixin, Importer):
     def migrate(self):
         update_session_options(db, {'expire_on_commit': False})
-        self.system_user = User.get_one(self.janitor_user_id)
+        self.system_user = User.get_one(self.system_user_id)
         self.migrate_global_templates()
         self.migrate_event_templates()
 

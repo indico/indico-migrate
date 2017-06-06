@@ -55,7 +55,7 @@ def except_hook(exc_class, exception, tb):
 @click.option('--ldap-provider-name', default='legacy-ldap', help="Provider name to use for existing LDAP identities")
 @click.option('--default-group-provider', required=True, help="Name of the default group provider")
 @click.option('--ignore-local-accounts', is_flag=True, default=False, help="Do not migrate existing local accounts")
-@click.option('--janitor-user-id', type=int, help="The ID of the Janitor user")
+@click.option('--system-user-id', type=int, help="The ID of the system user")
 @click.option('--default-email', required=True, help="Fallback email in case of garbage")
 @click.option('--archive-dir', required=True, multiple=True,
               help="The base path where resources are stored (ArchiveDir in indico.conf). When used multiple times, "

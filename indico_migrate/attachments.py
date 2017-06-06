@@ -114,7 +114,7 @@ class AttachmentMixin(LocalFileImporterMixin):
             else:  # category
                 modified_dt = pytz.utc.localize(modified_dt)
         data = {'folder': folder,
-                'user': self.janitor,
+                'user': self.system_user,
                 'title': convert_to_unicode(resource.name).strip() or folder.title,
                 'description': convert_to_unicode(resource.description),
                 'modified_dt': modified_dt}
@@ -131,7 +131,7 @@ class AttachmentMixin(LocalFileImporterMixin):
                 self.print_error(cformat('%{red!}File {} not found on disk').format(resource._LocalFile__archivedId))
                 return None
             filename = secure_filename(convert_to_unicode(resource.fileName), 'attachment')
-            data['file'] = AttachmentFile(user=self.janitor, created_dt=modified_dt, filename=filename,
+            data['file'] = AttachmentFile(user=self.system_user, created_dt=modified_dt, filename=filename,
                                           content_type=mimetypes.guess_type(filename)[0] or 'application/octet-stream',
                                           size=size, storage_backend=storage_backend, storage_file_id=storage_path)
         attachment = Attachment(**data)

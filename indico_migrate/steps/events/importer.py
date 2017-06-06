@@ -145,11 +145,11 @@ def EventContextFactory(counter, _importer):
 class EventImporter(TopLevelMigrationStep):
     def __init__(self, *args, **kwargs):
         super(EventImporter, self).__init__(*args, **kwargs)
-        del kwargs['janitor_user_id']
-        self.janitor = User.get_system_user()
+        del kwargs['system_user_id']
+        self.system_user = User.get_system_user()
         self.debug = kwargs.get('debug')
         self.kwargs = kwargs
-        self.kwargs['janitor'] = self.janitor
+        self.kwargs['system_user'] = self.system_user
 
     def has_data(self):
         return (EventSetting.query.filter(EventSetting.module.in_(['core', 'contact'])).has_rows() or

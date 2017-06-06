@@ -36,7 +36,7 @@ class EventMigrationStep(Importer):
 
     def __init__(self, *args, **kwargs):
         super(EventMigrationStep, self).__init__(*args, **kwargs)
-        self.janitor = kwargs.pop('janitor')
+        self.system_user = kwargs.pop('system_user')
         self.context = None
 
     def bind(self, context):
@@ -81,12 +81,12 @@ class EventMigrationStep(Importer):
     def teardown(self):
         pass
 
-    def user_from_legacy(self, legacy_user, janitor=False):
+    def user_from_legacy(self, legacy_user, system_user=False):
         user = self.convert_principal(legacy_user)
         if user:
             return user
         self.print_error(cformat('%{red!}Invalid legacy user: {}').format(legacy_user))
-        return self.janitor if janitor else None
+        return self.system_user if system_user else None
 
     def _naive_to_aware(self, dt, utc=True):
         """Convert a naive date to a TZ-aware one, using the event's TZ."""

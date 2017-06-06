@@ -46,7 +46,7 @@ class EventNotesImporter(EventMigrationStep):
                 self.print_warning(cformat('%{yellow}{} minutes are empty; skipping them').format(obj), always=False)
                 continue
             note = EventNote(object=obj)
-            note.create_revision(RenderMode.html, data, self.janitor)
+            note.create_revision(RenderMode.html, data, self.system_user)
             if not self.quiet:
                 self.print_success(cformat('%{cyan}{}').format(obj))
 

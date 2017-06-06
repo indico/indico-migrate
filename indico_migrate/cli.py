@@ -77,7 +77,7 @@ def except_hook(exc_class, exception, tb):
               help="Reference types ('report numbers'). Can be used multiple times to specify multiple reference types")
 @click.option('--default-currency', required=True, help="currency unit to use by default")
 @click.option('--debug', is_flag=True, default=False, help="Run migration in debug mode (requires ipython)")
-@click.option('--save-restore', is_flag=True, default=False, help="Save a restore point in case of failure")
+@click.option('--save-restore', type=click.File('w'), help="Save a restore point to the given file in case of failure")
 @click.option('--restore-file', type=click.File('r'), help="Restore migration from a file (enables debug)")
 def cli(sqlalchemy_uri, zodb_uri, rb_zodb_uri, verbose, dblog, debug, restore_file, **kwargs):
     """

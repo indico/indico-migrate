@@ -267,13 +267,12 @@ class MigrationStateManager(object):
         cls._namespaces[ns.name] = ns
 
     @classmethod
-    def save_restore_point(cls):
+    def save_restore_point(cls, fd):
         ns_data = {ns.name: ns.serialize() for ns in cls._namespaces.viewvalues()}
-        with open('indico-migration.yaml', 'w') as f:
-            yaml.dump({
-                'namespaces': ns_data,
-                'steps': cls._steps
-            }, f)
+        yaml.dump({
+            'namespaces': ns_data,
+            'steps': cls._steps
+        }, fd)
 
     @classmethod
     def load_restore_point(cls, data):

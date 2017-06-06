@@ -97,7 +97,7 @@ def migrate(zodb_root, zodb_rb_uri, sqlalchemy_uri, verbose=False, dblog=False, 
             if save_restore:
                 db.session.rollback()
                 print cformat('%{yellow}Saving restore point...'),
-                MigrationStateManager.save_restore_point()
+                MigrationStateManager.save_restore_point(save_restore)
                 print cformat('%{green!}DONE')
 
 

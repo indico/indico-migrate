@@ -339,9 +339,11 @@ class EventPaperReviewingImporter(LocalFileImporterMixin, EventMigrationStep):
                 continue
 
             contribution = self.event_ns.legacy_contribution_map[old_contrib]
-            review_manager = getattr(old_contrib, '_reviewManager', None)
             self._migrate_paper_roles(old_contrib, contribution)
-            self._migrate_revisions(old_contrib, contribution, review_manager)
+
+            review_manager = getattr(old_contrib, '_reviewManager', None)
+            if review_manager:
+                self._migrate_revisions(old_contrib, contribution, review_manager)
 
             reviewing = getattr(old_contrib, 'reviewing', None)
             if not reviewing:

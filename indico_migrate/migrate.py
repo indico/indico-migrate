@@ -104,7 +104,8 @@ def migrate(zodb_root, zodb_rb_uri, sqlalchemy_uri, verbose=False, dblog=False, 
 def db_has_data():
     """Check if there is already data in the DB"""
     models = ('Category', 'User', 'LocalGroup', 'NewsItem', 'IPNetworkGroup', 'LegacyCategoryMapping',
-              'LegacyEventMapping', 'Event')
+              'LegacyEventMapping', 'Event', 'Contribution', 'TimetableEntry', 'Room', 'Reservation',
+              'Session', 'Abstract')
     for model_name in models:
         if getattr(db.m, model_name).query.has_rows():
             return True

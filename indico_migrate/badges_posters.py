@@ -18,24 +18,17 @@ from __future__ import division, unicode_literals
 
 import math
 import mimetypes
-from operator import attrgetter
 
-from indico.core.db import db
-from indico.core.db.sqlalchemy.util.session import update_session_options
 from indico.modules.categories import Category
 from indico.modules.designer import PageOrientation, PageSize
 from indico.modules.designer.models.images import DesignerImageFile
 from indico.modules.designer.models.templates import DesignerTemplate, TemplateType
-from indico.modules.events import Event
 from indico.modules.events.registration.settings import DEFAULT_BADGE_SETTINGS, event_badge_settings
-from indico.modules.users import User
-from indico.util.console import cformat, verbose_iterator
+from indico.util.console import cformat
 from indico.util.fs import secure_filename
 from indico.util.string import to_unicode
-from indico.util.struct.iterables import committing_iterator
 
-from indico_zodbimport import Importer, convert_to_unicode
-from indico_zodbimport.util import LocalFileImporterMixin
+from indico_migrate import convert_to_unicode
 
 
 def _lower(text):
@@ -308,50 +301,3 @@ class BadgeMigration(TemplateMigrationBase):
 
         if new_settings:
             event_badge_settings.set_multi(self.event, new_settings)
-
-
-class BadgePosterImporter(LocalFileImporterMixin, Importer):
-    def migrate(self):
-        update_session_options(db, {'expire_on_commit': False})
-        self.system_user = User.get_one(self.system_user_id)
-        self.migrate_global_templates()
-        self.migrate_event_templates()
-
-    def _migrate_badges(self, conf, event):
-        mig = BadgeMigration(self, conf, event, self.system_user)
-        mig.run()
-
-    def _migrate_posters(self, conf, event):
-        mig = PosterMigration(self, conf, event, self.system_user)
-        mig.run()
-
-    def migrate_global_templates(self):
-        self.print_step("Migrating global templates")
-        default_conference = getattr(self.zodb_root['MaKaCInfo']['main'], '_defaultConference', None)
-        if not default_conference:
-            self.print_warning(cformat('%{yellow!}Server has no default conference'))
-            return
-        self._migrate_badges(default_conference, None)
-        self._migrate_posters(default_conference, None)
-
-    def migrate_event_templates(self):
-        self.print_step("Migrating event templates")
-        for conf, event in committing_iterator(self._iter_events(), n=10000):
-            with db.session.no_autoflush:
-                self._migrate_badges(conf, event)
-                self._migrate_posters(conf, event)
-        db.session.commit()
-
-    def _iter_events(self):
-        event_it = self.zodb_root['conferences'].itervalues()
-        events_query = Event.find(is_deleted=False).order_by(Event.id)
-        event_total = Event.query.count()
-        all_events = {ev.id: ev for ev in events_query}
-        if self.quiet:
-            event_it = verbose_iterator(event_it, event_total, attrgetter('id'), lambda x: '')
-        for conf in self.flushing_iterator(event_it):
-            event = all_events.get(int(conf.id))
-            if event is None:
-                self.print_error(cformat('%{red!}Event not found in DB'), event_id=conf.id)
-                continue
-            yield conf, event

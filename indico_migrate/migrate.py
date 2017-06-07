@@ -21,11 +21,13 @@ import sys
 
 import pytz
 import yaml
+from flask.helpers import get_root_path
 from sqlalchemy.orm import configure_mappers
 
 from indico.core.db.sqlalchemy import db
 from indico.core.db.sqlalchemy.logging import apply_db_loggers
-from indico.core.db.sqlalchemy.migration import migrate as alembic_migrate
+from indico.core.db.sqlalchemy.migration import migrate as alembic_migrate, prepare_db
+from indico.core.db.sqlalchemy.util.management import get_all_tables
 from indico.core.db.sqlalchemy.util.models import import_all_models
 from indico.core.plugins import plugin_engine
 from indico.util.console import cformat
@@ -139,13 +141,15 @@ def setup(zodb_root, sqlalchemy_uri, dblog=False, restore=False):
         tz = pytz.utc
 
     with app.app_context():
-        if db_has_data() and not restore:
-            # Usually there's no good reason to migrate with data in the DB. However, during development one might
-            # comment out some migration tasks and run the migration anyway.
-            print(cformat('%{yellow!}*** WARNING'))
-            print(cformat('%{yellow!}***%{reset} Your database is not empty, migration may fail or add duplicate '
-                          'data!'))
-            if raw_input(cformat('%{yellow!}***%{reset} To confirm this, enter %{yellow!}YES%{reset}: ')) != 'YES':
-                print('Aborting')
-                sys.exit(1)
+        if not restore:
+            if get_all_tables(db):
+                if db_has_data():
+                    print(cformat('%{red!}*** ERROR'))
+                    print(cformat('%{red!}***%{reset} Your database is not empty!'))
+                    print(cformat('%{red!}***%{reset} If you want to reset it, please drop and recreate it first.'))
+                    sys.exit(1)
+            else:
+                # the DB is empty, prepare DB tables
+                print cformat('%{cyan}Preparing database... ')
+                prepare_db(empty=True, root_path=get_root_path('indico'))
     return app, tz

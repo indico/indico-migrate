@@ -59,7 +59,6 @@ Please note that throughout the process we assume you have an unprivileged ``ind
 will own the database and run the web application server. This is highly recommended, especially in production setups.
 The second line installs in this new DB two extensions that are used by Indico (``unaccent`` and ``pg_trgm``).
 
-**TODO: How to handle prepare?**
 
 Migration settings
 ------------------

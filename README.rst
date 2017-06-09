@@ -236,8 +236,9 @@ you're doing.
 
 ``--avoid-storage-check`` (optional flag)
 =========================================
+    **DANGER!**
     By specifying this option, you're telling Indico it doesn't need to check if a file really exists when migrating it.
-    This will result in a faster migration but as well in possible data inconsistency and incomplete information.
+    This will result in a faster migration but as well in **possible data inconsistency and incomplete information**.
 
 
 
@@ -250,6 +251,7 @@ you're doing.
 
 ``--restore-file`` (optional flag)
 ==================================
+    **DANGER!**
     This option takes a file path as argument. The file in question should be a dump proced with ``--save-restore`` and
     which will be loaded to memory. The global migration steps that had been performed at the time of the failure will
     be skipped.

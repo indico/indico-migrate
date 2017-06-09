@@ -22,7 +22,8 @@ setup(
     author_email='indico-team@cern.ch',
     license='https://www.gnu.org/licenses/gpl-3.0.txt',
     packages=find_packages(),
-    install_requires=['indico>=1.9.11.dev3'],
+    install_requires=['indico>=1.9.11.dev3',
+                      'urwid==1.3.1'],
     entry_points={
         'console_scripts': [
             'indico-migrate = indico_migrate.cli:main'

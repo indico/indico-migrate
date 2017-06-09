@@ -27,7 +27,6 @@ from indico.modules.events.models.legacy_mapping import LegacyEventMapping
 from indico.modules.events.payment import payment_event_settings, payment_settings
 from indico.modules.events.reminders.models.reminders import EventReminder
 from indico.modules.events.settings import event_contact_settings, event_core_settings
-from indico.util.console import cformat, verbose_iterator
 from indico.util.date_time import now_utc
 from indico.util.string import fix_broken_string
 
@@ -70,7 +69,7 @@ class EventTypeImporter(EventMigrationStep):
         it = self.zodb_root['webfactoryregistry'].iteritems()
         total = len(self.zodb_root['webfactoryregistry'])
         if not self.quiet:
-            it = verbose_iterator(it, total, itemgetter(0), lambda x: '')
+            it = self.logger.progress_iterator('Loading data', it, total, itemgetter(0), lambda x: '')
         for conf_id, wf in it:
             if conf_id.isdigit():
                 yield conf_id, wf

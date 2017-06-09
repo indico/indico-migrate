@@ -32,7 +32,6 @@ from indico.modules.groups.models.groups import LocalGroup
 from indico.modules.users import User, user_settings
 from indico.modules.users.models.users import UserTitle
 from indico.util.caching import memoize
-from indico.util.console import cformat, verbose_iterator
 from indico.util.i18n import get_all_locales
 from indico.util.string import is_valid_mail, sanitize_email
 from indico.util.struct.iterables import committing_iterator
@@ -257,8 +256,9 @@ class UserImporter(TopLevelMigrationStep):
 
     @step_description('Groups')
     def migrate_groups(self):
-        self.print_step('Groups')
-        for old_group in committing_iterator(self.zodb_root['groups'].itervalues()):
+        it = committing_iterator(self.zodb_root['groups'].itervalues())
+        for old_group in self.logger.progress_iterator('Migrating groups', it, len(self.zodb_root['groups']),
+                                                       attrgetter('id'), lambda x: ''):
             if old_group.__class__.__name__ != 'Group':
                 continue
             group = LocalGroup(id=int(old_group.id), name=convert_to_unicode(old_group.name).strip())
@@ -388,5 +388,6 @@ class UserImporter(TopLevelMigrationStep):
     def _iter_avatars(self):
         it = self.zodb_root['avatars'].itervalues()
         if self.quiet:
-            it = verbose_iterator(it, len(self.zodb_root['avatars']), attrgetter('id'), lambda x: '')
+            it = self.logger.progress_iterator('Migrating users', it, len(self.zodb_root['avatars']), attrgetter('id'),
+                                               lambda x: '')
         return it

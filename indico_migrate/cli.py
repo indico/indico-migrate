@@ -32,6 +32,7 @@ from indico.core.db.sqlalchemy import db
 from indico.core.db.sqlalchemy.protection import ProtectionMode
 from indico.modules.groups import GroupProxy
 
+from indico_migrate import gui
 from indico_migrate.logger import logger_proxy, StdoutLogger
 from indico_migrate.migrate import migrate
 from indico_migrate.namespaces import SharedNamespace
@@ -76,9 +77,10 @@ def except_hook(exc_class, exception, tb):
               help="Reference types ('report numbers'). Can be used multiple times to specify multiple reference types")
 @click.option('--default-currency', required=True, help="currency unit to use by default")
 @click.option('--debug', is_flag=True, default=False, help="Run migration in debug mode (requires ipython)")
+@click.option('--no-gui', is_flag=True, default=False, help="Don't run the GUI")
 @click.option('--save-restore', type=click.File('w'), help="Save a restore point to the given file in case of failure")
 @click.option('--restore-file', type=click.File('r'), help="Restore migration from a file (enables debug)")
-def cli(sqlalchemy_uri, zodb_uri, rb_zodb_uri, verbose, dblog, debug, restore_file, **kwargs):
+def cli(sqlalchemy_uri, zodb_uri, rb_zodb_uri, verbose, dblog, debug, restore_file, no_gui, **kwargs):
     """
     This script migrates your database from ZODB/Indico 1.2 to PostgreSQL (2.0).
 
@@ -117,8 +119,16 @@ def cli(sqlalchemy_uri, zodb_uri, rb_zodb_uri, verbose, dblog, debug, restore_fi
     # in the event of a failure
     MigrationStateManager.register_ns(Importer._global_ns)
 
-    migrate(logger, zodb_root, rb_zodb_uri, sqlalchemy_uri, verbose=verbose, dblog=dblog, restore_file=restore_file,
-            debug=debug, **kwargs)
+    if not no_gui:
+        logger = gui.setup(not verbose)
+    else:
+        logger = StdoutLogger(not verbose)
+
+    try:
+        migrate(logger, zodb_root, rb_zodb_uri, sqlalchemy_uri, verbose=verbose, dblog=dblog, restore_file=restore_file,
+                debug=debug, **kwargs)
+    finally:
+        logger.shutdown()
 
 
 class Importer(object):

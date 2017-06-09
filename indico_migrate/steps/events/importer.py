@@ -24,7 +24,6 @@ from indico.core.db import db
 from indico.modules.events.models.events import Event
 from indico.modules.events.models.settings import EventSetting
 from indico.modules.users import User
-from indico.util.console import cformat, verbose_iterator
 from indico.util.string import is_legacy_id
 from indico.util.struct.iterables import committing_iterator
 
@@ -205,6 +204,7 @@ class EventImporter(TopLevelMigrationStep):
         it = _it()
         total = len(self.zodb_root['conferences'])
         if self.quiet:
-            it = verbose_iterator(it, total, attrgetter('id'), lambda x: x.__dict__.get('title', ''))
+            it = self.logger.progress_iterator('Migrating Events', it, total, attrgetter('id'),
+                                               lambda x: x.__dict__.get('title', ''))
         for old_event in self.flushing_iterator(it):
             yield old_event

@@ -12,9 +12,15 @@ here = os.path.abspath(os.path.dirname(__file__))
 with codecs.open(os.path.join(here, 'README.rst'), encoding='utf-8') as f:
     long_description = f.read()
 
+# Get version
+g = {}
+with open(os.path.join('indico_migrate', 'version.py'), 'r') as fp:
+    exec(fp.read(), g)
+    version = g['__version__']
+
 setup(
     name='indico_migrate',
-    version='0.0.1',
+    version=version,
     description='Migration from Indico 1.2 to 2.0',
     long_description=long_description,
     url='https://github.com/indico/indico-migrate',

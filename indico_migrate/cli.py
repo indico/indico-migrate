@@ -21,6 +21,7 @@ import time
 from operator import itemgetter
 
 import click
+from IPython.core import ultratb
 from sqlalchemy.sql import func, select
 
 # inject_unicode_debug happens to access the Config object
@@ -42,7 +43,6 @@ click.disable_unicode_literals_warning = True
 
 
 def except_hook(exc_class, exception, tb):
-    from IPython.core import ultratb
     ftb = ultratb.FormattedTB(mode='Verbose', color_scheme='Linux', call_pdb=1, include_vars=False)
     return ftb(exc_class, exception, tb)
 
@@ -76,7 +76,7 @@ def except_hook(exc_class, exception, tb):
 @click.option('--reference-type', 'reference_types', multiple=True,
               help="Reference types ('report numbers'). Can be used multiple times to specify multiple reference types")
 @click.option('--default-currency', required=True, help="currency unit to use by default")
-@click.option('--debug', is_flag=True, default=False, help="Run migration in debug mode (requires ipython)")
+@click.option('--debug', is_flag=True, default=False, help="Open debug shell if there is an error")
 @click.option('--no-gui', is_flag=True, default=False, help="Don't run the GUI")
 @click.option('--save-restore', type=click.File('w'), help="Save a restore point to the given file in case of failure")
 @click.option('--restore-file', type=click.File('r'), help="Restore migration from a file (enables debug)")
@@ -92,7 +92,6 @@ def cli(sqlalchemy_uri, zodb_uri, rb_zodb_uri, verbose, dblog, debug, restore_fi
         debug = True
 
     if debug:
-        verbose = True
         sys.excepthook = except_hook
 
     zodb_root = UnbreakingDB(get_storage(zodb_uri)).open().root()

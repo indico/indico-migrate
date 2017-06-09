@@ -123,11 +123,8 @@ def cli(sqlalchemy_uri, zodb_uri, rb_zodb_uri, verbose, dblog, debug, restore_fi
     else:
         logger = StdoutLogger(not verbose)
 
-    try:
-        migrate(logger, zodb_root, rb_zodb_uri, sqlalchemy_uri, verbose=verbose, dblog=dblog, restore_file=restore_file,
-                debug=debug, **kwargs)
-    finally:
-        logger.shutdown()
+    migrate(logger, zodb_root, rb_zodb_uri, sqlalchemy_uri, verbose=verbose, dblog=dblog, restore_file=restore_file,
+            debug=debug, **kwargs)
 
 
 class Importer(object):

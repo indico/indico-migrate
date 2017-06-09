@@ -18,13 +18,23 @@
 from __future__ import unicode_literals
 
 import logging
+import re
 import sys
+from io import BytesIO
 
 from indico.util.console import clear_line, verbose_iterator
 
 from indico_migrate.util import cformat2
 
+# alembic's logger is quite noisy
 logging.disable(sys.maxint)
+
+
+CFORMAT_TAGS = re.compile(r'%\[[a-z]+!?(?:,[a-z]+)?\]')
+
+
+def strip_cformat(text):
+    return CFORMAT_TAGS.sub('', text)
 
 
 def logger_proxy(msg_type):
@@ -36,6 +46,7 @@ def logger_proxy(msg_type):
 class BaseLogger(object):
     def __init__(self, quiet):
         self.quiet = quiet
+        self.buffer = BytesIO()
 
     def shutdown(self):
         pass
@@ -46,22 +57,36 @@ class BaseLogger(object):
         sys.exit(-1)
 
     def print_success(self, msg, always=False, prefix='', event_id=''):
-        self._print_msg('%[green]\u2713%[reset]', msg, always=always, prefix=prefix, event_id=event_id)
+        self.print_msg('%[green]\u2713%[reset]', msg, always=always, prefix=prefix, event_id=event_id)
 
     def print_error(self, msg, always=True, prefix='', event_id=''):
-        self._print_msg('%[red]\u00d7%[reset]', msg, always=always, prefix=prefix, event_id=event_id)
+        self.print_msg('%[red]\u00d7%[reset]', msg, always=always, prefix=prefix, event_id=event_id)
 
     def print_warning(self, msg, always=True, prefix='', event_id=''):
-        self._print_msg('%[yellow!]!%[reset]', msg, always=always, prefix=prefix, event_id=event_id)
+        self.print_msg('%[yellow!]!%[reset]', msg, always=always, prefix=prefix, event_id=event_id)
 
     def print_info(self, msg, always=False, prefix='', event_id=''):
-        self._print_msg('%[blue!]i%[reset]', msg, always=always, prefix=prefix, event_id=event_id)
+        self.print_msg('%[blue!]i%[reset]', msg, always=always, prefix=prefix, event_id=event_id)
 
     def print_log(self, msg, always=False, prefix='', event_id=''):
-        self._print_msg('%[magenta!]-%[reset]', msg, always=always, prefix=prefix, event_id=event_id)
+        self.print_msg('%[magenta!]-%[reset]', msg, always=always, prefix=prefix, event_id=event_id)
+
+    def print_msg(self, icon, msg, always=False, prefix='', event_id=''):
+        """Write the message to both the screen and the internal buffer."""
+        if always or not self.quiet:
+            self._print_to_buffer(icon, msg, always, prefix, event_id)
+        self._print_msg(icon, msg, always=always, prefix=prefix, event_id=event_id)
 
     def _print_msg(self, icon, msg, always=False, prefix='', event_id=''):
         raise NotImplemented
+
+    def _print_to_buffer(self, icon, msg, always, prefix, event_id):
+        suffix = ''
+        if event_id:
+            suffix = ' [{}]'.format(event_id)
+        if prefix:
+            prefix += ' '
+        self.buffer.write(strip_cformat(icon + ' ' + prefix + msg + suffix + '\n').encode('utf-8'))
 
 
 class StdoutLogger(BaseLogger):
@@ -78,13 +103,13 @@ class StdoutLogger(BaseLogger):
 
         suffix = ''
         if event_id:
-            suffix = ' %[cyan][%[cyan!]{}%[cyan]]%[reset]'
+            suffix = ' %[cyan][%[cyan!]{}%[cyan]]%[reset]'.format(event_id)
         if prefix:
             prefix += ' '
         print cformat2(icon + ' ' + prefix + msg + suffix).encode('utf-8')
 
     def print_step(self, msg):
-        self._print_msg('%[cyan,blue] > %[cyan!,blue]', '{:<30}'.format(msg), always=True)
+        self.print_msg('%[cyan,blue] > %[cyan!,blue]', '{:<30}'.format(msg), always=True)
 
     def progress_iterator(self, description, iterable, total, get_id, get_title, print_every=10):
         return verbose_iterator(iterable, total, get_id, get_title, print_every=10)

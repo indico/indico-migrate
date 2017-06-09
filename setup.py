@@ -29,7 +29,8 @@ setup(
     license='https://www.gnu.org/licenses/gpl-3.0.txt',
     packages=find_packages(),
     install_requires=['indico>=1.9.11.dev3',
-                      'urwid==1.3.1'],
+                      'urwid==1.3.1',
+                      'github3.py==0.9.6'],
     entry_points={
         'console_scripts': [
             'indico-migrate = indico_migrate.cli:main'

@@ -34,9 +34,7 @@ from indico.util.console import cformat
 from indico.web.flask.wrappers import IndicoFlask
 
 from indico_migrate.util import MigrationStateManager, UnbreakingDB, get_storage
-
-
-# TODO: handle plugins
+from indico_migrate.paste import ask_to_paste, get_full_stack
 
 
 def _monkeypatch_config():
@@ -96,6 +94,10 @@ def migrate(logger, zodb_root, zodb_rb_uri, sqlalchemy_uri, verbose=False, dblog
                     step(logger, app, sqlalchemy_uri, zodb_root, verbose, dblog, default_group_provider, tz,
                          **kwargs).run()
                 MigrationStateManager.register_step(step)
+        except:
+            logger.shutdown()
+            if not ask_to_paste(logger.buffer, get_full_stack()):
+                raise
         finally:
             if save_restore:
                 db.session.rollback()

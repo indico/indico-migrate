@@ -29,7 +29,6 @@ from indico.modules.events.registration.models.forms import ModificationMode, Re
 from indico.modules.events.registration.models.items import PersonalDataType, RegistrationFormSection
 from indico.modules.events.registration.models.registrations import Registration, RegistrationData, RegistrationState
 from indico.modules.events.registration.util import create_personal_data_fields
-from indico.util.console import cformat
 from indico.util.date_time import now_utc
 from indico.util.string import normalize_phone_number
 
@@ -84,7 +83,7 @@ class EventParticipantsImporter(EventMigrationStep):
             self.regform = RegistrationForm(event_id=self.event.id, title=PARTICIPATION_FORM_TITLE,
                                             is_participation=True, currency=payment_settings.get('currency'))
             if not self.quiet:
-                self.print_success(cformat('%{cyan}{}').format(self.regform.title))
+                self.print_success('%[cyan]{}'.format(self.regform.title))
             self._migrate_settings()
             self._create_form()
             self._migrate_participants()
@@ -178,7 +177,7 @@ class EventParticipantsImporter(EventMigrationStep):
                                     base_price=0, price_adjustment=0,
                                     checked_in=old_part._present, state=state,
                                     currency=payment_settings.get('currency'))
-        self.print_info(cformat('%{yellow}Registration%{reset} - %{cyan}{}%{reset} [{}]')
+        self.print_info('%[yellow]Registration%[reset] - %[cyan]{}%[reset] [{}]'
                         .format(registration.full_name, state.title))
         self._migrate_participant_user(old_part, registration)
         self._migrate_participant_data(old_part, registration)
@@ -191,8 +190,8 @@ class EventParticipantsImporter(EventMigrationStep):
         try:
             user, host = email.split('@', 1)
         except ValueError:
-            self.print_warning(
-                cformat('Garbage email %{red}{0}%{reset}; using %{green}{0}@example.com%{reset} instead').format(email))
+            self.print_warning('Garbage email %[red]{0}%[reset]; using %[green]{0}@example.com%[reset] instead'
+                               .format(email))
             user = email
             host = 'example.com'
             email += '@example.com'
@@ -201,7 +200,7 @@ class EventParticipantsImporter(EventMigrationStep):
             email = '{}+{}@{}'.format(user, n, host)
             n += 1
         if n != 1 and not no_email:
-            self.print_warning(cformat('Duplicate email %{yellow}{}@{}%{reset}; using %{green}{}%{reset} instead')
+            self.print_warning('Duplicate email %[yellow]{}@{}%[reset]; using %[green]{}%[reset] instead'
                                .format(user, host, email))
         self.emails.add(email)
         return email
@@ -210,17 +209,17 @@ class EventParticipantsImporter(EventMigrationStep):
         user = self.global_ns.users_by_email.get(registration.email)
         if user is not None:
             if user in self.users:
-                self.print_warning(cformat('User {} is already associated with a registration; not associating them '
-                                           'with {}').format(user, registration))
+                self.print_warning('User {} is already associated with a registration; not associating them with {}'
+                                   .format(user, registration))
                 return
             self.users.add(user)
             registration.user = user
         if not self.past_event and old_part._avatar and old_part._avatar.user:
             if not registration.user:
-                self.print_warning(cformat('No email match; discarding association between {} and {}')
+                self.print_warning('No email match; discarding association between {} and {}'
                                    .format(old_part._avatar.user, registration))
             elif registration.user != old_part._avatar.user:
-                self.print_warning(cformat('Email matches other user; associating {} with {} instead of {}')
+                self.print_warning('Email matches other user; associating {} with {} instead of {}'
                                    .format(registration, registration.user, old_part._avatar.user))
 
     def _migrate_participant_data(self, old_part, registration):
@@ -243,7 +242,7 @@ class EventParticipantsImporter(EventMigrationStep):
             if value:
                 field.is_enabled = True
             if not self.quiet:
-                self.print_info(cformat('%{yellow!}{}%{reset} %{cyan!}{}%{reset}').format(pd_type.name, friendly_value))
+                self.print_info('%[yellow!]{}%[reset] %[cyan!]{}%[reset]'.format(pd_type.name, friendly_value))
             registration.data.append(RegistrationData(field_data=field.current_data, data=value))
 
     def _migrate_participant_status(self, old_part, registration):
@@ -257,5 +256,5 @@ class EventParticipantsImporter(EventMigrationStep):
             data = None
             caption = ''
         if not self.quiet and data:
-            self.print_info(cformat('%{red}STATUS%{reset} %{cyan}{}').format(caption))
+            self.print_info('%[red]STATUS%[reset] %[cyan]{}'.format(caption))
         registration.data.append(RegistrationData(field_data=self.status_field.current_data, data=data))

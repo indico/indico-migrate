@@ -35,7 +35,6 @@ from indico.modules.events.papers.models.reviews import PaperReview, PaperReview
 from indico.modules.events.papers.models.revisions import PaperRevision, PaperRevisionState
 from indico.modules.events.papers.models.templates import PaperTemplate
 from indico.modules.events.papers.settings import paper_reviewing_settings, PaperReviewingRole
-from indico.util.console import cformat
 from indico.util.fs import secure_filename
 from indico.util.string import crc32
 
@@ -85,7 +84,7 @@ def _translate_notif_options(pr, options):
 
 
 def _review_color(review, text):
-    return '%{{{}}}{}%{{reset}}'.format({
+    return '%[{}]{}%[reset]'.format({
         PaperAction.accept: 'green',
         PaperAction.to_be_corrected: 'yellow',
         PaperAction.reject: 'red'
@@ -198,7 +197,7 @@ class EventPaperReviewingImporter(LocalFileImporterMixin, EventMigrationStep):
             old_filename = convert_to_unicode(old_tpl._Template__file.name)
             storage_backend, storage_path, size = self._get_local_file_info(old_tpl._Template__file)
             if storage_path is None:
-                self.print_error(cformat('%{red!}File not found on disk; skipping it [{}]').format(old_filename))
+                self.print_error('%[red!]File not found on disk; skipping it [{}]'.format(old_filename))
                 continue
 
             filename = secure_filename(old_filename, 'attachment')
@@ -235,7 +234,7 @@ class EventPaperReviewingImporter(LocalFileImporterMixin, EventMigrationStep):
             for avatar in avatars:
                 user = self.global_ns.avatar_merged_user[avatar.id]
                 target_list.add(user)
-                self.print_info(cformat('{} %{white!}-> %{blue}{}%{reset}: %{green}{}')
+                self.print_info('{} %[white!]-> %[blue]{}%[reset]: %[green]{}'
                                 .format(contrib.id, user, role.name))
 
     def _migrate_review(self, contribution, old_judgment, review_type):
@@ -251,7 +250,7 @@ class EventPaperReviewingImporter(LocalFileImporterMixin, EventMigrationStep):
             try:
                 question = self.legacy_question_map[old_question]
             except KeyError:
-                self.print_warning(cformat('%{yellow!}Answer to deleted question {} has been ignored [{}, {}]')
+                self.print_warning('%[yellow!]Answer to deleted question {} has been ignored [{}, {}]'
                                    .format(old_question._id, contribution, review_type))
                 continue
 
@@ -262,7 +261,7 @@ class EventPaperReviewingImporter(LocalFileImporterMixin, EventMigrationStep):
 
     def _migrate_revisions(self, old_contrib, contribution, rm):
         revision_dts = set()
-        self.print_info(cformat('%{white!}{}%{reset}').format(contribution))
+        self.print_info('%[white!]{}%[reset]'.format(contribution))
 
         self.file_checksums = defaultdict()
 
@@ -280,7 +279,7 @@ class EventPaperReviewingImporter(LocalFileImporterMixin, EventMigrationStep):
             if not old_revision._isAuthorSubmitted:
                 # ... except if said revision has been judged before being marked as submitted (!)
                 if old_judgment._submitted:
-                    self.print_warning(cformat('%{yellow!}Revision judged without being submitted! [{}: {}]')
+                    self.print_warning('%[yellow!]Revision judged without being submitted! [{}: {}]'
                                        .format(contribution, old_revision._version))
                 else:
                     continue
@@ -314,8 +313,8 @@ class EventPaperReviewingImporter(LocalFileImporterMixin, EventMigrationStep):
                 review_colors += _review_color(review, 'L')
             contribution._paper_revisions.append(revision)
 
-            self.print_info(cformat('\tRevision %{{blue!}}{}%{{reset}} %{{white,{}}}  %{{reset}} {}'.format(
-                n, STATE_COLOR_MAP[state], review_colors)))
+            self.print_info('\tRevision %[blue!]{}%[reset] %[white,{}]  %[reset] {}'.format(
+                n, STATE_COLOR_MAP[state], review_colors))
 
             last_file = self._migrate_paper_files(old_contrib, contribution, old_revision, revision, rm)
             submitted_dt = _to_utc(last_file.created_dt) if last_file else min(self.event.end_dt, strict_now_utc())
@@ -335,7 +334,7 @@ class EventPaperReviewingImporter(LocalFileImporterMixin, EventMigrationStep):
 
         for contrib_id, old_contrib in self.conf.contributions.iteritems():
             if old_contrib not in self.event_ns.legacy_contribution_map:
-                self.print_warning(cformat('%{yellow!}Contribution {} not found in event').format(contrib_id))
+                self.print_warning('%[yellow!]Contribution {} not found in event'.format(contrib_id))
                 continue
 
             contribution = self.event_ns.legacy_contribution_map[old_contrib]
@@ -374,8 +373,7 @@ class EventPaperReviewingImporter(LocalFileImporterMixin, EventMigrationStep):
             for checksum in ignored_checksums:
                 paper_file = self.checksum_map[checksum]
                 revision.files.append(paper_file)
-                self.print_warning(
-                    cformat('%{yellow!}File {} (rev. {}) reinstated').format(paper_file.filename, revision.id))
+                self.print_warning('%[yellow!]File {} (rev. {}) reinstated'.format(paper_file.filename, revision.id))
 
         return last_file
 
@@ -396,14 +394,13 @@ class EventPaperReviewingImporter(LocalFileImporterMixin, EventMigrationStep):
             collision = self.file_checksums.get(checksum)
             if collision:
                 ignored_checksums.add(checksum)
-                self.print_warning(
-                    cformat('%{yellow!}File {} (rev. {}) already in revision {}').format(
-                        resource.filename, revision.id if revision else None, collision.id))
+                self.print_warning('%[yellow!]File {} (rev. {}) already in revision {}'.format(
+                    resource.filename, revision.id if revision else None, collision.id))
                 return
             else:
                 self.file_checksums[checksum] = revision
         except (RuntimeError, StorageError):
-            self.print_error(cformat("%{red!}File not accessible; can't CRC it [{}]").format(paper_file.filename))
+            self.print_error("%[red!]File not accessible; can't CRC it [{}]".format(paper_file.filename))
 
         paper_file._contribution = contribution
         db.session.add(paper_file)

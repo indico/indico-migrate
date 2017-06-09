@@ -41,7 +41,6 @@ from indico.modules.events.contributions.models.persons import AuthorType
 from indico.modules.events.contributions.models.types import ContributionType
 from indico.modules.events.features.util import set_feature_enabled
 from indico.modules.users.models.users import UserTitle
-from indico.util.console import cformat
 from indico.util.date_time import as_utc
 from indico.util.fs import secure_filename
 
@@ -127,13 +126,13 @@ class EventAbstractImporter(LocalFileImporterMixin, EventMigrationStep):
             name = convert_to_unicode(old_ct._name)
             existing = name_map.get(name.lower())
             if existing is not None:
-                self.print_warning(cformat('%{yellow}Duplicate contribution type name: {}').format(name))
+                self.print_warning('%[yellow]Duplicate contribution type name: {}'.format(name))
                 self.event_ns.legacy_contribution_type_map[old_ct] = existing
                 continue
             ct = ContributionType(name=name, description=convert_to_unicode(old_ct._description))
             name_map[name.lower()] = ct
             if not self.quiet:
-                self.print_info(cformat('%{cyan}Contribution type%{reset} {}').format(ct.name))
+                self.print_info('%[cyan]Contribution type%[reset] {}'.format(ct.name))
             self.event_ns.legacy_contribution_type_map[old_ct] = ct
             self.event.contribution_types.append(ct)
 
@@ -240,7 +239,7 @@ class EventAbstractImporter(LocalFileImporterMixin, EventMigrationStep):
             include_submitter = any(x.__class__.__name__ == 'NotifTplToAddrSubmitter' for x in old_tpl._toAddrs)
             include_authors = any(x.__class__.__name__ == 'NotifTplToAddrPrimaryAuthors' for x in old_tpl._toAddrs)
             if not body:
-                self.print_warning(cformat('%{yellow!}Template "{}" has no body').format(title))
+                self.print_warning('%[yellow!]Template "{}" has no body'.format(title))
                 continue
             tpl = AbstractEmailTemplate(title=title,
                                         position=pos,
@@ -252,7 +251,7 @@ class EventAbstractImporter(LocalFileImporterMixin, EventMigrationStep):
                                         include_authors=include_authors,
                                         include_coauthors=bool(getattr(old_tpl, '_CAasCCAddr', False)))
             pos += 1
-            self.print_info(cformat('%{white!}Email Template:%{reset} {}').format(tpl.title))
+            self.print_info('%[white!]Email Template:%[reset] {}'.format(tpl.title))
             self.event.abstract_email_templates.append(tpl)
             self.email_template_map[old_tpl] = tpl
             rules = []
@@ -261,7 +260,7 @@ class EventAbstractImporter(LocalFileImporterMixin, EventMigrationStep):
                 try:
                     state = self.CONDITION_MAP[old_cond.__class__.__name__]
                 except KeyError:
-                    self.print_error(cformat('%{red!}Invalid condition type: {}').format(old_cond.__class__.__name__))
+                    self.print_error('%[red!]Invalid condition type: {}'.format(old_cond.__class__.__name__))
                     continue
                 if state == AbstractState.rejected:
                     track = contrib_type = any
@@ -275,7 +274,7 @@ class EventAbstractImporter(LocalFileImporterMixin, EventMigrationStep):
                         try:
                             track = self.event_ns.track_map.get(old_cond._track)
                         except KeyError:
-                            self.print_warning(cformat('%{yellow!}Invalid track: {}').format(old_cond._track))
+                            self.print_warning('%[yellow!]Invalid track: {}'.format(old_cond._track))
                             continue
                     # contrib type
                     if hasattr(old_cond, '_contrib_type_id'):
@@ -288,14 +287,14 @@ class EventAbstractImporter(LocalFileImporterMixin, EventMigrationStep):
                             contrib_type = self.event.contribution_types.filter_by(id=contrib_type_id).one()
                     elif not hasattr(old_cond, '_contribType'):
                         contrib_type = any
-                        self.print_warning(cformat('%{yellow}No contrib type data, using any [{}]')
+                        self.print_warning('%[yellow]No contrib type data, using any [{}]'
                                            .format(old_cond.__dict__))
                     else:
                         contrib_type = None
-                        self.print_error(cformat('%{red!}Legacy contribution type not found: {}')
+                        self.print_error('%[red!]Legacy contribution type not found: {}'
                                          .format(old_cond._contribType))
-                _any_str = cformat('%{green}any%{reset}')
-                self.print_success(cformat('%{white!}Condition:%{reset} {} | {} | {}')
+                _any_str = '%[green]any%[reset]'
+                self.print_success('%[white!]Condition:%[reset] {} | {} | {}'
                                    .format(state.name, track if track is not any else _any_str,
                                            contrib_type if contrib_type is not any else _any_str))
                 rule = {'state': [state.value]}
@@ -305,7 +304,7 @@ class EventAbstractImporter(LocalFileImporterMixin, EventMigrationStep):
                     rule['contribution_type'] = [contrib_type.id if contrib_type else None]
                 rules.append(rule)
             if not rules:
-                self.print_warning(cformat('%{yellow}Template "{}" has no rules').format(tpl.title), always=False)
+                self.print_warning('%[yellow]Template "{}" has no rules'.format(tpl.title), always=False)
             tpl.rules = rules
 
         # submission notification
@@ -350,7 +349,7 @@ class EventAbstractImporter(LocalFileImporterMixin, EventMigrationStep):
                             submitted_contrib_type_id=type_id,
                             submission_comment=convert_to_unicode(old_abstract._comments),
                             modified_dt=modified_dt)
-        self.print_info(cformat('%{white!}Abstract %{cyan}{}%{reset}: {}').format(abstract.friendly_id, abstract.title))
+        self.print_info('%[white!]Abstract %[cyan]{}%[reset]: {}'.format(abstract.friendly_id, abstract.title))
         self.event.abstracts.append(abstract)
         self.event_ns.abstract_map[old_abstract] = abstract
 
@@ -367,7 +366,7 @@ class EventAbstractImporter(LocalFileImporterMixin, EventMigrationStep):
                                         if old_contrib_type else None)
                 except KeyError:
                     self.print_warning(
-                        cformat('%{yellow!}Contribution {} - invalid contrib type {}, setting to None')
+                        '%[yellow!]Contribution {} - invalid contrib type {}, setting to None'
                         .format(old_contribution.id, convert_to_unicode(old_contrib_type._name)))
 
                 old_accepted_track = old_abstract._currentStatus._track
@@ -381,7 +380,7 @@ class EventAbstractImporter(LocalFileImporterMixin, EventMigrationStep):
                               if accepted_track_id is not None
                               else None)
         except KeyError:
-            self.print_error(cformat('%{yellow!}Abstract #{} accepted in invalid track #{}')
+            self.print_error('%[yellow!]Abstract #{} accepted in invalid track #{}'
                              .format(abstract.friendly_id, accepted_track_id))
             accepted_track = None
 
@@ -403,7 +402,7 @@ class EventAbstractImporter(LocalFileImporterMixin, EventMigrationStep):
         for old_attachment in getattr(old_abstract, '_attachments', {}).itervalues():
             storage_backend, storage_path, size = self._get_local_file_info(old_attachment)
             if storage_path is None:
-                self.print_error(cformat('%{red!}File not found on disk; skipping it [{}]')
+                self.print_error('%[red!]File not found on disk; skipping it [{}]'
                                  .format(convert_to_unicode(old_attachment.fileName)))
                 continue
             content_type = mimetypes.guess_type(old_attachment.fileName)[0] or 'application/octet-stream'
@@ -455,7 +454,7 @@ class EventAbstractImporter(LocalFileImporterMixin, EventMigrationStep):
             try:
                 review.proposed_related_abstract = self.event_ns.abstract_map.get(old_abstract)
             except KeyError:
-                self.print_error(cformat('%{yellow!}Abstract #{} marked as duplicate of invalid abstract #{}')
+                self.print_error('%[yellow!]Abstract #{} marked as duplicate of invalid abstract #{}'
                                  .format(review.abstract.friendly_id, old_abstract._id))
                 # delete the review; it would violate our CHECKs
                 review.abstract = None
@@ -465,7 +464,7 @@ class EventAbstractImporter(LocalFileImporterMixin, EventMigrationStep):
 
     def _migrate_abstract_reviews(self, abstract, old_abstract):
         if not hasattr(old_abstract, '_trackJudgementsHistorical'):
-            self.print_warning(cformat('%{blue!}Abstract {} {yellow}had no judgment history!%{reset}')
+            self.print_warning('%[blue!]Abstract {} {yellow}had no judgment history!%[reset]'
                                .format(old_abstract._id))
             return
 
@@ -485,21 +484,19 @@ class EventAbstractImporter(LocalFileImporterMixin, EventMigrationStep):
                 try:
                     track = self.event_ns.track_map_by_id.get(int(old_judgment._track.id))
                 except KeyError:
-                    self.print_warning(
-                        cformat('%{blue!}Abstract {} {yellow}judged in invalid track {}%{reset}').format(
-                                old_abstract._id, int(old_judgment._track.id)))
+                    self.print_warning('%[blue!]Abstract {} {yellow}judged in invalid track {}%[reset]'.format(
+                        old_abstract._id, int(old_judgment._track.id)))
                     continue
 
                 judge = (self.global_ns.avatar_merged_user.get(old_judgment._responsible.id)
                          if old_judgment._responsible else None)
                 if not judge:
-                    self.print_warning(cformat('%{blue!}Abstract {} {yellow}had an empty judge ({})!%{reset}')
+                    self.print_warning('%[blue!]Abstract {} {yellow}had an empty judge ({})!%[reset]'
                                        .format(old_abstract._id, old_judgment))
                     continue
                 elif judge in seen_judges:
-                    self.print_warning(
-                        cformat("%{blue!}Abstract {}: {yellow}judge '{}' seen more than once ({})!%{reset}")
-                        .format(old_abstract._id, judge, old_judgment))
+                    self.print_warning("%[blue!]Abstract {}: {yellow}judge '{}' seen more than once ({})!%[reset]"
+                                       .format(old_abstract._id, judge, old_judgment))
                     continue
 
                 seen_judges.add(judge)
@@ -526,17 +523,15 @@ class EventAbstractImporter(LocalFileImporterMixin, EventMigrationStep):
                 answered_questions = set()
                 for old_answer in getattr(old_judgment, '_answers', []):
                     if old_answer._question in answered_questions:
-                        self.print_warning(
-                            cformat("%{blue!}Abstract {}: {yellow}question answered more than once!").format(
-                                abstract.friendly_id))
+                        self.print_warning("%[blue!]Abstract {}: {yellow}question answered more than once!".format(
+                            abstract.friendly_id))
                         continue
                     try:
                         question = self.question_map[old_answer._question]
                     except KeyError:
                         question = self._migrate_question(old_answer._question, is_deleted=True)
-                        self.print_warning(
-                            cformat("%{blue!}Abstract {}: {yellow}answer for deleted question").format(
-                                abstract.friendly_id))
+                        self.print_warning("%[blue!]Abstract {}: {yellow}answer for deleted question".format(
+                            abstract.friendly_id))
                     rating = AbstractReviewRating(question=question, value=self._convert_scale(old_answer))
                     review.ratings.append(rating)
                     answered_questions.add(old_answer._question)
@@ -553,13 +548,12 @@ class EventAbstractImporter(LocalFileImporterMixin, EventMigrationStep):
             try:
                 new_field = self.event_ns.legacy_contribution_field_map[field_id]
             except KeyError:
-                self.print_warning(cformat('%{yellow!}Contribution field "{}" does not exist').format(field_id))
+                self.print_warning('%[yellow!]Contribution field "{}" does not exist'.format(field_id))
                 continue
             new_value = self._process_abstract_field_value(field_id, value, new_field)
             if new_value:
                 if not self.quiet:
-                    self.print_info(cformat('%{green} - [field]%{reset} {}: {}').format(new_field.title,
-                                                                                        new_value.data))
+                    self.print_info('%[green] - [field]%[reset] {}: {}'.format(new_field.title, new_value.data))
                 yield new_value
 
     def _process_abstract_field_value(self, old_field_id, old_value, new_field):
@@ -578,7 +572,7 @@ class EventAbstractImporter(LocalFileImporterMixin, EventMigrationStep):
         new_min, new_max = self.new_scale
         new_value = int(round((((old_value - old_min) * (new_max - new_min)) / (old_max - old_min)) + new_min))
         if int(old_value) != new_value:
-            self.print_warning(cformat('Adjusted value: %{cyan}{} [{}..{}] %{white}==> %{cyan!}{} [{}..{}]')
+            self.print_warning('Adjusted value: %[cyan]{} [{}..{}] %[white]==> %[cyan!]{} [{}..{}]'
                                .format(old_value, self.old_scale[0], self.old_scale[1],
                                        new_value, self.new_scale[0], self.new_scale[1]), always=False)
         return new_value
@@ -624,8 +618,8 @@ class EventAbstractImporter(LocalFileImporterMixin, EventMigrationStep):
                     person_link.author_type = author_type
                     person_link.is_speaker |= existing.is_speaker
                     person_links_by_person[person_link.person] = person_link
-                    self.print_warning(cformat('%{blue!}Abstract {}: {yellow}Author {} already exists '
-                                               '(%{magenta}{} [{}] %{yellow}/ %{green}{} [{}]%{yellow})')
+                    self.print_warning('%[blue!]Abstract {}: {yellow}Author {} already exists '
+                                       '(%[magenta]{} [{}] %[yellow]/ %[green]{} [{}]%[yellow])'
                                        .format(abstract.friendly_id, existing.person.full_name, existing.full_name,
                                                existing_flags, person_link.full_name, new_flags))
                     existing.person = None  # cut the link to an already-persistent object
@@ -633,8 +627,8 @@ class EventAbstractImporter(LocalFileImporterMixin, EventMigrationStep):
                     # the existing one has the higher author type -> use that one
                     existing.author_type = author_type
                     existing.is_speaker |= person_link.is_speaker
-                    self.print_warning(cformat('%{blue!}Abstract {}: {yellow}Author {} already exists '
-                                               '(%{green}{} [{}]%{yellow} / %{magenta}{} [{}]%{yellow})')
+                    self.print_warning('%[blue!]Abstract {}: {yellow}Author {} already exists '
+                                       '(%[green]{} [{}]%[yellow] / %[magenta]{} [{}]%[yellow])'
                                        .format(abstract.friendly_id, existing.person.full_name, existing.full_name,
                                                existing_flags, person_link.full_name, new_flags))
                     person_link.person = None  # cut the link to an already-persistent object
@@ -660,7 +654,7 @@ class EventAbstractImporter(LocalFileImporterMixin, EventMigrationStep):
                 self._migrate_contribution_field(field, pos)
 
         if not content_field:
-            self.print_warning(cformat('%{yellow!}Event has no content field!%{reset}'))
+            self.print_warning('%[yellow!]Event has no content field!%[reset]')
             return
 
         def _positive_or_none(value):
@@ -708,15 +702,14 @@ class EventAbstractImporter(LocalFileImporterMixin, EventMigrationStep):
             self.print_error('Unrecognized field type {}'.format(field_type))
             return
         if old_field._id in self.event_ns.legacy_contribution_field_map:
-            self.print_warning(
-                cformat("%{yellow!}There is already a field with legacy_id '{}')!%{reset}").format(old_field._id))
+            self.print_warning("%[yellow!]There is already a field with legacy_id '{}')!%[reset]".format(old_field._id))
             return
         field = ContributionField(event_new=self.event, field_type=field_type, is_active=old_field._active,
                                   title=convert_to_unicode(old_field._caption), is_required=old_field._isMandatory,
                                   field_data=field_data, position=position, legacy_id=old_field._id)
         self.event_ns.legacy_contribution_field_map[old_field._id] = field
         if not self.quiet:
-            self.print_info(cformat('%{green}Contribution field%{reset} {}').format(field.title))
+            self.print_info('%[green]Contribution field%[reset] {}'.format(field.title))
 
     def _person_link_from_legacy(self, old_person):
         person = self.event_person_from_legacy(old_person)

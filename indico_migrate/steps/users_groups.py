@@ -125,9 +125,9 @@ class UserImporter(TopLevelMigrationStep):
                 if old_categ:
                     self.global_ns.user_favorite_categories[old_categ.id].add(user)
             db.session.flush()
-            self.print_success(cformat('%{white!}{:6d}%{reset} %{cyan}{}%{reset} [%{blue!}{}%{reset}] '
-                                       '{{%{cyan!}{}%{reset}}}').format(user.id, user.full_name, user.email,
-                                                                        ', '.join(user.secondary_emails)))
+            self.print_success('%[white!]{:6d}%[reset] %[cyan]{}%[reset] [%[blue!]{}%[reset]] '
+                               '{{%[cyan!]{}%[reset]}}'.format(user.id, user.full_name, user.email,
+                                                               ', '.join(user.secondary_emails)))
             # migrate API keys
             self._migrate_api_keys(avatar, user)
             # migrate identities of avatars
@@ -171,7 +171,7 @@ class UserImporter(TopLevelMigrationStep):
                     identity = Identity(provider=provider, identifier=username)
 
                 if identity:
-                    self.print_info(cformat('%{blue!}<->%{reset}  %{yellow}{}%{reset}').format(identity))
+                    self.print_info('%[blue!]<->%[reset]  %[yellow]{}%[reset]'.format(identity))
                     user.identities.add(identity)
                     seen_identities.add((provider, username))
 
@@ -213,7 +213,7 @@ class UserImporter(TopLevelMigrationStep):
                          last_used_ip=ak._lastUsedIP, last_used_uri=last_used_uri,
                          last_used_auth=ak._lastUseAuthenticated, use_count=ak._useCount)
         user.api_key = api_key
-        self.print_info(cformat('%{blue!}<->%{reset}  %{yellow}{}%{reset}').format(api_key))
+        self.print_info('%[blue!]<->%[reset]  %[yellow]{}%[reset]'.format(api_key))
 
         for old_key in ak._oldKeys:
             # We have no creation time so we use *something* older..
@@ -227,15 +227,15 @@ class UserImporter(TopLevelMigrationStep):
         self.print_step('Favorite users')
         for user_id, avatars in self.favorite_avatars.viewitems():
             user = users[user_id]
-            self.print_success(cformat('%{white!}{:6d}%{reset} %{cyan}{}%{reset}').format(user_id, user.full_name))
+            self.print_success('%[white!]{:6d}%[reset] %[cyan]{}%[reset]'.format(user_id, user.full_name))
             for avatar_id in avatars:
                 fav_user = self.global_ns.avatar_merged_user.get(avatar_id)
                 if not fav_user:
                     self.print_warning('User not found: {} (in {})'.format(avatar_id, user_id))
                     continue
                 user.favorite_users.add(fav_user)
-                self.print_info(cformat(u'%{blue!}F%{reset} %{white!}{:6d}%{reset} '
-                                        '%{cyan}{}%{reset}').format(fav_user.id, fav_user.full_name))
+                self.print_info(u'%[blue!]F%[reset] %[white!]{:6d}%[reset] %[cyan]{}%[reset]'
+                                .format(fav_user.id, fav_user.full_name))
             # add the user to his/her own favorites
             user.favorite_users.add(user)
         db.session.flush()
@@ -250,7 +250,7 @@ class UserImporter(TopLevelMigrationStep):
             if user is None or user.is_deleted:
                 continue
             user.is_admin = True
-            self.print_success(cformat('%{cyan}{}').format(user))
+            self.print_success('%[cyan]{}'.format(user))
         db.session.flush()
 
     def migrate_groups(self):
@@ -259,7 +259,7 @@ class UserImporter(TopLevelMigrationStep):
             if old_group.__class__.__name__ != 'Group':
                 continue
             group = LocalGroup(id=int(old_group.id), name=convert_to_unicode(old_group.name).strip())
-            self.print_success(cformat('%{white!}{:6d}%{reset} %{cyan}{}%{reset}').format(group.id, group.name))
+            self.print_success('%[white!]{:6d}%[reset] %[cyan]{}%[reset]'.format(group.id, group.name))
             members = set()
             for old_member in old_group.members:
                 if old_member.__class__.__name__ != 'Avatar':
@@ -271,8 +271,8 @@ class UserImporter(TopLevelMigrationStep):
                     continue
                 members.add(user)
             for member in sorted(members, key=attrgetter('full_name')):
-                self.print_info(cformat('%{blue!}<->%{reset}        %{white!}{:6d} %{yellow}{} ({})').format(
-                                    member.id, member.full_name, member.email))
+                self.print_info('%[blue!]<->%[reset]        %[white!]{:6d} %[yellow]{} ({})'.format(
+                    member.id, member.full_name, member.email))
             group.members = members
             self.global_ns.all_groups[group.id] = group
             db.session.add(group)
@@ -338,9 +338,8 @@ class UserImporter(TopLevelMigrationStep):
             else:
                 to_delete = {user, coll}
             for u in to_delete:
-                self.print_msg(cformat('%{magenta!}---%{reset} '
-                                       '%{yellow!}Deleting {} - primary email collision%{reset} '
-                                       '[%{blue!}{}%{reset}]').format(u.id, u.email))
+                self.print_log('%[magenta!]---%[reset] %[yellow!]Deleting {} - primary email collision%[reset] '
+                               '[%[blue!]{}%[reset]]'.format(u.id, u.email))
                 u.is_deleted = True
                 db.session.flush()
         # if the user was already deleted we don't care about primary email collisions
@@ -350,9 +349,8 @@ class UserImporter(TopLevelMigrationStep):
         # Remove primary email from another user's secondary email list
         coll = self.global_ns.users_by_secondary_email.get(user.email)
         if coll and user.merged_into_id != coll.id:
-            self.print_msg(cformat('%{magenta!}---%{reset} '
-                                   '%{yellow!}1 Removing colliding secondary email (P/S) from {}%{reset} '
-                                   '[%{blue!}{}%{reset}]').format(coll, user.email))
+            self.print_log('%[magenta!]---%[reset] %[yellow!]1 Removing colliding secondary email (P/S from {}%[reset] '
+                           '[%[blue!]{}%[reset]])'.format(coll, user.email))
             coll.secondary_emails.remove(user.email)
             del self.global_ns.users_by_secondary_email[user.email]
             db.session.flush()
@@ -362,17 +360,15 @@ class UserImporter(TopLevelMigrationStep):
             # colliding with primary email
             coll = self.global_ns.users_by_primary_email.get(email)
             if coll:
-                self.print_msg(cformat('%{magenta!}---%{reset} '
-                                       '%{yellow!}Removing colliding secondary email (S/P) from {}%{reset} '
-                                       '[%{blue!}{}%{reset}]').format(user, email))
+                self.print_log('%[magenta!]---%[reset] %[yellow!]Removing colliding secondary email '
+                               '(S/P from {}%[reset] [%[blue!]{}%[reset]])'.format(user, email))
                 user.secondary_emails.remove(email)
                 db.session.flush()
             # colliding with a secondary email
             coll = self.global_ns.users_by_secondary_email.get(email)
             if coll:
-                self.print_msg(cformat('%{magenta!}---%{reset} '
-                                       '%{yellow!}Removing colliding secondary email (S/S) from {}%{reset} '
-                                       '[%{blue!}{}%{reset}]').format(user, email))
+                self.print_log('%[magenta!]---%[reset] %[yellow!]Removing colliding secondary email '
+                               '(S/S from {}%[reset] [%[blue!]{}%[reset]])').format(user, email)
                 user.secondary_emails.remove(email)
                 db.session.flush()
                 self.global_ns.users_by_secondary_email[email] = coll

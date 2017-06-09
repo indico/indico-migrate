@@ -46,7 +46,7 @@ def _convert_font_family(name):
     if name in FONT_FAMILY_MAPPING:
         return FONT_FAMILY_MAPPING[name]
     else:
-        print(cformat("%{yellow!}--%{reset} Unknown font: '{}'. Using 'sans-serif' instead.").format(name))
+        print(cformat("%[yellow!]--%[reset] Unknown font: '{}'. Using 'sans-serif' instead.").format(name))
         return 'sans-serif'
 
 
@@ -166,7 +166,7 @@ class TemplateMigrationBase(object):
         item.pop('name', None)
 
         if new_type is None:
-            self.importer.print_warning(cformat('%{yellow!}Template attribute type unknown'), event_id=self.event_id)
+            self.importer.print_warning('%[yellow!]Template attribute type unknown', event_id=self.event_id)
             return
 
         result['type'] = new_type
@@ -178,7 +178,7 @@ class TemplateMigrationBase(object):
             result[new_k] = datatype(old_v)
         diff = {v[0] for v in ITEM_KEY_MAPPING.viewvalues()} - set(result)
         if diff:
-            self.importer.print_warning(cformat('%{yellow!}Template item misses some attributes: {}').format(diff),
+            self.importer.print_warning('%[yellow!]Template item misses some attributes: {}'.format(diff),
                                         event_id=self.event_id)
 
         # we should store every position/size at 50px/cm
@@ -193,7 +193,7 @@ class TemplateMigrationBase(object):
         height = _sane_float(tpl_data[1]['height'])
 
         if width is None or height is None:
-            self.importer.print_error(cformat('%{red!}Template has invalid dimensions ({}, {})').format(width, height),
+            self.importer.print_error('%[red!]Template has invalid dimensions ({}, {})'.format(width, height),
                                       event_id=self.event_id)
             return None
         return {
@@ -208,7 +208,7 @@ class TemplateMigrationBase(object):
     def _migrate_background(self, old_bg, tpl):
         storage_backend, storage_path, size = self.importer._get_local_file_info(old_bg)
         if storage_path is None:
-            self.importer.print_error(cformat('%{red!}File not found on disk; skipping it [{}]')
+            self.importer.print_error('%[red!]File not found on disk; skipping it [{}]'
                                       .format(convert_to_unicode(old_bg.fileName)),
                                       event_id=self.event_id)
             return
@@ -232,7 +232,7 @@ class TemplateMigrationBase(object):
                 if image:
                     old_background_map[int(old_bg_id)] = image
                     tpl.images.append(image)
-                    self.importer.print_success(cformat('\t %{cyan!}{}').format(image), event_id=self.event_id)
+                    self.importer.print_success('\t %[cyan!]{}'.format(image), event_id=self.event_id)
 
             old_positions_map = getattr(old_tpl, '_{}__bgPositions'.format(self.tpl_class), None)
             old_used_bg_id = int(old_tpl_data[3])
@@ -241,14 +241,14 @@ class TemplateMigrationBase(object):
                 if new_bg_image:
                     tpl.background_image = new_bg_image
                 else:
-                    self.importer.print_warning(cformat("%{yellow!}Background '{}' not found").format(old_used_bg_id),
+                    self.importer.print_warning("%[yellow!]Background '{}' not found".format(old_used_bg_id),
                                                 event_id=self.event_id)
                 if old_positions_map:
                     old_position = old_positions_map.get(old_used_bg_id)
                     if old_position:
                         tpl.data['background_position'] = unicode(old_position.lower())
                     else:
-                        self.importer.print_warning(cformat('%{yellow!}Position setting for non-existing background'),
+                        self.importer.print_warning('%[yellow!]Position setting for non-existing background',
                                                     event_id=self.event_id)
             if 'background_position' not in tpl.data:
                 tpl.data['background_position'] = 'stretch'
@@ -257,7 +257,7 @@ class TemplateMigrationBase(object):
                 tpl.category = Category.get_root()
             else:
                 tpl.event_new = self.event
-            self.importer.print_success(cformat('%{blue!}{}').format(tpl), event_id=self.event_id)
+            self.importer.print_success('%[blue!]{}'.format(tpl), event_id=self.event_id)
 
     def _migrate_data(self, manager):
         self._migrate_templates(manager)
@@ -283,7 +283,7 @@ class BadgeMigration(TemplateMigrationBase):
         options = getattr(manager, '_PDFOptions', None)
         if options is None:
             if not self.importer.quiet:
-                self.importer.print_warning(cformat('%{yellow!}Event has no badge PDF options'), event_id=self.event.id)
+                self.importer.print_warning('%[yellow!]Event has no badge PDF options', event_id=self.event.id)
             return
 
         if not self.event:

@@ -18,7 +18,6 @@ from __future__ import unicode_literals
 
 from indico.core.db.sqlalchemy.descriptions import RenderMode
 from indico.modules.events.notes.models.notes import EventNote
-from indico.util.console import cformat
 
 from indico_migrate.steps.events import EventMigrationStep
 from indico_migrate.util import convert_to_unicode, get_archived_file
@@ -34,21 +33,21 @@ class EventNotesImporter(EventMigrationStep):
     def migrate(self):
         for obj, minutes, special_prot in self._iter_minutes():
             if special_prot:
-                self.print_warning(cformat('%{yellow!}{} minutes have special permissions; skipping them').format(obj))
+                self.print_warning('%[yellow!]{} minutes have special permissions; skipping them'.format(obj))
                 continue
             path = get_archived_file(minutes, self.archive_dirs)[1]
             if path is None:
-                self.print_error(cformat('%{red!}{} minutes not found on disk; skipping them').format(obj))
+                self.print_error('%[red!]{} minutes not found on disk; skipping them'.format(obj))
                 continue
             with open(path, 'r') as f:
                 data = convert_to_unicode(f.read()).strip()
             if not data:
-                self.print_warning(cformat('%{yellow}{} minutes are empty; skipping them').format(obj), always=False)
+                self.print_warning('%[yellow]{} minutes are empty; skipping them'.format(obj), always=False)
                 continue
             note = EventNote(object=obj)
             note.create_revision(RenderMode.html, data, self.system_user)
             if not self.quiet:
-                self.print_success(cformat('%{cyan}{}').format(obj))
+                self.print_success('%[cyan]{}'.format(obj))
 
     def _has_special_protection(self, material, resource):
         material_ac = material._Material__ac

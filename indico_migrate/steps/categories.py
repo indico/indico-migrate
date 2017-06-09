@@ -33,7 +33,6 @@ from indico.modules.categories.models.legacy_mapping import LegacyCategoryMappin
 from indico.modules.events.layout import theme_settings
 from indico.modules.networks.models.networks import IPNetworkGroup
 from indico.modules.users import User
-from indico.util.console import cformat
 from indico.util.fs import secure_filename
 from indico.util.string import crc32, is_legacy_id, is_valid_mail, sanitize_email
 from indico.web.flask.templating import strip_tags
@@ -68,7 +67,7 @@ class CategoryImporter(AttachmentMixin, TopLevelMigrationStep):
     def _process_icon(self, cat, icon):
         path = get_archived_file(icon, self.archive_dirs)[1]
         if path is None:
-            self.print_error(cformat('%{red!}Icon not found on disk; skipping it'), event_id=cat.id)
+            self.print_error('%[red!]Icon not found on disk; skipping it', event_id=cat.id)
             return
 
         try:
@@ -105,7 +104,7 @@ class CategoryImporter(AttachmentMixin, TopLevelMigrationStep):
     def process_principal(self, cat, legacy_principal, name, color, read_access=None, full_access=None, roles=None):
         principal = self.convert_principal(legacy_principal)
         if principal is None:
-            self.print_warning(cformat('%%{%s}{}%%{reset}%%{yellow} does not exist:%%{reset} {}' % color)
+            self.print_warning('%%[%s]{}%%[reset]%%[yellow] does not exist:%%[reset] {}' % color
                                .format(name, legacy_principal))
             return
         updates = {}
@@ -116,7 +115,7 @@ class CategoryImporter(AttachmentMixin, TopLevelMigrationStep):
         if roles:
             updates['add_roles'] = roles
         cat.update_principal(principal, quiet=True, **updates)
-        self.print_msg(cformat('    - %%{%s}[{}]%%{reset} {}' % color).format(name.lower(), principal))
+        self.print_log('    - %%[%s][{}]%%[reset] {}' % color.format(name.lower(), principal))
 
     def _process_protection(self, cat, old_cat):
         ac = old_cat._Category__ac
@@ -178,7 +177,7 @@ class CategoryImporter(AttachmentMixin, TopLevelMigrationStep):
         title = _ws_re.sub(' ', title).strip()
         if title != orig:
             self.print_warning('Sanitized category title', event_id=categ_id)
-            self.print_warning(cformat('%{red!}{}%{reset} => %{green!}{}%{reset}').format(orig, title))
+            self.print_warning('%[red!]{}%[reset] => %[green!]{}%[reset]'.format(orig, title))
         return title
 
     def _migrate_category(self, old_cat, position):
@@ -199,7 +198,7 @@ class CategoryImporter(AttachmentMixin, TopLevelMigrationStep):
             # and establish a mapping (for URL redirection)
             new_id = self.gen_categ_id()
             db.session.add(LegacyCategoryMapping(legacy_category_id=old_cat.id, category_id=new_id))
-            self.print_success(cformat('%{white!}{:6s}%{reset} -> %{cyan}{}').format(old_cat.id, new_id))
+            self.print_success('%[white!]{:6s}%[reset] -> %[cyan]{}'.format(old_cat.id, new_id))
         else:
             new_id = int(old_cat.id)
 

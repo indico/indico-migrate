@@ -101,7 +101,7 @@ class _EventContextBase(object):
         try:
             parent_category = self.importer.global_ns.legacy_category_ids[self.conf._Conference__owners[0].id]
         except (IndexError, KeyError):
-            self.importer.print_error(cformat('%{red!}Event has no category!'), event_id=self.conf.id)
+            self.importer.print_error('Event has no category!', event_id=self.conf.id)
             raise SkipEvent
 
         title = convert_to_unicode(self.conf.__dict__['title']) or '(no title)'

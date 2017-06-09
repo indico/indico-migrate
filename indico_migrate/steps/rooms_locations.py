@@ -33,7 +33,6 @@ from indico.modules.rb.models.room_attributes import RoomAttribute, RoomAttribut
 from indico.modules.rb.models.room_bookable_hours import BookableHours
 from indico.modules.rb.models.room_nonbookable_periods import NonBookablePeriod
 from indico.modules.rb.models.rooms import Room
-from indico.util.console import cformat
 from indico.util.date_time import as_utc
 from indico.util.string import is_valid_mail
 
@@ -100,7 +99,7 @@ class RoomsLocationsImporter(TopLevelMigrationStep):
                 is_default=(old_location.friendlyName == default_location_name)
             )
 
-            self.print_info(cformat('- %{cyan}{}').format(location.name))
+            self.print_info('- %[cyan]{}'.format(location.name))
 
             # add aspects
             for old_aspect in old_location._aspects.values():
@@ -115,7 +114,7 @@ class RoomsLocationsImporter(TopLevelMigrationStep):
                     bottom_right_longitude=old_aspect.bottomRightLongitude
                 )
 
-                self.print_info(cformat('  %{blue!}Aspect:%{reset} {}').format(a.name))
+                self.print_info('  %[blue!]Aspect:%[reset] {}'.format(a.name))
 
                 location.aspects.append(a)
                 if old_aspect.defaultOnStartup:
@@ -129,7 +128,7 @@ class RoomsLocationsImporter(TopLevelMigrationStep):
                 attr = RoomAttribute(name=attr_name.replace(' ', '-').lower(), title=attr_name, type=ca['type'],
                                      is_required=ca['required'], is_hidden=ca['hidden'])
                 location.attributes.append(attr)
-                self.print_info(cformat('  %{blue!}Attribute:%{reset} {}').format(attr.title))
+                self.print_info('  %[blue!]Attribute:%[reset] {}'.format(attr.title))
 
             self.global_ns.venue_mapping[location.name] = location.id
             # add new created location
@@ -152,7 +151,7 @@ class RoomsLocationsImporter(TopLevelMigrationStep):
                 continue
 
             location.equipment_types.extend(EquipmentType(name=x) for x in eqs)
-            self.print_info(cformat('- [%{cyan}{}%{reset}] {}').format(name, eqs))
+            self.print_info('- [%[cyan]{}%[reset]] {}'.format(name, eqs))
             db.session.add(location)
         db.session.flush()
 
@@ -168,7 +167,7 @@ class RoomsLocationsImporter(TopLevelMigrationStep):
                 req = EquipmentType(name=vc_name)
                 req.parent = pvc
                 location.equipment_types.append(req)
-                self.print_info(cformat('- [%{cyan}{}%{reset}] {}').format(name, req.name))
+                self.print_info('- [%[cyan]{}%[reset]] {}'.format(name, req.name))
             db.session.add(location)
         db.session.flush()
 
@@ -215,7 +214,7 @@ class RoomsLocationsImporter(TopLevelMigrationStep):
                 max_advance_days=int(old_room.maxAdvanceDays) if getattr(old_room, 'maxAdvanceDays', None) else None
             )
 
-            self.print_info(cformat('- [%{cyan}{}%{reset}] %{grey!}{:4}%{reset}  %{green!}{}%{reset}').format(
+            self.print_info('- [%[cyan]{}%[reset]] %[grey!]{:4}%[reset]  %[green!]{}%[reset]'.format(
                 location.name, r.id, r.name))
 
             for old_bookable_time in getattr(old_room, '_dailyBookablePeriods', []):
@@ -225,7 +224,7 @@ class RoomsLocationsImporter(TopLevelMigrationStep):
                         end_time=old_bookable_time._endTime
                     )
                 )
-                self.print_info(cformat('  %{blue!}Bookable:%{reset} {}').format(r.bookable_hours[-1]))
+                self.print_info('  %[blue!]Bookable:%[reset] {}'.format(r.bookable_hours[-1]))
 
             for old_nonbookable_date in getattr(old_room, '_nonBookableDates', []):
                 r.nonbookable_periods.append(
@@ -234,7 +233,7 @@ class RoomsLocationsImporter(TopLevelMigrationStep):
                         end_dt=old_nonbookable_date._endDate
                     )
                 )
-                self.print_info(cformat('  %{blue!}Nonbookable:%{reset} {}').format(r.nonbookable_periods[-1]))
+                self.print_info('  %[blue!]Nonbookable:%[reset] {}'.format(r.nonbookable_periods[-1]))
 
             if self.photo_path:
                 try:
@@ -253,7 +252,7 @@ class RoomsLocationsImporter(TopLevelMigrationStep):
 
                 if large_photo and small_photo:
                     r.photo = Photo(data=large_photo, thumbnail=small_photo)
-                    self.print_info(cformat('  %{blue!}Photos'))
+                    self.print_info('  %[blue!]Photos')
 
             new_eq = []
             for old_equipment in ifilter(None, old_room._equipment.split('`') + old_room.avaibleVC):
@@ -261,7 +260,7 @@ class RoomsLocationsImporter(TopLevelMigrationStep):
                 new_eq.append(room_eq)
                 r.available_equipment.append(room_eq)
             if new_eq:
-                self.print_info(cformat('  %{blue!}Equipment:%{reset} {}')
+                self.print_info('  %[blue!]Equipment:%[reset] {}'
                                 .format(', '.join(sorted(x.name for x in new_eq))))
 
             for attr_name, value in getattr(old_room, 'customAtts', {}).iteritems():
@@ -271,13 +270,13 @@ class RoomsLocationsImporter(TopLevelMigrationStep):
                 attr_name = attribute_map.get(attr_name, attr_name).replace(' ', '-').lower()
                 ca = location.get_attribute_by_name(attr_name)
                 if not ca:
-                    self.print_info(cformat('  %{blue!}Attribute:%{reset} {} %{red!}not found').format(attr_name))
+                    self.print_info('  %[blue!]Attribute:%[reset] {} %[red!]not found'.format(attr_name))
                     continue
                 attr = RoomAttributeAssociation()
                 attr.value = value
                 attr.attribute = ca
                 r.attributes.append(attr)
-                self.print_info(cformat('  %{blue!}Attribute:%{reset} {} = {}')
+                self.print_info('  %[blue!]Attribute:%[reset] {} = {}'
                                 .format(attr.attribute.title, attr.value))
 
             self.global_ns.room_mapping[(location.name, r.name)] = (location.id, r.id)
@@ -303,7 +302,7 @@ class RoomsLocationsImporter(TopLevelMigrationStep):
                 reason=convert_to_unicode(old_blocking.message)
             )
 
-            self.print_info(cformat(u'- %{cyan}{}').format(b.reason))
+            self.print_info(u'- %[cyan]{}'.format(b.reason))
             for old_blocked_room in old_blocking.blockedRooms:
                 br = BlockedRoom(
                     state=state_map[old_blocked_room.active],
@@ -313,8 +312,8 @@ class RoomsLocationsImporter(TopLevelMigrationStep):
                 room = Room.get(get_room_id(old_blocked_room.roomGUID))
                 room.blocked_rooms.append(br)
                 b.blocked_rooms.append(br)
-                self.print_info(cformat(u'  %{blue!}Room:%{reset} {} ({})').format(room.full_name,
-                                                                                   BlockedRoom.State(br.state).title))
+                self.print_info(u'  %[blue!]Room:%[reset] {} ({})'.format(room.full_name,
+                                                                          BlockedRoom.State(br.state).title))
 
             for old_principal in old_blocking.allowed:
                 if old_principal._type == 'Avatar':
@@ -326,6 +325,6 @@ class RoomsLocationsImporter(TopLevelMigrationStep):
                     principal = GroupProxy(old_principal._id, self.default_group_provider)
 
                 b.allowed.add(principal)
-                self.print_info(cformat(u'  %{blue!}Allowed:%{reset} {}').format(principal))
+                self.print_info(u'  %[blue!]Allowed:%[reset] {}'.format(principal))
             db.session.add(b)
         db.session.flush()

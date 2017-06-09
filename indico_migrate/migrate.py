@@ -85,7 +85,7 @@ def migrate(zodb_root, zodb_rb_uri, sqlalchemy_uri, verbose=False, dblog=False, 
         try:
             for step in steps:
                 if MigrationStateManager.has_already_run(step):
-                    print cformat('%{blue!}Skipping previously-run step {}...').format(step.__name__)
+                    print cformat('%[blue!]Skipping previously-run step {}...').format(step.__name__)
                     continue
                 if step in (RoomsLocationsImporter, RoomBookingsImporter):
                     if zodb_rb_uri:
@@ -98,9 +98,9 @@ def migrate(zodb_root, zodb_rb_uri, sqlalchemy_uri, verbose=False, dblog=False, 
         finally:
             if save_restore:
                 db.session.rollback()
-                print cformat('%{yellow}Saving restore point...'),
+                print cformat('%[yellow]Saving restore point...'),
                 MigrationStateManager.save_restore_point(save_restore)
-                print cformat('%{green!}DONE')
+                print cformat('%[green!]DONE')
 
 
 def db_has_data():
@@ -123,7 +123,7 @@ def setup(zodb_root, sqlalchemy_uri, dblog=False, restore=False):
 
     plugin_engine.init_app(app)
     if not plugin_engine.load_plugins(app):
-        print(cformat('%{red!}Could not load some plugins: {}%{reset}').format(
+        print(cformat('%[red!]Could not load some plugins: {}%[reset]').format(
             ', '.join(plugin_engine.get_failed_plugins(app))))
         sys.exit(1)
     db.init_app(app)

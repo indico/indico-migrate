@@ -32,7 +32,6 @@ from indico.modules.networks.models.networks import IPNetworkGroup
 from indico.modules.news import news_settings
 from indico.modules.news.models.news import NewsItem
 from indico.modules.users import user_management_settings
-from indico.util.console import cformat
 from indico.web.flask.templating import strip_tags
 
 from indico_migrate import TopLevelMigrationStep, convert_to_unicode
@@ -121,7 +120,7 @@ class GlobalPreEventsImporter(TopLevelMigrationStep):
         self.print_step('Global IP acl')
         ip_networks = filter(None, map(self._to_network, self.makac_info._ip_based_acl_mgr._full_access_acl))
         if not ip_networks:
-            self.print_error(cformat('%{red}No valid IPs found'))
+            self.print_error('%[red]No valid IPs found')
             return
         network = IPNetworkGroup(name='Full Attachment Access', hidden=True, attachment_access_override=True,
                                  description='IPs that can access all attachments without authentication',
@@ -135,7 +134,7 @@ class GlobalPreEventsImporter(TopLevelMigrationStep):
         for domain in self._iter_domains():
             ip_networks = filter(None, map(self._to_network, set(domain.filterList)))
             if not ip_networks:
-                self.print_warning(cformat('%{yellow}Domain has no valid IPs: {}')
+                self.print_warning('%[yellow]Domain has no valid IPs: {}'
                                    .format(convert_to_unicode(domain.name)))
             network = IPNetworkGroup(name=convert_to_unicode(domain.name),
                                      description=convert_to_unicode(domain.description), networks=ip_networks)
@@ -189,5 +188,5 @@ class GlobalPreEventsImporter(TopLevelMigrationStep):
                 addr = ':'.join(segments + ['0'] * (8 - len(segments)))
                 net = ip_network('{}/{}'.format(addr, 16 * len(segments)))
         if net is None:
-            self.print_warning(cformat('%{yellow!}Skipped invalid mask: {}').format(mask))
+            self.print_warning('%[yellow!]Skipped invalid mask: {}'.format(mask))
         return net

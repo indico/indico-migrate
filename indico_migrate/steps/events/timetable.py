@@ -48,7 +48,6 @@ from indico.modules.events.tracks import Track
 from indico.modules.events.tracks.settings import track_settings
 from indico.modules.rb import Location, Room
 from indico.modules.users.models.users import UserTitle
-from indico.util.console import cformat
 from indico.util.string import fix_broken_string, is_valid_mail, sanitize_email
 
 from indico_migrate import convert_to_unicode
@@ -100,12 +99,12 @@ class EventTracksImporter(EventMigrationStep):
                           code=convert_to_unicode(old_track._code),
                           position=pos,
                           abstract_reviewers=set())
-            self.print_info(cformat('%{white!}Track:%{reset} {}').format(track.title))
+            self.print_info('%[white!]Track:%[reset] {}'.format(track.title))
             for coordinator in old_track._coordinators:
                 user = self.user_from_legacy(coordinator)
                 if user is None:
                     continue
-                self.print_info(cformat('%{blue!}  Coordinator:%{reset} {}').format(user))
+                self.print_info('%[blue!]  Coordinator:%[reset] {}'.format(user))
                 track.conveners.add(user)
                 track.abstract_reviewers.add(user)
                 self.event.update_principal(user, add_roles={'abstract_reviewer', 'track_convener'}, quiet=True)
@@ -173,19 +172,19 @@ class EventTimetableImporter(EventMigrationStep):
             self.event._last_friendly_session_id += 1
             session.friendly_id = self.event._last_friendly_session_id
         if not self.quiet:
-            self.print_info(cformat('%{blue!}Session%{reset} {}').format(session.title))
+            self.print_info('%[blue!]Session%[reset] {}'.format(session.title))
         self.event_ns.legacy_session_map[old_session] = session
         if old_session.id not in self.legacy_session_ids_used:
             session.legacy_mapping = LegacySessionMapping(event_new=self.event, legacy_session_id=old_session.id)
             self.legacy_session_ids_used.add(old_session.id)
         else:
-            self.print_warning(cformat('%{yellow!}Duplicate session id; not adding legacy mapping for {}')
+            self.print_warning('%[yellow!]Duplicate session id; not adding legacy mapping for {}'
                                .format(old_session.id))
         # colors
         try:
             session.colors = ColorTuple(old_session._textColor, old_session._color)
         except (AttributeError, ValueError) as e:
-            self.print_warning(cformat('%{yellow}Session has no colors: "{}" [{}]').format(session.title, e))
+            self.print_warning('%[yellow]Session has no colors: "{}" [{}]'.format(session.title, e))
         principals = {}
         # managers / read access
         self._process_ac(SessionPrincipal, principals, ac, allow_emails=True)
@@ -248,7 +247,7 @@ class EventTimetableImporter(EventMigrationStep):
             else:
                 contrib.track = track
         if not self.quiet:
-            self.print_info(cformat('%{cyan}Contribution%{reset} {}').format(contrib.title))
+            self.print_info('%[cyan]Contribution%[reset] {}'.format(contrib.title))
         self.event_ns.legacy_contribution_map[old_contrib] = contrib
         contrib.legacy_mapping = LegacyContributionMapping(event_new=self.event, legacy_contribution_id=old_contrib.id)
         # contribution type
@@ -256,7 +255,7 @@ class EventTimetableImporter(EventMigrationStep):
             try:
                 contrib.type = self.event_ns.legacy_contribution_type_map[old_contrib._type]
             except AttributeError:
-                self.print_warning(cformat('%{yellow!}Invalid contrib type {}')
+                self.print_warning('%[yellow!]Invalid contrib type {}'
                                    .format(convert_to_unicode(old_contrib._type._name)))
         # abstract
         if old_contrib in self.event_ns.legacy_contribution_abstracts:
@@ -286,7 +285,7 @@ class EventTimetableImporter(EventMigrationStep):
                                      title=convert_to_unicode(old_subcontrib.title),
                                      description=convert_to_unicode(old_subcontrib.description))
         if not self.quiet:
-            self.print_info(cformat('  %{cyan!}SubContribution%{reset} {}').format(subcontrib.title))
+            self.print_info('  %[cyan!]SubContribution%[reset] {}'.format(subcontrib.title))
         self.event_ns.legacy_subcontribution_map[old_subcontrib] = subcontrib
         subcontrib.legacy_mapping = LegacySubContributionMapping(event_new=self.event,
                                                                  legacy_contribution_id=old_contrib.id,
@@ -309,13 +308,12 @@ class EventTimetableImporter(EventMigrationStep):
             try:
                 new_field = self.event_ns.legacy_contribution_field_map[field_id]
             except KeyError:
-                self.print_warning(cformat('%{yellow!}Contribution field "{}" does not exist').format(field_id))
+                self.print_warning('%[yellow!]Contribution field "{}" does not exist'.format(field_id))
                 continue
             new_value = self._process_contribution_field_value(field_id, value, new_field, ContributionFieldValue)
             if new_value:
                 if not self.quiet:
-                    self.print_info(cformat('%{green} - [field]%{reset} {}: {}').format(new_field.title,
-                                                                                        new_value.data))
+                    self.print_info('%[green] - [field]%[reset] {}: {}'.format(new_field.title, new_value.data))
                 yield new_value
 
     def _process_contribution_field_value(self, old_field_id, old_value, new_field, field_class):
@@ -330,7 +328,7 @@ class EventTimetableImporter(EventMigrationStep):
 
     def _migrate_timetable(self):
         if not self.quiet:
-            self.print_info(cformat('%{green}Timetable...'))
+            self.print_info('%[green]Timetable...')
         self._migrate_timetable_entries(self.conf._Conference__schedule._entries)
 
     def _migrate_timetable_entries(self, old_entries, session_block=None):
@@ -344,10 +342,10 @@ class EventTimetableImporter(EventMigrationStep):
                 parent = old_entry._LinkedTimeSchEntry__owner
                 parent_type = parent.__class__.__name__
                 if parent_type == 'Contribution':
-                    self.print_warning(cformat('%{yellow!}Found LinkedTimeSchEntry for contribution'))
+                    self.print_warning('%[yellow!]Found LinkedTimeSchEntry for contribution')
                     entry = self._migrate_contribution_timetable_entry(old_entry, session_block)
                 elif parent_type != 'SessionSlot':
-                    self.print_error(cformat('%{red!}Found LinkedTimeSchEntry for {}').format(parent_type))
+                    self.print_error('%[red!]Found LinkedTimeSchEntry for {}'.format(parent_type))
                     continue
                 else:
                     assert session_block is None
@@ -356,14 +354,12 @@ class EventTimetableImporter(EventMigrationStep):
                 raise ValueError('Unexpected item type: ' + item_type)
             if session_block:
                 if entry.start_dt < session_block.timetable_entry.start_dt:
-                    self.print_warning(cformat('%{yellow!}Block boundary (start) violated; extending block '
-                                               'from {} to {}').format(session_block.timetable_entry.start_dt,
-                                                                       entry.start_dt))
+                    self.print_warning('%[yellow!]Block boundary (start violated; extending block from {} to {})'
+                                       .format(session_block.timetable_entry.start_dt, entry.start_dt))
                     session_block.timetable_entry.start_dt = entry.start_dt
                 if entry.end_dt > session_block.timetable_entry.end_dt:
-                    self.print_warning(cformat('%{yellow!}Block boundary (end) violated; extending block '
-                                               'from {} to {}').format(session_block.timetable_entry.end_dt,
-                                                                       entry.end_dt))
+                    self.print_warning('%[yellow!]Block boundary (end violated; extending block from {} to {})'
+                                       .format(session_block.timetable_entry.end_dt, entry.end_dt))
                     session_block.duration += entry.end_dt - session_block.timetable_entry.end_dt
 
     def _migrate_contribution_timetable_entry(self, old_entry, session_block=None):
@@ -383,7 +379,7 @@ class EventTimetableImporter(EventMigrationStep):
         try:
             break_.colors = ColorTuple(old_entry._textColor, old_entry._color)
         except (AttributeError, ValueError) as e:
-            self.print_warning(cformat('%{yellow}Break has no colors: "{}" [{}]').format(break_.title, e))
+            self.print_warning('%[yellow]Break has no colors: "{}" [{}]'.format(break_.title, e))
         break_.timetable_entry = TimetableEntry(event_new=self.event, start_dt=old_entry.startDate)
         self._migrate_location(old_entry, break_)
         if session_block:
@@ -395,7 +391,7 @@ class EventTimetableImporter(EventMigrationStep):
         try:
             session = self.event_ns.legacy_session_map[old_block.session]
         except KeyError:
-            self.print_warning(cformat('%{yellow!}Found zombie session {}').format(old_block.session))
+            self.print_warning('%[yellow!]Found zombie session {}'.format(old_block.session))
             session = self._migrate_session(old_block.session)
         session_block = SessionBlock(session=session, title=convert_to_unicode(old_block.title),
                                      duration=old_block.duration)
@@ -479,16 +475,16 @@ class EventTimetableImporter(EventMigrationStep):
             try:
                 reference_type = self.global_ns.reference_types[name]
             except KeyError:
-                self.print_warning(cformat('%{yellow!}Unknown reference type: {}').format(name))
+                self.print_warning('%[yellow!]Unknown reference type: {}'.format(name))
                 continue
             if isinstance(values, basestring):
                 values = [values]
             for value in map(convert_to_unicode, values):
                 if value == 'None':
-                    self.print_warning(cformat("%{yellow!}Skipping 'None' value"))
+                    self.print_warning("%[yellow!]Skipping 'None' value")
                     continue
                 if not self.quiet:
-                    self.print_info(cformat(' - %{magenta}{}: %{green!}{}').format(name, value))
+                    self.print_info(' - %[magenta]{}: %[green!]{}'.format(name, value))
                 yield reference_cls(reference_type=reference_type, value=value)
 
     def _convert_principal(self, old_principal):
@@ -512,11 +508,11 @@ class EventTimetableImporter(EventMigrationStep):
         else:
             principal = self._convert_principal(legacy_principal)
         if principal is None:
-            self.print_warning(cformat('%{yellow}{} does not exist:%{reset} {}') .format(name, legacy_principal),
+            self.print_warning('%[yellow]{} does not exist:%[reset] {}' .format(name, legacy_principal),
                                always=False)
             return
         elif not allow_emails and isinstance(principal, EmailPrincipal):
-            self.print_warning(cformat('%{yellow}{} cannot be an email principal:%{reset} {}')
+            self.print_warning('%[yellow]{} cannot be an email principal:%[reset] {}'
                                .format(name, legacy_principal), always=False)
             return
         try:
@@ -603,8 +599,7 @@ class EventTimetableImporter(EventMigrationStep):
                                      phone=most_common(persons, key=attrgetter('phone')))
                 self.add_event_person(person)
             if not self.quiet:
-                msg = cformat('%{magenta!}Event Person%{reset} {}({})').format(person.full_name, person.email)
-                self.print_info(msg)
+                self.print_info('%[magenta!]Event Person%[reset] {}({})'.format(person.full_name, person.email))
 
     def _get_person(self, old_person):
         email = getattr(old_person, '_email', None) or getattr(old_person, 'email', None)
@@ -625,7 +620,7 @@ class EventTimetableImporter(EventMigrationStep):
                 continue
             link = person_link_map.get(person)
             if link:
-                self.print_warning(cformat('%{yellow!}Duplicated chair "{}" for event').format(person.full_name))
+                self.print_warning('%[yellow!]Duplicated chair "{}" for event'.format(person.full_name))
             else:
                 link = EventPersonLink(person=person, **self._get_person_data(chair))
                 person_link_map[person] = link
@@ -678,7 +673,7 @@ class EventTimetableImporter(EventMigrationStep):
             if link:
                 self._update_link_data(link, person_link_data_map[person])
                 if link.author_type == AuthorType.primary:
-                    self.print_warning(cformat('%{yellow!}Primary author "{}" is also co-author')
+                    self.print_warning('%[yellow!]Primary author "{}" is also co-author'
                                        .format(person.full_name))
                 else:
                     link.author_type = AuthorType.secondary
@@ -699,7 +694,7 @@ class EventTimetableImporter(EventMigrationStep):
             link = person_link_map.get(person)
             if link:
                 self._update_link_data(link, person_link_data_map[person])
-                self.print_warning(cformat('%{yellow!}Duplicated speaker "{}" for sub-contribution')
+                self.print_warning('%[yellow!]Duplicated speaker "{}" for sub-contribution'
                                    .format(person.full_name))
             else:
                 link = SubContributionPersonLink(person=person, **person_link_data)
@@ -718,7 +713,7 @@ class EventTimetableImporter(EventMigrationStep):
             link = person_link_map.get(person)
             if link:
                 self._update_link_data(link, person_link_data_map[person])
-                self.print_warning(cformat('%{yellow!}Duplicated session block convener "{}"').format(person.full_name))
+                self.print_warning('%[yellow!]Duplicated session block convener "{}"'.format(person.full_name))
             else:
                 link = SessionBlockPersonLink(person=person, **person_link_data)
                 person_link_map[person] = link

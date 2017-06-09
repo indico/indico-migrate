@@ -27,7 +27,6 @@ from indico.modules.rb.models.reservation_edit_logs import ReservationEditLog
 from indico.modules.rb.models.reservation_occurrences import ReservationOccurrence
 from indico.modules.rb.models.reservations import RepeatMapping, Reservation
 from indico.modules.rb.models.rooms import Room
-from indico.util.console import cformat
 from indico.util.date_time import as_utc
 
 from indico_migrate import TopLevelMigrationStep, convert_to_unicode
@@ -141,7 +140,7 @@ class RoomBookingsImporter(TopLevelMigrationStep):
                     else:
                         self.print_error('event {} does not contain booking {}'.format(event_id, v.id))
 
-            self.print_info(cformat('- [%{cyan}{}%{reset}/%{green!}{}%{reset}]  %{grey!}{}%{reset}  {}').format(
+            self.print_info('- [%[cyan]{}%[reset]/%[green!]{}%[reset]]  %[grey!]{}%[reset]  {}'.format(
                 room.location_name,
                 room.name,
                 r.id,

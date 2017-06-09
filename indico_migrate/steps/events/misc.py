@@ -131,10 +131,10 @@ class EventAlarmImporter(EventMigrationStep):
                                      reply_to_address=convert_to_unicode(alarm.fromAddr).strip().lower(),
                                      message=convert_to_unicode(alarm.note).strip())
             db.session.add(reminder)
-            status = (cformat('%{red!}OVERDUE%{reset}') if is_overdue else
-                      cformat('%{green!}SENT%{reset}') if is_sent else
-                      cformat('%{yellow}PENDING%{reset}'))
-            self.print_success(cformat('%{cyan}{}%{reset} {}').format(reminder.scheduled_dt, status))
+            status = ('%[red!]OVERDUE%[reset]' if is_overdue else
+                      '%[green!]SENT%[reset]' if is_sent else
+                      '%[yellow]PENDING%[reset]')
+            self.print_success('%[cyan]{}%[reset] {}'.format(reminder.scheduled_dt, status))
 
 
 class EventShortUrlsImporter(EventMigrationStep):
@@ -161,19 +161,19 @@ class EventShortUrlsImporter(EventMigrationStep):
         error = self._validate_shorturl(shorturl)
         if error == 'url':
             # show obvious garbage in a less prominent way
-            self.print_warning(cformat('%{yellow}Shorturl %{yellow!}{}%{reset}%{yellow} is invalid: %{yellow!}{}')
+            self.print_warning('%[yellow]Shorturl %[yellow!]{}%[reset]%[yellow] is invalid: %[yellow!]{}'
                                .format(shorturl, error))
             return
         elif error:
-            self.print_warning(cformat('%{red}Shorturl %{yellow!}{}%{reset}%{red} is invalid: %{red!}{}')
+            self.print_warning('%[red]Shorturl %[yellow!]{}%[reset]%[red] is invalid: %[red!]{}'
                                .format(shorturl, error))
             return
         conflict = self.global_ns.used_short_urls.get(shorturl.lower())
         if conflict:
             # if there's a conflict caused by the previously case-sensitive url shortcuts,
             # discard them in both events - it's better to get a 404 error than a wrong event
-            self.print_error(cformat('%{red!}Shorturl %{reset}%{red}{}%{red!} collides with '
-                                     'that of event %{reset}%{red}{}%{red!}; discarding both')
+            self.print_error('%[red!]Shorturl %[reset]%[red]{}%[red!] collides with '
+                                     'that of event %[reset]%[red]{}%[red!]; discarding both'
                              .format(shorturl, conflict))
             conflict.url_shortcut = None
             return
@@ -245,7 +245,7 @@ class EventLegacyIdImporter(EventMigrationStep):
         if self.is_legacy_event:
             db.session.add(LegacyEventMapping(legacy_event_id=self.conf.id, event_id=self.event.id))
             if not self.quiet:
-                self.print_success(cformat('-> %{cyan}{}').format(self.event.id))
+                self.print_success('-> %[cyan]{}'.format(self.event.id))
 
 
 class EventPaymentSettingsImporter(EventMigrationStep):

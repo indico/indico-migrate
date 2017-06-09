@@ -24,7 +24,6 @@ import pytz
 from indico.modules.attachments import Attachment, AttachmentFolder
 from indico.modules.attachments.models.attachments import AttachmentFile, AttachmentType
 from indico.modules.attachments.models.legacy_mapping import LegacyAttachmentFolderMapping, LegacyAttachmentMapping
-from indico.util.console import cformat
 from indico.util.date_time import now_utc
 from indico.util.fs import secure_filename
 
@@ -51,23 +50,23 @@ class AttachmentMixin(LocalFileImporterMixin):
         for material, resources in self._iter_attachments(old_category):
             folder = self._folder_from_material(material, category)
             if not self.quiet:
-                self.print_success(cformat('%{cyan}[{}]').format(folder.title))
+                self.print_success('%[cyan][{}]'.format(folder.title))
             for resource in resources:
                 attachment = self._attachment_from_resource(folder, material, resource, old_category)
                 if attachment is None:
                     continue
                 if not self.quiet:
                     if attachment.type == AttachmentType.link:
-                        self.print_success(cformat('- %{cyan}{}').format(attachment.title))
+                        self.print_success('- %[cyan]{}'.format(attachment.title))
                     else:
-                        self.print_success(cformat('- %{cyan!}{}').format(attachment.title))
+                        self.print_success('- %[cyan!]{}'.format(attachment.title))
 
     def migrate_event_attachments(self):
         for obj, material, resources, legacy_link_data in self._iter_event_materials():
             folder = self._folder_from_material(material, obj)
             LegacyAttachmentFolderMapping(material_id=material.id, folder=folder, **legacy_link_data)
             if not self.quiet:
-                self.print_success(cformat('%{cyan}[{}]%{reset} %{blue!}({})').format(folder.title, folder.link_repr))
+                self.print_success('%[cyan][{}]%[reset] %[blue!]({})'.format(folder.title, folder.link_repr))
             for resource in resources:
                 attachment = self._attachment_from_resource(folder, material, resource, self.conf)
                 if attachment is None:
@@ -76,9 +75,9 @@ class AttachmentMixin(LocalFileImporterMixin):
                                         **legacy_link_data)
                 if not self.quiet:
                     if attachment.type == AttachmentType.link:
-                        self.print_success(cformat('- %{cyan}{}').format(attachment.title))
+                        self.print_success('- %[cyan]{}'.format(attachment.title))
                     else:
-                        self.print_success(cformat('- %{cyan!}{}').format(attachment.title))
+                        self.print_success('- %[cyan!]{}'.format(attachment.title))
 
     def _iter_event_materials(self):
         for material, resources in self._iter_attachments(self.conf):
@@ -122,13 +121,13 @@ class AttachmentMixin(LocalFileImporterMixin):
             data['type'] = AttachmentType.link
             data['link_url'] = convert_to_unicode(resource.url).strip()
             if not data['link_url']:
-                self.print_error(cformat('%{red!}[{}] Skipping link, missing URL').format(data['title']))
+                self.print_error('%[red!][{}] Skipping link, missing URL'.format(data['title']))
                 return None
         else:
             data['type'] = AttachmentType.file
             storage_backend, storage_path, size = self._get_local_file_info(resource)
             if storage_path is None:
-                self.print_error(cformat('%{red!}File {} not found on disk').format(resource._LocalFile__archivedId))
+                self.print_error('%[red!]File {} not found on disk'.format(resource._LocalFile__archivedId))
                 return None
             filename = secure_filename(convert_to_unicode(resource.fileName), 'attachment')
             data['file'] = AttachmentFile(user=self.system_user, created_dt=modified_dt, filename=filename,

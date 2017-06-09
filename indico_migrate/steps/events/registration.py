@@ -36,7 +36,6 @@ from indico.modules.events.registration.models.items import (PersonalDataType, R
                                                              RegistrationFormSection, RegistrationFormText)
 from indico.modules.events.registration.models.legacy_mapping import LegacyRegistrationMapping
 from indico.modules.events.registration.models.registrations import Registration, RegistrationData, RegistrationState
-from indico.util.console import cformat
 from indico.util.date_time import as_utc, now_utc
 from indico.util.fs import secure_filename
 from indico.util.string import normalize_phone_number
@@ -177,8 +176,7 @@ class EventRegFormImporter(LocalFileImporterMixin, EventMigrationStep):
         self.regform = RegistrationForm(event_id=int(self.event.id), base_price=0,
                                         currency=self.event_ns.misc_data['payment_currency'])
         self._migrate_settings()
-        self.print_success(cformat('%{blue!}{}%{reset} - %{cyan}{}').format(self.regform.start_dt.date(),
-                                                                            self.regform.title))
+        self.print_success('%[blue!]{}%[reset] - %[cyan]{}'.format(self.regform.start_dt.date(), self.regform.title))
         self._migrate_form()
         self._migrate_custom_statuses()
         self._migrate_registrations()
@@ -239,7 +237,7 @@ class EventRegFormImporter(LocalFileImporterMixin, EventMigrationStep):
             return
         section = RegistrationFormSection(registration_form=self.regform, title=sanitize_user_input(form._title),
                                           description=sanitize_user_input(form._description, html=True))
-        self.print_info(cformat('%{green!}Section/Sessions%{reset} - %{cyan}{}').format(section.title))
+        self.print_info('%[green!]Section/Sessions%[reset] - %[cyan]{}'.format(section.title))
         field_data = {
             'with_extra_slots': False,
             'choices': []
@@ -281,7 +279,7 @@ class EventRegFormImporter(LocalFileImporterMixin, EventMigrationStep):
             return
         section = RegistrationFormSection(registration_form=self.regform, title=sanitize_user_input(form._title),
                                           description=sanitize_user_input(form._description, html=True))
-        self.print_info(cformat('%{green!}Section/Social%{reset} - %{cyan}{}').format(section.title))
+        self.print_info('%[green!]Section/Social%[reset] - %[cyan]{}'.format(section.title))
         input_type = 'multi_choice' if getattr(form, '_selectionType', 'multiple') == 'multiple' else 'single_choice'
         field_data = {'with_extra_slots': True, 'choices': []}
         if input_type == 'single_choice':
@@ -354,7 +352,7 @@ class EventRegFormImporter(LocalFileImporterMixin, EventMigrationStep):
 
         section = RegistrationFormSection(registration_form=self.regform, title=sanitize_user_input(form._title),
                                           description=sanitize_user_input(form._description, html=True))
-        self.print_info(cformat('%{green!}Section/Accommodation%{reset} - %{cyan}{}').format(section.title))
+        self.print_info('%[green!]Section/Accommodation%[reset] - %[cyan]{}'.format(section.title))
         field = self.accommodation_field = RegistrationFormField(registration_form=self.regform, title=section.title,
                                                                  input_type='accommodation')
         field.data = data
@@ -366,7 +364,7 @@ class EventRegFormImporter(LocalFileImporterMixin, EventMigrationStep):
             return
         section = RegistrationFormSection(registration_form=self.regform, title=sanitize_user_input(form._title),
                                           description=sanitize_user_input(form._description, html=True))
-        self.print_info(cformat('%{green!}Section/Reason%{reset} - %{cyan}{}').format(section.title))
+        self.print_info('%[green!]Section/Reason%[reset] - %[cyan]{}'.format(section.title))
         field = self.reason_field = RegistrationFormField(registration_form=self.regform, title='Reason',
                                                           input_type='textarea')
         field.data, field.versioned_data = field.field_impl.process_field_data({'number_of_rows': 4})
@@ -376,7 +374,7 @@ class EventRegFormImporter(LocalFileImporterMixin, EventMigrationStep):
         if not form._content or not form._enabled:
             return
         section = RegistrationFormSection(registration_form=self.regform, title=sanitize_user_input(form._title))
-        self.print_info(cformat('%{green!}Section/Info%{reset} - %{cyan}{}').format(section.title))
+        self.print_info('%[green!]Section/Info%[reset] - %[cyan]{}'.format(section.title))
         text = RegistrationFormText(registration_form=self.regform, title='Information',
                                     description=sanitize_user_input(form._content, html=True))
         section.children.append(text)
@@ -396,7 +394,7 @@ class EventRegFormImporter(LocalFileImporterMixin, EventMigrationStep):
         section = RegistrationFormPersonalDataSection(registration_form=self.regform,
                                                       title=sanitize_user_input(form._title),
                                                       description=sanitize_user_input(form._description, html=True))
-        self.print_info(cformat('%{green!}Section/Personal%{reset} - %{cyan}{}').format(section.title))
+        self.print_info('%[green!]Section/Personal%[reset] - %[cyan]{}'.format(section.title))
         self.section_map[form] = section
         for f in getattr(form, '_sortedFields', []) or getattr(form, '_fields', []):
             old_pd_type = getattr(f, '_pdField', None)
@@ -408,7 +406,7 @@ class EventRegFormImporter(LocalFileImporterMixin, EventMigrationStep):
         section = RegistrationFormSection(registration_form=self.regform, title=sanitize_user_input(form._title),
                                           description=sanitize_user_input(form._description, html=True),
                                           is_enabled=getattr(form, '_enabled', True))
-        self.print_info(cformat('%{green!}Section%{reset} - %{cyan}{}').format(section.title))
+        self.print_info('%[green!]Section%[reset] - %[cyan]{}'.format(section.title))
         self.section_map[form] = section
         for f in getattr(form, '_sortedFields', []) or getattr(form, '_fields', []):
             section.children.append(self._migrate_field(f))
@@ -432,7 +430,7 @@ class EventRegFormImporter(LocalFileImporterMixin, EventMigrationStep):
             billable, price = self._convert_billable(old_field)
             if billable and price:
                 self.regform.base_price += Decimal(price)
-            self.print_info(cformat('%{green}Text%{reset} - %{cyan}{}').format(text.title))
+            self.print_info('%[green]Text%[reset] - %[cyan]{}'.format(text.title))
             return text
         field_cls = RegistrationFormPersonalDataField if pd_type is not None else RegistrationFormField
         pd_required = pd_type is not None and pd_type.is_required
@@ -442,7 +440,7 @@ class EventRegFormImporter(LocalFileImporterMixin, EventMigrationStep):
                           is_enabled=is_enabled, title=sanitize_user_input(old_field._caption),
                           description=sanitize_user_input(getattr(old_field, '_description', '')))
         self._migrate_field_input(field, old_field, pd_type)
-        self.print_info(cformat('%{green}Field/{}%{reset} - %{cyan}{}').format(field.input_type, field.title))
+        self.print_info('%[green]Field/{}%[reset] - %[cyan]{}'.format(field.input_type, field.title))
         self.field_map[old_field] = field
         return field
 
@@ -539,7 +537,7 @@ class EventRegFormImporter(LocalFileImporterMixin, EventMigrationStep):
         try:
             price = float(str(item._price).replace(',', '.')) if getattr(item, '_price', 0) else 0
         except ValueError:
-            self.print_warning(cformat('Setting invalid price %{red}{!r}%{reset} to %{green}0%{reset}')
+            self.print_warning('Setting invalid price %[red]{!r}%[reset] to %[green]0%[reset]'
                                .format(item._price))
             return False, 0
         return bool(getattr(item, '_billable', False)), price
@@ -568,7 +566,7 @@ class EventRegFormImporter(LocalFileImporterMixin, EventMigrationStep):
         # db, but both can be safely commented out without causing any issues
         registration.friendly_id = int(old_reg._id)
         registration.ticket_uuid = getattr(old_reg, '_checkInUUID', None)
-        self.print_info(cformat('%{yellow}Registration%{reset} - %{cyan}{}%{reset} [{}]').format(
+        self.print_info('%[yellow]Registration%[reset] - %[cyan]{}%[reset] [{}]'.format(
             registration.full_name, old_reg._id))
         self._migrate_registration_user(old_reg, registration)
         self._migrate_registration_fields(old_reg, registration)
@@ -605,8 +603,8 @@ class EventRegFormImporter(LocalFileImporterMixin, EventMigrationStep):
         try:
             user, host = email.split('@', 1)
         except ValueError:
-            self.print_warning(
-                cformat('Garbage email %{red}{0}%{reset}; using %{green}{0}@example.com%{reset} instead').format(email))
+            self.print_warning('Garbage email %[red]{0}%[reset]; using %[green]{0}@example.com%[reset] instead'
+                               .format(email))
             user = email
             host = 'example.com'
             email += '@example.com'
@@ -615,9 +613,8 @@ class EventRegFormImporter(LocalFileImporterMixin, EventMigrationStep):
             email = '{}+{}@{}'.format(user, n, host)
             n += 1
         if n != 1:
-            self.print_warning(
-                cformat('Duplicate email %{yellow}{}@{}%{reset}; using %{green}{}%{reset} instead').format(user, host,
-                                                                                                           email))
+            self.print_warning('Duplicate email %[yellow]{}@{}%[reset]; using %[green]{}%[reset] instead'
+                               .format(user, host, email))
         self.emails.add(email)
         return email
 
@@ -625,8 +622,8 @@ class EventRegFormImporter(LocalFileImporterMixin, EventMigrationStep):
         user = self.global_ns.users_by_email.get(registration.email)
         if user is not None:
             if user in self.users:
-                self.print_warning(cformat('User {} is already associated with a registration; not associating them '
-                                           'with {}').format(user, registration))
+                self.print_warning('User {} is already associated with a registration; not associating them '
+                                   'with {}'.format(user, registration))
                 return
             self.users.add(user)
             registration.user = user
@@ -635,10 +632,10 @@ class EventRegFormImporter(LocalFileImporterMixin, EventMigrationStep):
             if not user:
                 return
             if not registration.user:
-                self.print_warning(cformat('No email match; discarding association between {} and {}')
+                self.print_warning('No email match; discarding association between {} and {}'
                                    .format(user, registration))
             elif registration.user != user:
-                self.print_warning(cformat('Email matches another user; associating {} with {} instead of {}')
+                self.print_warning('Email matches another user; associating {} with {} instead of {}'
                                    .format(registration, registration.user, old_reg._avatar))
 
     def _migrate_registration_statuses(self, old_reg, registration):
@@ -648,7 +645,7 @@ class EventRegFormImporter(LocalFileImporterMixin, EventMigrationStep):
             except KeyError:
                 if old_status._value:
                     val = convert_to_unicode(old_status._value._caption) if old_status._value else None
-                    self.print_warning(cformat('Skipping deleted status %{red!}{}%{reset} ({})')
+                    self.print_warning('Skipping deleted status %[red!]{}%[reset] ({})'
                                        .format(convert_to_unicode(old_status._status._caption), val))
                 continue
             field = info['field']
@@ -656,7 +653,7 @@ class EventRegFormImporter(LocalFileImporterMixin, EventMigrationStep):
             data = {status_info['uuid']: 1} if status_info is not None else None
             registration.data.append(RegistrationData(field_data=field.current_data, data=data))
             if not self.quiet and status_info:
-                self.print_info(cformat('%{red}STATUS%{reset} %{yellow!}{}%{reset} %{cyan}{}')
+                self.print_info('%[red]STATUS%[reset] %[yellow!]{}%[reset] %[cyan]{}'
                                 .format(field.title, status_info['caption']))
 
     def _migrate_registration_sessions(self, old_reg, registration):
@@ -675,7 +672,7 @@ class EventRegFormImporter(LocalFileImporterMixin, EventMigrationStep):
         choices = {choice_map[old_sess._regSession]: 1 for old_sess in old_sessions}
         registration.data.append(RegistrationData(field_data=data_version, data=choices))
         if not self.quiet:
-            self.print_info(cformat('%{blue!}SESSIONS%{reset} %{cyan!}{}')
+            self.print_info('%[blue!]SESSIONS%[reset] %[cyan!]{}'
                             .format(', '.join(sanitize_user_input(old_sess._regSession._session.title)
                                               for old_sess in old_sessions)))
 
@@ -686,7 +683,7 @@ class EventRegFormImporter(LocalFileImporterMixin, EventMigrationStep):
             uuid = choice_map[old_sess._regSession]
             registration.data.append(RegistrationData(field_data=data_versions[i], data={uuid: 1}))
             if not self.quiet:
-                self.print_info(cformat('%{blue!}SESSION/{}%{reset} %{cyan!}{}')
+                self.print_info('%[blue!]SESSION/{}%[reset] %[cyan!]{}'
                                 .format(i + 1, sanitize_user_input(old_sess._regSession._session.title)))
 
     def _get_session_objects(self, old_sessions):
@@ -700,7 +697,7 @@ class EventRegFormImporter(LocalFileImporterMixin, EventMigrationStep):
 
         if self.session_extra_choice_versions is None:
             # create one version that covers all choices not available in the current version
-            self.print_info(cformat('%{magenta!}{}').format('Creating version for missing sessions'))
+            self.print_info('%[magenta!]{}'.format('Creating version for missing sessions'))
             self.session_extra_choice_map = dict(self.session_choice_map)
             choices = list(self.session_choices)
             done = set(self.session_choice_map.viewkeys())
@@ -754,7 +751,7 @@ class EventRegFormImporter(LocalFileImporterMixin, EventMigrationStep):
         if not reason:
             return
         if not self.quiet:
-            self.print_info(cformat('%{blue!}REASON%{reset} %{yellow!}{}%{reset} %{cyan!}{}')
+            self.print_info('%[blue!]REASON%[reset] %[yellow!]{}%[reset] %[cyan!]{}'
                             .format(self.reason_field.title, reason))
         registration.data.append(RegistrationData(field_data=self.reason_field.current_data,
                                                   data=reason))
@@ -818,10 +815,9 @@ class EventRegFormImporter(LocalFileImporterMixin, EventMigrationStep):
         data = {'arrival_date': old_ac._arrivalDate.date().strftime('%Y-%m-%d'),
                 'departure_date': old_ac._departureDate.date().strftime('%Y-%m-%d')}
         if not self.quiet:
-            self.print_info(
-                cformat('%{blue!}ACCOMODATION%{reset} %{cyan!}{} [{} - {}]%{reset} %{red!}{}').format(
-                    sanitize_user_input(ac_type._caption), data['arrival_date'], data['departure_date'],
-                    '{:.02f}'.format(price) if billable and price else ''))
+            self.print_info('%[blue!]ACCOMODATION%[reset] %[cyan!]{} [{} - {}]%[reset] %[red!]{}'
+                            .format(sanitize_user_input(ac_type._caption), data['arrival_date'], data['departure_date'],
+                                    '{:.02f}'.format(price) if billable and price else ''))
         uuid = self.accommodation_choice_map.get(ac_type)
         if uuid is not None:
             data['choice'] = uuid
@@ -865,10 +861,9 @@ class EventRegFormImporter(LocalFileImporterMixin, EventMigrationStep):
                     if billable and price:
                         registration.base_price += Decimal(price)
                         if not self.quiet:
-                            self.print_info(
-                                cformat('%{blue!}STATIC%{reset} %{cyan!}{}%{reset} %{red!}{}').format(
-                                    sanitize_user_input(item._generalField._caption),
-                                    '{:.02f}'.format(price) if billable and price else ''))
+                            self.print_info('%[blue!]STATIC%[reset] %[cyan!]{}%[reset] %[red!]{}'.format(
+                                sanitize_user_input(item._generalField._caption),
+                                '{:.02f}'.format(price) if billable and price else ''))
                 elif item._generalField._id != item_id:
                     self.print_warning('Skipping invalid data (field id mismatch) for obsolete version of "{}" '
                                        '(registrant {})'
@@ -884,7 +879,7 @@ class EventRegFormImporter(LocalFileImporterMixin, EventMigrationStep):
         data_version = field.current_data
         billable, price = self._convert_billable(old_item)
         if not self.quiet:
-            self.print_info(cformat('%{yellow!}{}%{reset} %{cyan!}{}%{reset} %{red!}{}')
+            self.print_info('%[yellow!]{}%[reset] %[cyan!]{}%[reset] %[red!]{}'
                             .format(sanitize_user_input(old_item._generalField._caption),
                                     sanitize_user_input(str(old_item._value)),
                                     '{:.02f}'.format(price) if billable and price else ''))
@@ -893,7 +888,7 @@ class EventRegFormImporter(LocalFileImporterMixin, EventMigrationStep):
             if isinstance(old_item._value, basestring):
                 attrs['data'] = convert_to_unicode(old_item._value)
             else:
-                self.print_warning(cformat("Non-string '%{red}{!r}%{reset}' in {} field")
+                self.print_warning("Non-string '%[red]{!r}%[reset]' in {} field"
                                    .format(old_item._value, field.input_type))
                 attrs['data'] = unicode(old_item._value)
         elif field.input_type == 'number':
@@ -902,7 +897,7 @@ class EventRegFormImporter(LocalFileImporterMixin, EventMigrationStep):
             try:
                 attrs['data'] = float(old_item._value)
             except ValueError:
-                self.print_warning(cformat("Garbage number '%{red}{0}%{reset}' in number field")
+                self.print_warning("Garbage number '%[red]{0}%[reset]' in number field"
                                    .format(old_item._value))
             else:
                 if attrs['data'] == int(attrs['data']):
@@ -930,7 +925,7 @@ class EventRegFormImporter(LocalFileImporterMixin, EventMigrationStep):
             storage_backend, storage_path, size = self._get_local_file_info(local_file)
             filename = secure_filename(local_file.fileName, 'attachment')
             if storage_path is None:
-                self.print_error(cformat('%{red!}File not found on disk; skipping it [{}]')
+                self.print_error('%[red!]File not found on disk; skipping it [{}]'
                                  .format(local_file.id))
                 return
             attrs['filename'] = filename
@@ -943,7 +938,7 @@ class EventRegFormImporter(LocalFileImporterMixin, EventMigrationStep):
             try:
                 value = sanitize_user_input(old_item._value)
             except RuntimeError:
-                self.print_warning(cformat("Garbage caption '%{red}{!r}%{reset}' in choice field")
+                self.print_warning("Garbage caption '%[red]{!r}%[reset]' in choice field"
                                    .format(old_item._value))
                 return
             rv = self._migrate_registration_choice_field(field, value, price, billable)

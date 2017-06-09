@@ -21,7 +21,6 @@ from indico.core.db import db
 from indico.core.db.sqlalchemy.principals import EmailPrincipal
 from indico.core.db.sqlalchemy.protection import ProtectionMode
 from indico.modules.events.models.principals import EventPrincipal
-from indico.util.console import cformat
 from indico.util.string import is_valid_mail, sanitize_email
 
 from indico_migrate import convert_to_unicode
@@ -43,7 +42,7 @@ class EventACLImporter(EventMigrationStep):
         else:
             principal = self.convert_principal(legacy_principal)
         if principal is None:
-            self.print_warning(cformat('%%{%s}{}%%{reset}%%{yellow} does not exist:%%{reset} {} ({})' % color)
+            self.print_warning(('%%[%s]{}%%[reset]%%[yellow] does not exist:%%[reset] {} ({})' % color)
                                .format(name, legacy_principal, getattr(legacy_principal, 'id', '-')))
             return
         try:
@@ -58,7 +57,7 @@ class EventACLImporter(EventMigrationStep):
         if roles:
             entry.roles = sorted(set(entry.roles) | set(roles))
         if not self.quiet:
-            self.print_msg(cformat('      %%{%s}[{}]%%{reset} {}' % color).format(name.lower(), principal))
+            self.print_log('      %%[%s][{}]%%[reset] {}' % color.format(name.lower(), principal))
         return principal
 
     def process_emails(self, principals, emails, name, color, full_access=None, roles=None):

@@ -326,7 +326,7 @@ class TopLevelMigrationStep(Importer):
             self.migrate()
         finally:
             self.post_migrate()
-        self.print_msg(cformat('%{cyan}{:.06f} seconds%{reset}\a').format((time.time() - start)))
+        self.print_log('%[cyan]{:.06f} seconds%[reset]\a'.format((time.time() - start)))
 
     def pre_migrate(self):
         pass

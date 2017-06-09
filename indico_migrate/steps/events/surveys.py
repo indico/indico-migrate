@@ -26,7 +26,6 @@ from indico.core.db import db
 from indico.modules.events.surveys.models.items import SurveyQuestion, SurveySection
 from indico.modules.events.surveys.models.submissions import SurveyAnswer, SurveySubmission
 from indico.modules.events.surveys.models.surveys import Survey
-from indico.util.console import cformat
 
 from indico_migrate import convert_to_unicode
 from indico_migrate.steps.events import EventMigrationStep
@@ -85,7 +84,7 @@ class EventSurveyImporter(EventMigrationStep):
             elif kind == 'newSubmissionNotify':
                 survey.new_submission_emails = list(recipients)
 
-        self.print_success(cformat('%{cyan}{}%{reset}').format(survey))
+        self.print_success('%[cyan]{}%[reset]'.format(survey))
 
         question_map = {}
         section = SurveySection(survey=survey, display_as_section=False)

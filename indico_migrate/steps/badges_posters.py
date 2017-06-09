@@ -17,7 +17,6 @@
 from __future__ import unicode_literals
 
 from indico.modules.users import User
-from indico.util.console import cformat
 
 from indico_migrate import TopLevelMigrationStep
 from indico_migrate.badges_posters import BadgeMigration, PosterMigration
@@ -33,7 +32,7 @@ class GlobalBadgePosterImporter(LocalFileImporterMixin, TopLevelMigrationStep):
         self.print_step("Migrating global badge/poster templates")
         default_conference = getattr(self.zodb_root['MaKaCInfo']['main'], '_defaultConference', None)
         if not default_conference:
-            self.print_warning(cformat('%{yellow!}Server has no default conference'))
+            self.print_warning('%[yellow!]Server has no default conference')
             return
         system_user = User.get_system_user()
         BadgeMigration(self, default_conference, None, system_user).run()

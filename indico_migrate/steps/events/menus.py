@@ -22,7 +22,6 @@ from indico.core.db import db
 from indico.modules.events.layout import layout_settings
 from indico.modules.events.layout.models.legacy_mapping import LegacyPageMapping
 from indico.modules.events.layout.models.menu import EventPage, MenuEntry, MenuEntryType
-from indico.util.console import cformat
 
 from indico_migrate.steps.events import EventMigrationStep
 from indico_migrate.util import sanitize_user_input
@@ -199,16 +198,16 @@ class EventMenuImporter(EventMigrationStep):
                     continue
                 data['name'] = name
                 if not parent and data['name'] in NOT_TOP_LEVEL_NAMES:
-                    self.print_warning(cformat('%{yellow}Skipping top-level menu entry {}').format(data['name']))
+                    self.print_warning('%[yellow]Skipping top-level menu entry {}'.format(data['name']))
                     continue
                 elif data['name'] in used:
-                    self.print_error(cformat('%{red!}duplicate menu entry name {}; skipping').format(data['name']))
+                    self.print_error('%[red!]duplicate menu entry name {}; skipping'.format(data['name']))
                     continue
                 used.add(data['name'])
                 data['title'] = sanitize_user_input(item._caption)
                 if not data['title']:
                     data['title'] = None
-                    self.print_warning(cformat('%{yellow!}Menu entry {} has no title; using default').format(
+                    self.print_warning('%[yellow!]Menu entry {} has no title; using default'.format(
                         data['name']))
                 elif data['title'].lower() in DEFAULT_MENU_TITLES[data['name']]:
                     data['title'] = None
@@ -225,15 +224,15 @@ class EventMenuImporter(EventMigrationStep):
                 data['link_url'] = item._URL.strip()
                 if not data['link_url']:
                     if getattr(item, '_listLink', None):
-                        self.print_warning(cformat('%{yellow!}Link "{}" has no URL but children').format(data['title']))
+                        self.print_warning('%[yellow!]Link "{}" has no URL but children'.format(data['title']))
                     else:
-                        self.print_warning(cformat('%{yellow}Skipping link "{}" with no URL').format(data['title']))
+                        self.print_warning('%[yellow]Skipping link "{}" with no URL'.format(data['title']))
                         continue
                 if not data['title']:
                     if getattr(item, '_listLink', None):
-                        self.print_warning(cformat('%{yellow!}Link has no title but children'))
+                        self.print_warning('%[yellow!]Link has no title but children')
                     else:
-                        self.print_warning(cformat('%{yellow}Skipping link with no title'))
+                        self.print_warning('%[yellow]Skipping link with no title')
                         continue
             elif item_type == 'PageLink':
                 data['type'] = MenuEntryType.page

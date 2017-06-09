@@ -27,7 +27,6 @@ from indico.modules.events.layout import layout_settings
 from indico.modules.events.layout.models.images import ImageFile
 from indico.modules.events.layout.models.legacy_mapping import LegacyImageMapping
 from indico.modules.events.models.events import EventType
-from indico.util.console import cformat
 from indico.util.date_time import now_utc
 from indico.util.fs import secure_filename
 from indico.util.string import crc32
@@ -54,7 +53,7 @@ class EventImageImporter(LocalFileImporterMixin, EventMigrationStep):
             storage_backend, storage_path, size = self._get_local_file_info(local_file)
 
             if storage_path is None:
-                self.print_warning(cformat('%{yellow}[{}]%{reset} -> %{red!}Not found in filesystem').format(
+                self.print_warning('%[yellow][{}]%[reset] -> %[red!]Not found in filesystem'.format(
                     local_file.id))
                 continue
 
@@ -72,7 +71,7 @@ class EventImageImporter(LocalFileImporterMixin, EventMigrationStep):
             db.session.add(map_entry)
 
             if not self.quiet:
-                self.print_success(cformat('%{cyan}[{}]%{reset} -> %{blue!}{}').format(local_file.id, image))
+                self.print_success('%[cyan][{}]%[reset] -> %[blue!]{}'.format(local_file.id, image))
 
     def _iter_pictures(self, conf):
         try:
@@ -100,7 +99,7 @@ class EventLayoutImporter(EventMigrationStep):
     def _process_logo(self, logo):
         path = get_archived_file(logo, self.archive_dirs)[1]
         if path is None:
-            self.print_error(cformat('%{red!}Logo not found on disk; skipping it'))
+            self.print_error('%[red!]Logo not found on disk; skipping it')
             return
 
         try:
@@ -128,13 +127,13 @@ class EventLayoutImporter(EventMigrationStep):
         }
         self.event.logo = logo_content
         if not self.quiet:
-            self.print_success(cformat('- %{cyan}[Logo] {}').format(logo.fileName))
+            self.print_success('- %[cyan][Logo] {}'.format(logo.fileName))
 
     def _process_css(self, css):
         stylesheet = css._localFile
         path = get_archived_file(stylesheet, self.archive_dirs)[1]
         if path is None:
-            self.print_error(cformat('%{red!}CSS file not found on disk; skipping it'))
+            self.print_error('%[red!]CSS file not found on disk; skipping it')
             return
         with open(path, 'rb') as f:
             stylesheet_content = convert_to_unicode(f.read())
@@ -146,7 +145,7 @@ class EventLayoutImporter(EventMigrationStep):
         }
         self.event.stylesheet = stylesheet_content
         if not self.quiet:
-            self.print_success(cformat('- %{cyan}[CSS] {}').format(stylesheet.fileName))
+            self.print_success('- %[cyan][CSS] {}'.format(stylesheet.fileName))
 
     def migrate(self):
         dmgr = self.zodb_root['displayRegistery'][self.conf.id]
@@ -159,7 +158,7 @@ class EventLayoutImporter(EventMigrationStep):
             settings = self._get_event_settings(dmgr)
             layout_settings.set_multi(self.event, settings)
             if not self.quiet:
-                self.print_success(cformat('- %{cyan}Layout settings'))
+                self.print_success('- %[cyan]Layout settings')
             if logo:
                 self._process_logo(logo)
             if custom_css:
@@ -170,7 +169,7 @@ class EventLayoutImporter(EventMigrationStep):
                 return
             layout_settings.set(self.event, 'timetable_theme', theme)
             if not self.quiet:
-                self.print_success(cformat('- %{cyan}Default timetable theme: {}').format(theme))
+                self.print_success('- %[cyan]Default timetable theme: {}'.format(theme))
 
     def _get_event_settings(self, dmgr):
         format_opts = getattr(dmgr, '_format', None)
@@ -187,24 +186,24 @@ class EventLayoutImporter(EventMigrationStep):
             settings['header_text_color'] = format_opts._data.get('titleTextColor')
             settings['header_background_color'] = format_opts._data.get('titleBgColor')
         else:
-            self.print_error(cformat('%{red!} Skipping some settings, missing _format attribute'))
+            self.print_error('%[red!] Skipping some settings, missing _format attribute')
         if tt:
             settings['show_banner'] = getattr(tt, '_enabledNowPlaying', None)
             settings['announcement'] = getattr(tt, '_text', None)
             settings['show_announcement'] = getattr(tt, '_enabledSimpleText', None)
         else:
-            self.print_error(cformat('%{red!} Skipping some settings, missing _tickerTape attribute'))
+            self.print_error('%[red!] Skipping some settings, missing _tickerTape attribute')
         if style_mgr:
             template = getattr(style_mgr, '_usingTemplate', None)
             theme = getattr(template, 'templateId', None)
             settings['theme'] = theme if theme in ALLOWED_THEMES else None
             settings['use_custom_css'] = getattr(style_mgr, '_css', None) is not None
         else:
-            self.print_error(cformat('%{red!} Skipping some settings, missing _styleMngr attribute'))
+            self.print_error('%[red!] Skipping some settings, missing _styleMngr attribute')
         if menu:
             settings['timetable_by_room'] = getattr(menu, '_timetable_layout', None) == 'room'
             settings['timetable_detailed'] = getattr(menu, '_timetable_detailed_view', False)
         else:
-            self.print_error(cformat('%{red!} Skipping some settings, missing _menu attribute'))
+            self.print_error('%[red!] Skipping some settings, missing _menu attribute')
 
         return {k: v for k, v in settings.iteritems() if v is not None}

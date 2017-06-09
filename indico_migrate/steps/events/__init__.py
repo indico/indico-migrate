@@ -20,7 +20,6 @@ from pytz import utc as utc_tz
 
 from indico.modules.events.models.persons import EventPerson
 from indico.modules.users.models.users import UserTitle
-from indico.util.console import cformat
 
 from indico_migrate.cli import Importer
 from indico_migrate.steps.events.importer import EventImporter
@@ -67,8 +66,8 @@ class EventMigrationStep(Importer):
     @property
     def prefix(self):
         if self.conf:
-            return cformat('%{cyan}{:<12}%{reset} %{grey!}{:<10}%{reset}').format(
-                '[{}]'.format(self.conf.id), '[{}]'.format(self.step_id))
+            return '%[cyan]{:<10}%[reset] %[grey!]{:<14}%[reset]'.format('[%[white]{}%[cyan]]'.format(self.conf.id),
+                                                                         '[{}]'.format(self.step_id))
         else:
             return ''
 
@@ -85,7 +84,7 @@ class EventMigrationStep(Importer):
         user = self.convert_principal(legacy_user)
         if user:
             return user
-        self.print_error(cformat('%{red!}Invalid legacy user: {}').format(legacy_user))
+        self.print_error('%[red!]Invalid legacy user: {}'.format(legacy_user))
         return self.system_user if system_user else None
 
     def _naive_to_aware(self, dt, utc=True):
@@ -104,7 +103,7 @@ class EventMigrationStep(Importer):
                     phone=convert_to_unicode(getattr(old_person, '_telephone', None) or
                                              getattr(old_person, '_phone', None)))
         if skip_empty_names and not data['first_name'] and not data['last_name']:
-            self.print_warning(cformat('%{yellow!}Skipping nameless event person'))
+            self.print_warning('%[yellow!]Skipping nameless event person')
             return None
         email = strict_sanitize_email(old_person._email)
         if email:

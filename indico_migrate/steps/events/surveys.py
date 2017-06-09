@@ -16,7 +16,6 @@
 
 from __future__ import unicode_literals
 
-import re
 from datetime import date, timedelta
 from uuid import uuid4
 

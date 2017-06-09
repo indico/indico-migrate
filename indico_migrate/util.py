@@ -22,19 +22,21 @@ import re
 import sys
 from contextlib import contextmanager
 from datetime import timedelta
+from functools import wraps
 from HTMLParser import HTMLParser
 from urlparse import urlparse
 from uuid import uuid4
 
 import click
 import yaml
+from colorclass import Color
+from termcolor import colored
 from ZEO.ClientStorage import ClientStorage
 from ZODB import DB, FileStorage
 from ZODB.broken import Broken, find_global
 
 from indico.core.auth import IndicoMultipass
 from indico.util.caching import memoize
-from indico.util.console import cformat
 from indico.util.date_time import now_utc
 from indico.util.string import sanitize_email
 from indico.web.flask.templating import strip_tags
@@ -43,6 +45,25 @@ from indico.web.flask.templating import strip_tags
 WHITESPACE_RE = re.compile(r'\s+')
 
 _last_dt = None
+
+
+def _cformat_sub(m):
+    bg = u'on_{}'.format(m.group('bg')) if m.group('bg') else None
+    attrs = ['bold'] if m.group('fg_bold') else None
+    return colored(u'', m.group('fg'), bg, attrs=attrs)[:-4]
+
+
+def cformat2(string):
+    """Replaces %{color} and %{color,bgcolor} with ansi colors.
+
+    Bold foreground can be achieved by suffixing the color with a '!'
+    """
+    reset = colored(u'')
+    string = string.replace(u'%[reset]', reset)
+    string = re.sub(ur'%\[(?P<fg>[a-z]+)(?P<fg_bold>!?)(?:,(?P<bg>[a-z]+))?\]', _cformat_sub, string)
+    if not string.endswith(reset):
+        string += reset
+    return Color(string)
 
 
 class NotBroken(Broken):
@@ -68,11 +89,11 @@ class UnbreakingDB(DB):
 def get_storage(zodb_uri):
     uri_parts = urlparse(str(zodb_uri))
 
-    print cformat("%{green}Trying to open {}...").format(zodb_uri)
+    print cformat2("%[green]Trying to open {}...").format(zodb_uri)
 
     if uri_parts.scheme == 'zeo':
         if uri_parts.port is None:
-            print cformat("%{yellow}No ZEO port specified. Assuming 9675")
+            print cformat2("%[yellow]No ZEO port specified. Assuming 9675")
 
         storage = ClientStorage((uri_parts.hostname, uri_parts.port or 9675),
                                 username=uri_parts.username,
@@ -83,7 +104,7 @@ def get_storage(zodb_uri):
         storage = FileStorage.FileStorage(uri_parts.path)
     else:
         raise Exception("URI scheme not known: {}".format(uri_parts.scheme))
-    print cformat("%{green}Done!")
+    print cformat2("%[green]Done!")
     return storage
 
 

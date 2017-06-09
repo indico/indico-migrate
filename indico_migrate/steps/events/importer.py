@@ -177,7 +177,7 @@ class EventImporter(TopLevelMigrationStep):
     def migrate_event_data(self):
         all_event_steps = _get_all_steps()
 
-        importers = [importer(self.app, self.sqlalchemy_uri, self.zodb_root, not self.quiet, self.dblog,
+        importers = [importer(self.logger, self.app, self.sqlalchemy_uri, self.zodb_root, not self.quiet, self.dblog,
                               self.default_group_provider, self.tz, **self.kwargs) for importer in all_event_steps]
         for importer in importers:
             importer.setup()

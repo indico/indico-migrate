@@ -31,12 +31,11 @@ indico_util_string.inject_unicode_debug = lambda s, level=1: s
 from indico.core.db.sqlalchemy import db
 from indico.core.db.sqlalchemy.protection import ProtectionMode
 from indico.modules.groups import GroupProxy
-from indico.util.console import cformat, clear_line
 
+from indico_migrate.logger import logger_proxy, StdoutLogger
 from indico_migrate.migrate import migrate
 from indico_migrate.namespaces import SharedNamespace
 from indico_migrate.util import MigrationStateManager, UnbreakingDB, convert_to_unicode, get_storage
-
 
 click.disable_unicode_literals_warning = True
 
@@ -118,7 +117,7 @@ def cli(sqlalchemy_uri, zodb_uri, rb_zodb_uri, verbose, dblog, debug, restore_fi
     # in the event of a failure
     MigrationStateManager.register_ns(Importer._global_ns)
 
-    migrate(zodb_root, rb_zodb_uri, sqlalchemy_uri, verbose=verbose, dblog=dblog, restore_file=restore_file,
+    migrate(logger, zodb_root, rb_zodb_uri, sqlalchemy_uri, verbose=verbose, dblog=dblog, restore_file=restore_file,
             debug=debug, **kwargs)
 
 
@@ -127,9 +126,14 @@ class Importer(object):
 
     #: Specify plugins that need to be loaded for the import (e.g. to access its .settings property)
     plugins = frozenset()
-    prefix = ''
 
-    def __init__(self, app, sqlalchemy_uri, zodb_root, verbose, dblog, default_group_provider, tz, **kwargs):
+    print_info = logger_proxy('info')
+    print_success = logger_proxy('success')
+    print_warning = logger_proxy('warning')
+    print_error = logger_proxy('error')
+    print_log = logger_proxy('log')
+
+    def __init__(self, logger, app, sqlalchemy_uri, zodb_root, verbose, dblog, default_group_provider, tz, **kwargs):
         self.sqlalchemy_uri = sqlalchemy_uri
         self.quiet = not verbose
         self.dblog = dblog
@@ -137,11 +141,17 @@ class Importer(object):
         self.app = app
         self.tz = tz
         self.default_group_provider = default_group_provider
+        self.logger = logger
 
         self.initialize_global_ns(Importer._global_ns)
 
     def initialize_global_ns(self, g):
         pass
+
+    @property
+    def log_prefix(self):
+        from indico_migrate.util import cformat2
+        return '%[cyan]{:<14}%[reset]'.format('[%[grey!]{}%[cyan]]'.format(self.step_name))
 
     @property
     def makac_info(self):
@@ -152,7 +162,7 @@ class Importer(object):
         return Importer._global_ns
 
     def __repr__(self):
-        return '<{}({}, {})>'.format(type(self).__name__, self.sqlalchemy_uri, self.zodb_uri)
+        return '<{}({})>'.format(type(self).__name__, self.sqlalchemy_uri)
 
     def flushing_iterator(self, iterable, n=5000):
         """Iterates over `iterable` and flushes the ZODB cache every `n` items.
@@ -165,90 +175,6 @@ class Importer(object):
             yield item
             if i % n == 0:
                 conn.sync()
-
-    def check_plugin_schema(self, name):
-        """Checks if a plugin schema exists in the database.
-
-        :param name: Name of the plugin
-        """
-        sql = 'SELECT COUNT(*) FROM "information_schema"."schemata" WHERE "schema_name" = :name'
-        count = db.engine.execute(db.text(sql), name='plugin_{}'.format(name)).scalar()
-        if not count:
-            print(cformat('%{red!}Plugin schema does not exist%{reset}'))
-            print(cformat('Run %{yellow!}indico db --plugin {} upgrade%{reset} to create it').format(name))
-            return False
-        return True
-
-    def print_msg(self, msg, always=False):
-        """Prints a message to the console.
-
-        By default, messages are not shown in quiet mode, but this
-        can be changed using the `always` parameter.
-        """
-        if self.quiet:
-            if not always:
-                return
-            clear_line()
-        print((self.prefix + msg).encode('utf-8'))
-
-    def print_step(self, msg):
-        """Prints a message about a migration step to the console
-
-        This message is always shown, even in quiet mode.
-        """
-        self.print_msg(cformat('%{cyan,blue} > %{cyan!,blue}{:<30}').format(msg), True)
-
-    def print_msg_type(self, msg_type, msg_type_color, msg, always=False, event_id=None):
-        """Prints a colored message to the console."""
-        parts = [
-            cformat('%%{%s}{}%%{reset}' % msg_type_color).format(msg_type),
-            cformat('%{white!}{:>6s}%{reset}').format(unicode(event_id)) if event_id is not None else None,
-            msg
-        ]
-        self.print_msg(' '.join(filter(None, parts)), always)
-
-    def print_info(self, msg, always=False, has_event=True):
-        """Prints an info message to the console.
-
-        By default, info messages are not shown in quiet mode.
-        They are prefixed with blank spaces to align with other
-        messages.
-
-        When calling this in a loop that is invoked a lot, it is
-        recommended to add an explicit ``if not self.quiet`` check
-        to avoid expensive `cformat` or `format` calls for a message
-        that is never displayed.
-        """
-        self.print_msg(' ' * (11 if has_event else 4) + msg, always)
-
-    def print_success(self, msg, always=False, event_id=None):
-        """Prints a success message to the console.
-
-        By default, success messages are not shown in quiet mode.
-        They are prefixed with three green plus signs.
-
-        When calling this in a loop that is invoked a lot, it is
-        recommended to add an explicit ``if not self.quiet`` check
-        to avoid expensive `cformat` or `format` calls for a message
-        that is never displayed.
-        """
-        self.print_msg_type('+++', 'green!', msg, always, event_id)
-
-    def print_warning(self, msg, always=True, event_id=None):
-        """Prints a warning message to the console.
-
-        By default, warnings are displayed even in quiet mode.
-        Warning messages are with three yellow exclamation marks.
-        """
-        self.print_msg_type('!!!', 'yellow!', msg, always, event_id)
-
-    def print_error(self, msg, event_id=None):
-        """Prints an error message to the console
-
-        Errors are always displayed, even in quiet mode.
-        They are prefixed with three red exclamation marks.
-        """
-        self.print_msg_type('!!!', 'red!', msg, True, event_id)
 
     def convert_principal(self, old_principal):
         """Converts a legacy principal to PrincipalMixin style"""

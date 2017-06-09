@@ -55,7 +55,7 @@ def _zodb_powered_loader(_zodb_root):
     return _ZODBLoader
 
 
-def migrate(zodb_root, zodb_rb_uri, sqlalchemy_uri, verbose=False, dblog=False, restore_file=None, **kwargs):
+def migrate(logger, zodb_root, zodb_rb_uri, sqlalchemy_uri, verbose=False, dblog=False, restore_file=None, **kwargs):
     from indico_migrate.steps.badges_posters import GlobalBadgePosterImporter
     from indico_migrate.steps.event_series import EventSeriesImporter
     from indico_migrate.steps.events import EventImporter
@@ -68,7 +68,7 @@ def migrate(zodb_root, zodb_rb_uri, sqlalchemy_uri, verbose=False, dblog=False, 
     steps = (GlobalPreEventsImporter, UserImporter, RoomsLocationsImporter, CategoryImporter, EventImporter,
              RoomBookingsImporter, GlobalPostEventsImporter, EventSeriesImporter, GlobalBadgePosterImporter)
 
-    app, tz = setup(zodb_root, sqlalchemy_uri, dblog=dblog, restore=(restore_file is not None))
+    app, tz = setup(logger, zodb_root, sqlalchemy_uri, dblog=dblog, restore=(restore_file is not None))
 
     default_group_provider = kwargs.pop('default_group_provider')
     save_restore = kwargs.pop('save_restore')
@@ -90,10 +90,11 @@ def migrate(zodb_root, zodb_rb_uri, sqlalchemy_uri, verbose=False, dblog=False, 
                 if step in (RoomsLocationsImporter, RoomBookingsImporter):
                     if zodb_rb_uri:
                         zodb_rb_root = UnbreakingDB(get_storage(zodb_rb_uri)).open().root()
-                        step(app, sqlalchemy_uri, zodb_root, verbose, dblog, default_group_provider, tz,
+                        step(logger, app, sqlalchemy_uri, zodb_root, verbose, dblog, default_group_provider, tz,
                              rb_root=zodb_rb_root, **kwargs).run()
                 else:
-                    step(app, sqlalchemy_uri, zodb_root, verbose, dblog, default_group_provider, tz, **kwargs).run()
+                    step(logger, app, sqlalchemy_uri, zodb_root, verbose, dblog, default_group_provider, tz,
+                         **kwargs).run()
                 MigrationStateManager.register_step(step)
         finally:
             if save_restore:
@@ -114,7 +115,7 @@ def db_has_data():
     return False
 
 
-def setup(zodb_root, sqlalchemy_uri, dblog=False, restore=False):
+def setup(logger, zodb_root, sqlalchemy_uri, dblog=False, restore=False):
     app = IndicoFlask('indico_migrate')
     app.config['PLUGINENGINE_NAMESPACE'] = 'indico.plugins'
     app.config['SQLALCHEMY_DATABASE_URI'] = sqlalchemy_uri
@@ -142,14 +143,12 @@ def setup(zodb_root, sqlalchemy_uri, dblog=False, restore=False):
 
     with app.app_context():
         if not restore:
-            if get_all_tables(db):
+            all_tables = sum(get_all_tables(db).values(), [])
+            if all_tables:
                 if db_has_data():
-                    print(cformat('%{red!}*** ERROR'))
-                    print(cformat('%{red!}***%{reset} Your database is not empty!'))
-                    print(cformat('%{red!}***%{reset} If you want to reset it, please drop and recreate it first.'))
-                    sys.exit(1)
+                    logger.fatal_error('Your database is not empty!\n'
+                                       'If you want to reset it, please drop and recreate it first.')
             else:
                 # the DB is empty, prepare DB tables
-                print cformat('%{cyan}Preparing database... ')
-                prepare_db(empty=True, root_path=get_root_path('indico'))
+                prepare_db(empty=True, root_path=get_root_path('indico'), verbose=False)
     return app, tz

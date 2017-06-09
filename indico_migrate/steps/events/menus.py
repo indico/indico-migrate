@@ -16,8 +16,6 @@
 
 from __future__ import unicode_literals
 
-import re
-
 from indico.core.db import db
 from indico.modules.events.layout import layout_settings
 from indico.modules.events.layout.models.legacy_mapping import LegacyPageMapping

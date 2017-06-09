@@ -123,6 +123,8 @@ def cli(sqlalchemy_uri, zodb_uri, rb_zodb_uri, verbose, dblog, debug, restore_fi
 
 
 class Importer(object):
+    step_name = ''
+
     #: Specify plugins that need to be loaded for the import (e.g. to access its .settings property)
     plugins = frozenset()
     prefix = ''

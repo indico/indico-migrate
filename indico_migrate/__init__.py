@@ -17,7 +17,7 @@
 from __future__ import unicode_literals
 
 from .cli import Importer, TopLevelMigrationStep
-from .util import convert_to_unicode, option_value
+from .util import convert_to_unicode, option_value, step_description
 
 
-__all__ = ('Importer', 'TopLevelMigrationStep', 'convert_to_unicode', 'option_value')
+__all__ = ('Importer', 'TopLevelMigrationStep', 'convert_to_unicode', 'option_value', 'step_description')

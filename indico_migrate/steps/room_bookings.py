@@ -29,7 +29,7 @@ from indico.modules.rb.models.reservations import RepeatMapping, Reservation
 from indico.modules.rb.models.rooms import Room
 from indico.util.date_time import as_utc
 
-from indico_migrate import TopLevelMigrationStep, convert_to_unicode
+from indico_migrate import TopLevelMigrationStep, convert_to_unicode, step_description
 
 
 FRENCH_MONTH_NAMES = [(str(i), name[:3].encode('utf-8').lower())
@@ -54,13 +54,14 @@ def parse_dt_string(value):
 
 
 class RoomBookingsImporter(TopLevelMigrationStep):
+    step_name = 'room_bookings'
 
     def __init__(self, *args, **kwargs):
         self.rb_root = kwargs.get('rb_root')
         super(RoomBookingsImporter, self).__init__(*args, **kwargs)
 
+    @step_description('Room Bookings')
     def migrate(self):
-        self.print_step('Room bookings')
         i = 1
         for rid, v in self.rb_root['Reservations'].iteritems():
             room = Room.get(v.room.id)

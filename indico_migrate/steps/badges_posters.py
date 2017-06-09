@@ -24,12 +24,13 @@ from indico_migrate.util import LocalFileImporterMixin
 
 
 class GlobalBadgePosterImporter(LocalFileImporterMixin, TopLevelMigrationStep):
+    step_name = 'badges'
+
     def __init__(self, *args, **kwargs):
         self._set_config_options(**kwargs)
         super(GlobalBadgePosterImporter, self).__init__(*args, **kwargs)
 
     def migrate(self):
-        self.print_step("Migrating global badge/poster templates")
         default_conference = getattr(self.zodb_root['MaKaCInfo']['main'], '_defaultConference', None)
         if not default_conference:
             self.print_warning('%[yellow!]Server has no default conference')

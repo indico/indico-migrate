@@ -279,3 +279,14 @@ class MigrationStateManager(object):
         cls._steps = data['steps']
         for name, ns in cls._namespaces.viewitems():
             ns.load(data['namespaces'][name])
+
+
+def step_description(description):
+    def _step_description(f):
+
+        @wraps(f)
+        def _f(self, *args, **kwargs):
+            self.logger.print_step(description)
+            f(self, *args, **kwargs)
+        return _f
+    return _step_description

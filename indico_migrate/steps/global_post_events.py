@@ -24,7 +24,7 @@ from HTMLParser import HTMLParser
 from indico.modules.categories import upcoming_events_settings
 from indico.web.flask.templating import strip_tags
 
-from indico_migrate import TopLevelMigrationStep, convert_to_unicode
+from indico_migrate import TopLevelMigrationStep, convert_to_unicode, step_description
 
 
 def _sanitize_title(title, _ws_re=re.compile(r'\s+')):
@@ -34,12 +34,14 @@ def _sanitize_title(title, _ws_re=re.compile(r'\s+')):
 
 
 class GlobalPostEventsImporter(TopLevelMigrationStep):
+    step_name = 'global_post'
+
+    @step_description('Upcoming event settings')
     def migrate(self):
         self.migrate_upcoming_event_settings()
         self.migrate_survey_tasks()
 
     def migrate_upcoming_event_settings(self):
-        self.print_step('Upcoming event settings')
         mod = self.zodb_root['modules']['upcoming_events']
         upcoming_events_settings.set('max_entries', int(mod._maxEvents))
         entries = []

@@ -37,12 +37,14 @@ from indico.util.fs import secure_filename
 from indico.util.string import crc32, is_legacy_id, is_valid_mail, sanitize_email
 from indico.web.flask.templating import strip_tags
 
-from indico_migrate import TopLevelMigrationStep, convert_to_unicode
+from indico_migrate import TopLevelMigrationStep, convert_to_unicode, step_description
 from indico_migrate.attachments import AttachmentMixin
 from indico_migrate.util import get_archived_file, patch_default_group_provider
 
 
 class CategoryImporter(AttachmentMixin, TopLevelMigrationStep):
+    step_name = 'categories'
+
     def __init__(self, *args, **kwargs):
         self._set_config_options(**kwargs)
         self.system_user = User.get_system_user()
@@ -50,6 +52,7 @@ class CategoryImporter(AttachmentMixin, TopLevelMigrationStep):
         self.categ_id_counter = self.zodb_root['counters']['CATEGORY']._Counter__count
 
     @no_autoflush
+    @step_description('Categories')
     def migrate(self):
         self.domain_mapping = {ipng.name.lower(): ipng for ipng in IPNetworkGroup.query}
         with patch_default_group_provider(self.default_group_provider):
@@ -57,7 +60,6 @@ class CategoryImporter(AttachmentMixin, TopLevelMigrationStep):
         self.fix_sequences('categories', {'categories'})
 
     def migrate_categories(self):
-        self.print_step("Categories")
         old_root = self.zodb_root['rootCategory']
         assert old_root.id == '0'
         root = self._migrate_category(old_root, 1)

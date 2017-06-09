@@ -37,7 +37,7 @@ from indico.util.i18n import get_all_locales
 from indico.util.string import is_valid_mail, sanitize_email
 from indico.util.struct.iterables import committing_iterator
 
-from indico_migrate import TopLevelMigrationStep, convert_to_unicode
+from indico_migrate import TopLevelMigrationStep, convert_to_unicode, step_description
 
 
 USER_TITLE_MAP = {x.title: x for x in UserTitle}
@@ -56,6 +56,8 @@ def _get_all_locales():
 
 
 class UserImporter(TopLevelMigrationStep):
+    step_name = 'users'
+
     def __init__(self, *args, **kwargs):
         self.ldap_provider_name = kwargs.pop('ldap_provider_name')
         self.ignore_local_accounts = kwargs.pop('ignore_local_accounts')
@@ -89,8 +91,8 @@ class UserImporter(TopLevelMigrationStep):
         db.session.flush()
         self.print_success('Added new system user: {}'.format(User.get_system_user()), always=True)
 
+    @step_description('Users')
     def migrate_users(self):
-        self.print_step('Users')
         seen_identities = set()
 
         for avatar in committing_iterator(self._iter_avatars(), 5000):
@@ -222,9 +224,9 @@ class UserImporter(TopLevelMigrationStep):
             user.old_api_keys.append(APIKey(token=old_key, secret=unicode(uuid4()), created_dt=fake_created_dt,
                                             is_active=False))
 
+    @step_description('Favorite users')
     def migrate_favorite_users(self):
         users = {u.id: u for u in User.find(User.id.in_(set(self.favorite_avatars)))}
-        self.print_step('Favorite users')
         for user_id, avatars in self.favorite_avatars.viewitems():
             user = users[user_id]
             self.print_success('%[white!]{:6d}%[reset] %[cyan]{}%[reset]'.format(user_id, user.full_name))
@@ -240,8 +242,8 @@ class UserImporter(TopLevelMigrationStep):
             user.favorite_users.add(user)
         db.session.flush()
 
+    @step_description('Admins')
     def migrate_admins(self):
-        self.print_step('Admins')
         for avatar in committing_iterator(self.zodb_root['adminlist']._AdminList__list):
             try:
                 user = self.global_ns.avatar_merged_user[avatar.id]
@@ -253,6 +255,7 @@ class UserImporter(TopLevelMigrationStep):
             self.print_success('%[cyan]{}'.format(user))
         db.session.flush()
 
+    @step_description('Groups')
     def migrate_groups(self):
         self.print_step('Groups')
         for old_group in committing_iterator(self.zodb_root['groups'].itervalues()):

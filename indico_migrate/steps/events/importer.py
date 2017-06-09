@@ -28,7 +28,7 @@ from indico.util.console import cformat, verbose_iterator
 from indico.util.string import is_legacy_id
 from indico.util.struct.iterables import committing_iterator
 
-from indico_migrate import TopLevelMigrationStep, convert_to_unicode
+from indico_migrate import TopLevelMigrationStep, convert_to_unicode, step_description
 from indico_migrate.namespaces import SharedNamespace
 
 
@@ -143,6 +143,8 @@ def EventContextFactory(counter, _importer):
 
 
 class EventImporter(TopLevelMigrationStep):
+    step_name = 'event'
+
     def __init__(self, *args, **kwargs):
         super(EventImporter, self).__init__(*args, **kwargs)
         del kwargs['system_user_id']
@@ -155,6 +157,7 @@ class EventImporter(TopLevelMigrationStep):
         return (EventSetting.query.filter(EventSetting.module.in_(['core', 'contact'])).has_rows() or
                 Event.query.filter_by(is_locked=True).has_rows())
 
+    @step_description('Event data')
     def migrate(self):
         db.session.commit()  # make sure there's no transaction open or the DISABLE TRIGGER may deadlock
         tables = ('timetable_entries', 'session_blocks', 'contributions', 'breaks')
@@ -181,7 +184,6 @@ class EventImporter(TopLevelMigrationStep):
 
         EventContext = EventContextFactory(self.zodb_root['counters']['CONFERENCE'], self)
 
-        self.print_step("Event data")
         for conf in committing_iterator(self._iter_events()):
             context = EventContext(conf, self.debug)
             try:

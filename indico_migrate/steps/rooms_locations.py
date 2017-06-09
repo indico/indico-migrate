@@ -36,7 +36,7 @@ from indico.modules.rb.models.rooms import Room
 from indico.util.date_time import as_utc
 from indico.util.string import is_valid_mail
 
-from indico_migrate import TopLevelMigrationStep, convert_to_unicode
+from indico_migrate import TopLevelMigrationStep, convert_to_unicode, step_description
 
 
 attribute_map = {
@@ -58,6 +58,7 @@ def get_room_id(guid):
 
 
 class RoomsLocationsImporter(TopLevelMigrationStep):
+    step_name = 'rooms_locations'
 
     def __init__(self, *args, **kwargs):
         self.photo_path = kwargs.pop('photo_path')
@@ -87,8 +88,8 @@ class RoomsLocationsImporter(TopLevelMigrationStep):
         rb_settings.set('notification_before_days', opts['notificationBefore']._PluginOption__value)
         db.session.flush()
 
+    @step_description('Room locations')
     def migrate_locations(self):
-        self.print_step('Room locations')
         default_location_name = self.zodb_root['DefaultRoomBookingLocation']
         custom_attributes_dict = self.rb_root['CustomAttributesList']
 
@@ -135,8 +136,8 @@ class RoomsLocationsImporter(TopLevelMigrationStep):
             db.session.add(location)
         db.session.flush()
 
+    @step_description('Rooms')
     def migrate_rooms(self):
-        self.print_step('Rooms')
         eq = defaultdict(set)
         vc = defaultdict(set)
         for old_room_id, old_room in self.rb_root['Rooms'].iteritems():
@@ -283,9 +284,8 @@ class RoomsLocationsImporter(TopLevelMigrationStep):
             db.session.add(location)
         db.session.flush()
 
+    @step_description('Room blockings')
     def migrate_blockings(self):
-        self.print_step('Room blockings')
-
         state_map = {
             None: BlockedRoom.State.pending,
             False: BlockedRoom.State.rejected,

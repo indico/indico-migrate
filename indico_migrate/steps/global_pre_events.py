@@ -34,7 +34,7 @@ from indico.modules.news.models.news import NewsItem
 from indico.modules.users import user_management_settings
 from indico.web.flask.templating import strip_tags
 
-from indico_migrate import TopLevelMigrationStep, convert_to_unicode
+from indico_migrate import TopLevelMigrationStep, convert_to_unicode, step_description
 
 
 def _sanitize_title(title, _ws_re=re.compile(r'\s+')):
@@ -44,6 +44,8 @@ def _sanitize_title(title, _ws_re=re.compile(r'\s+')):
 
 
 class GlobalPreEventsImporter(TopLevelMigrationStep):
+    step_name = 'global_pre'
+
     def __init__(self, *args, **kwargs):
         self.reference_types = kwargs.pop('reference_types')
         self.default_currency = kwargs.pop('default_currency')
@@ -62,8 +64,8 @@ class GlobalPreEventsImporter(TopLevelMigrationStep):
         self.migrate_reference_types()
         db.session.commit()
 
+    @step_description('API settings')
     def migrate_api_settings(self):
-        self.print_step('API settings')
         settings_map = {
             '_apiPersistentAllowed': 'allow_persistent',
             '_apiMode': 'security_mode',
@@ -73,8 +75,8 @@ class GlobalPreEventsImporter(TopLevelMigrationStep):
         for old, new in settings_map.iteritems():
             api_settings.set(new, getattr(self.makac_info, old, None))
 
+    @step_description('Global settings')
     def migrate_global_settings(self):
-        self.print_step('Migrating global settings')
         core_settings.set_multi({
             'site_title': convert_to_unicode(self.makac_info._title),
             'site_organization': convert_to_unicode(self.makac_info._organisation)
@@ -84,8 +86,8 @@ class GlobalPreEventsImporter(TopLevelMigrationStep):
             'facebook_app_id': convert_to_unicode(self.makac_info._socialAppConfig['facebook'].get('appId'))
         })
 
+    @step_description('User management settings')
     def migrate_user_management_settings(self):
-        self.print_step('User management settings')
         settings_dict = {
             '_notifyAccountCreation': 'notify_account_creation'
         }
@@ -93,8 +95,8 @@ class GlobalPreEventsImporter(TopLevelMigrationStep):
         for old_setting_name, new_setting_name in settings_dict.iteritems():
             user_management_settings.set(new_setting_name, getattr(self.makac_info, old_setting_name))
 
+    @step_description('Legal settings')
     def migrate_legal_settings(self):
-        self.print_step('Legal settings')
         settings_map = {
             '_protectionDisclaimerProtected': 'network_protected_disclaimer',
             '_protectionDisclaimerRestricted': 'restricted_disclaimer'
@@ -102,9 +104,8 @@ class GlobalPreEventsImporter(TopLevelMigrationStep):
         for old, new in settings_map.iteritems():
             legal_settings.set(new, convert_to_unicode(getattr(self.makac_info, old)))
 
+    @step_description('Payment settings')
     def migrate_payment_settings(self):
-        self.print_step('Payment settings')
-
         currency_opt = self.zodb_root['plugins']['EPayment']._PluginBase__options['customCurrency']
         currencies = [{'code': oc['abbreviation'], 'name': oc['name']} for oc in currency_opt._PluginOption__value]
 
@@ -116,8 +117,8 @@ class GlobalPreEventsImporter(TopLevelMigrationStep):
 
         db.session.commit()
 
+    @step_description('Global IP acl')
     def migrate_global_ip_acl(self):
-        self.print_step('Global IP acl')
         ip_networks = filter(None, map(self._to_network, self.makac_info._ip_based_acl_mgr._full_access_acl))
         if not ip_networks:
             self.print_error('%[red]No valid IPs found')
@@ -129,8 +130,8 @@ class GlobalPreEventsImporter(TopLevelMigrationStep):
         db.session.flush()
         self.print_success(repr(network))
 
+    @step_description('IP Networks')
     def migrate_networks(self):
-        self.print_step('Networks')
         for domain in self._iter_domains():
             ip_networks = filter(None, map(self._to_network, set(domain.filterList)))
             if not ip_networks:
@@ -143,8 +144,8 @@ class GlobalPreEventsImporter(TopLevelMigrationStep):
             self.print_success(repr(network))
         db.session.flush()
 
+    @step_description('News')
     def migrate_news(self):
-        self.print_step('News')
         old_items = sorted(self.zodb_root['modules']['news']._newsItems, key=attrgetter('_creationDate'))
         for old_item in old_items:
             n = NewsItem(title=_sanitize_title(old_item._title), content=convert_to_unicode(old_item._content),
@@ -153,14 +154,14 @@ class GlobalPreEventsImporter(TopLevelMigrationStep):
             db.session.flush()
             self.print_success(n.title)
 
+    @step_description('News settings')
     def migrate_news_settings(self):
-        self.print_step('News settings')
         mod = self.zodb_root['modules']['news']
         news_settings.set('show_recent', bool(self.makac_info._newsActive))
         news_settings.set('new_days', int(mod._recentDays))
 
+    @step_description('Reference types')
     def migrate_reference_types(self):
-        self.print_step("Migrating reference types")
         for name in self.reference_types:
             self.global_ns.reference_types[name] = reftype = ReferenceType(name=name)
             db.session.add(reftype)

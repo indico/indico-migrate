@@ -175,7 +175,7 @@ class GUI(object):
             ('red', 'dark red', ''),
             ('yellow', 'yellow', ''),
             ('progress_empty', 'black', 'light gray'),
-            ('progress_progress', 'light cyan', 'dark cyan'),
+            ('progress_progress', 'light cyan', 'light gray'),
             ('progress_done', 'black', 'light cyan'),
             ('box', 'white', 'dark gray'),
             ('step_done', 'light green', ''),

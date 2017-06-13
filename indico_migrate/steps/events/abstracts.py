@@ -464,7 +464,7 @@ class EventAbstractImporter(LocalFileImporterMixin, EventMigrationStep):
 
     def _migrate_abstract_reviews(self, abstract, old_abstract):
         if not hasattr(old_abstract, '_trackJudgementsHistorical'):
-            self.print_warning('%[blue!]Abstract {} {yellow}had no judgment history!%[reset]'
+            self.print_warning('%[blue!]Abstract {} %[yellow]had no judgment history!%[reset]'
                                .format(old_abstract._id))
             return
 
@@ -484,18 +484,18 @@ class EventAbstractImporter(LocalFileImporterMixin, EventMigrationStep):
                 try:
                     track = self.event_ns.track_map_by_id.get(int(old_judgment._track.id))
                 except KeyError:
-                    self.print_warning('%[blue!]Abstract {} {yellow}judged in invalid track {}%[reset]'.format(
+                    self.print_warning('%[blue!]Abstract {} %[yellow]judged in invalid track {}%[reset]'.format(
                         old_abstract._id, int(old_judgment._track.id)))
                     continue
 
                 judge = (self.global_ns.avatar_merged_user.get(old_judgment._responsible.id)
                          if old_judgment._responsible else None)
                 if not judge:
-                    self.print_warning('%[blue!]Abstract {} {yellow}had an empty judge ({})!%[reset]'
+                    self.print_warning('%[blue!]Abstract {} %[yellow]had an empty judge ({})!%[reset]'
                                        .format(old_abstract._id, old_judgment))
                     continue
                 elif judge in seen_judges:
-                    self.print_warning("%[blue!]Abstract {}: {yellow}judge '{}' seen more than once ({})!%[reset]"
+                    self.print_warning("%[blue!]Abstract {}: %[yellow]judge '{}' seen more than once ({})!%[reset]"
                                        .format(old_abstract._id, judge, old_judgment))
                     continue
 
@@ -523,14 +523,14 @@ class EventAbstractImporter(LocalFileImporterMixin, EventMigrationStep):
                 answered_questions = set()
                 for old_answer in getattr(old_judgment, '_answers', []):
                     if old_answer._question in answered_questions:
-                        self.print_warning("%[blue!]Abstract {}: {yellow}question answered more than once!".format(
+                        self.print_warning("%[blue!]Abstract {}: %[yellow]question answered more than once!".format(
                             abstract.friendly_id))
                         continue
                     try:
                         question = self.question_map[old_answer._question]
                     except KeyError:
                         question = self._migrate_question(old_answer._question, is_deleted=True)
-                        self.print_warning("%[blue!]Abstract {}: {yellow}answer for deleted question".format(
+                        self.print_warning("%[blue!]Abstract {}: %[yellow]answer for deleted question".format(
                             abstract.friendly_id))
                     rating = AbstractReviewRating(question=question, value=self._convert_scale(old_answer))
                     review.ratings.append(rating)
@@ -618,7 +618,7 @@ class EventAbstractImporter(LocalFileImporterMixin, EventMigrationStep):
                     person_link.author_type = author_type
                     person_link.is_speaker |= existing.is_speaker
                     person_links_by_person[person_link.person] = person_link
-                    self.print_warning('%[blue!]Abstract {}: {yellow}Author {} already exists '
+                    self.print_warning('%[blue!]Abstract {}: %[yellow]Author {} already exists '
                                        '(%[magenta]{} [{}] %[yellow]/ %[green]{} [{}]%[yellow])'
                                        .format(abstract.friendly_id, existing.person.full_name, existing.full_name,
                                                existing_flags, person_link.full_name, new_flags))
@@ -627,7 +627,7 @@ class EventAbstractImporter(LocalFileImporterMixin, EventMigrationStep):
                     # the existing one has the higher author type -> use that one
                     existing.author_type = author_type
                     existing.is_speaker |= person_link.is_speaker
-                    self.print_warning('%[blue!]Abstract {}: {yellow}Author {} already exists '
+                    self.print_warning('%[blue!]Abstract {}: %[yellow]Author {} already exists '
                                        '(%[green]{} [{}]%[yellow] / %[magenta]{} [{}]%[yellow])'
                                        .format(abstract.friendly_id, existing.person.full_name, existing.full_name,
                                                existing_flags, person_link.full_name, new_flags))

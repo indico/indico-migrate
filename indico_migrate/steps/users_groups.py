@@ -371,7 +371,7 @@ class UserImporter(TopLevelMigrationStep):
             coll = self.global_ns.users_by_secondary_email.get(email)
             if coll:
                 self.print_log('%[magenta!]---%[reset] %[yellow!]Removing colliding secondary email '
-                               '(S/S from {}%[reset] [%[blue!]{}%[reset]])').format(user, email)
+                               '(S/S from {}%[reset] [%[blue!]{}%[reset]])'.format(user, email))
                 user.secondary_emails.remove(email)
                 db.session.flush()
                 self.global_ns.users_by_secondary_email[email] = coll

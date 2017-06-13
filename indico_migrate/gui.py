@@ -16,14 +16,11 @@
 
 from __future__ import unicode_literals
 
-import os
 import re
-import termios
 import time
 
-from urwid import (Text, Pile, LineBox, escape, signals, ListBox, SimpleFocusListWalker, ProgressBar, Columns, AttrMap,
+from urwid import (Text, Pile, LineBox, ListBox, SimpleFocusListWalker, ProgressBar, Columns, AttrMap,
                    Divider, Filler, GridFlow, SolidFill, BoxAdapter)
-from urwid.display_common import AttrSpec, INPUT_DESCRIPTORS_CHANGED
 from urwid.raw_display import Screen
 
 from indico_migrate.logger import BaseLogger
@@ -98,33 +95,6 @@ def color_segments(string):
     return result or ''
 
 
-class NonClearingScreen(Screen):
-    def _stop(self):
-        signals.emit_signal(self, INPUT_DESCRIPTORS_CHANGED)
-
-        self.signal_restore()
-
-        fd = self._term_input_file.fileno()
-        if os.isatty(fd):
-            termios.tcsetattr(fd, termios.TCSADRAIN, self._old_termios_settings)
-
-        self._mouse_tracking(False)
-
-        move_cursor = ""
-        if self._alternate_buffer:
-            move_cursor = escape.RESTORE_NORMAL_BUFFER
-        elif self.maxrow is not None:
-            move_cursor = escape.set_cursor_position(0, self.maxrow)
-        self.write(
-            self._attrspec_to_escape(AttrSpec('', '')) + escape.SI + move_cursor + escape.SHOW_CURSOR)
-        self.flush()
-
-        if self._old_signal_keys:
-            self.tty_signal_keys(*(self._old_signal_keys + (fd,)))
-
-        super(Screen, self)._stop()
-
-
 class GUILogger(BaseLogger):
     def __init__(self, gui, quiet):
         super(GUILogger, self).__init__(quiet)
@@ -186,7 +156,8 @@ class StepProgressBar(object):
 
 class GUI(object):
     def __init__(self):
-        self.screen = NonClearingScreen()
+        self.screen = Screen()
+        self.screen.set_input_timeouts(max_wait=0)
         self.steps = GridFlow([], 20, 2, 1, 'left')
         self.progress = SimpleFocusListWalker([])
         self.log = SimpleFocusListWalker([])
@@ -245,7 +216,8 @@ class GUI(object):
 
     def redraw(self):
         screen_size = self.screen.get_cols_rows()
-        canvas = self.widget.render(screen_size)
+        canvas = self.widget.render(screen_size, focus=True)
+        self.screen.get_input()
         self.screen.draw_screen(screen_size, canvas)
 
 

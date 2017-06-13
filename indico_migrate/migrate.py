@@ -70,6 +70,7 @@ def migrate(logger, zodb_root, zodb_rb_uri, sqlalchemy_uri, verbose=False, dblog
 
     default_group_provider = kwargs.pop('default_group_provider')
     save_restore = kwargs.pop('save_restore')
+    debug = kwargs.get('debug', False)
 
     with app.app_context():
         if restore_file:
@@ -96,7 +97,7 @@ def migrate(logger, zodb_root, zodb_rb_uri, sqlalchemy_uri, verbose=False, dblog
                 MigrationStateManager.register_step(step)
         except:
             logger.shutdown()
-            if not ask_to_paste(logger.buffer, get_full_stack()):
+            if debug or not ask_to_paste(logger.buffer, get_full_stack()):
                 raise
         finally:
             if save_restore:

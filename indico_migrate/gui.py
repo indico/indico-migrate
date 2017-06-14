@@ -131,6 +131,9 @@ class GUILogger(BaseLogger):
         if always or not self.quiet:
             self.gui.print_log(icon, msg, prefix, event_id)
 
+    def set_success(self):
+        self.gui.set_success()
+
     def shutdown(self):
         self.gui.stop()
 
@@ -182,7 +185,8 @@ class GUI(object):
             ('step_done', 'light green', ''),
             ('step_working', 'dark gray', ''),
             ('global_frame', 'light cyan', ''),
-            ('fill', 'light cyan', 'dark cyan')
+            ('fill', 'light cyan', 'dark cyan'),
+            ('done', 'white', 'dark green')
         ] + generate_urwid_palette(PALETTE))
 
     def print_log(self, icon, message, prefix='', event_id=''):
@@ -212,6 +216,17 @@ class GUI(object):
         if self.progress:
             del self.progress[:]
         return StepProgressBar(self, description)
+
+    def set_success(self):
+        if self.progress:
+            del self.progress[:]
+        self.progress.append(AttrMap(Text('Migration finished!', align='center'), 'done'))
+        self.progress.append(AttrMap(Text('Please press any key...', align='center'), 'done'))
+        self.redraw()
+        self.wait_for_input()
+
+    def wait_for_input(self):
+        self.screen._getch(None)
 
     def set_step_banner(self, msg):
         if self.progress:

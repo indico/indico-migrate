@@ -113,3 +113,6 @@ class StdoutLogger(BaseLogger):
 
     def progress_iterator(self, description, iterable, total, get_id, get_title, print_every=10):
         return verbose_iterator(iterable, total, get_id, get_title, print_every=10)
+
+    def set_success(self):
+        self.print_success('%[green!]Migration finished!', always=True)

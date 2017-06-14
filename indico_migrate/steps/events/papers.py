@@ -14,7 +14,7 @@
 # You should have received a copy of the GNU General Public License
 # along with Indico; if not, see <http://www.gnu.org/licenses/>.
 
-from __future__ import unicode_literals, division
+from __future__ import division, unicode_literals
 
 import mimetypes
 from collections import defaultdict
@@ -31,16 +31,17 @@ from indico.modules.events.papers.models.files import PaperFile
 from indico.modules.events.papers.models.papers import Paper
 from indico.modules.events.papers.models.review_questions import PaperReviewQuestion
 from indico.modules.events.papers.models.review_ratings import PaperReviewRating
-from indico.modules.events.papers.models.reviews import PaperReview, PaperReviewType, PaperAction
+from indico.modules.events.papers.models.reviews import PaperAction, PaperReview, PaperReviewType
 from indico.modules.events.papers.models.revisions import PaperRevision, PaperRevisionState
 from indico.modules.events.papers.models.templates import PaperTemplate
-from indico.modules.events.papers.settings import paper_reviewing_settings, PaperReviewingRole
+from indico.modules.events.papers.settings import PaperReviewingRole, paper_reviewing_settings
 from indico.util.fs import secure_filename
 from indico.util.string import crc32
 
 from indico_migrate import convert_to_unicode
 from indico_migrate.steps.events import EventMigrationStep
 from indico_migrate.util import LocalFileImporterMixin, strict_now_utc
+
 
 CPR_NO_REVIEWING = 1
 CPR_CONTENT_REVIEWING = 2
@@ -400,7 +401,8 @@ class EventPaperReviewingImporter(LocalFileImporterMixin, EventMigrationStep):
             else:
                 self.file_checksums[checksum] = revision
         except (RuntimeError, StorageError):
-            self.print_error("%[red!]File not accessible; can't CRC it [{}]".format(paper_file.filename))
+            self.print_error("%[red!]File not accessible; can't CRC it [{}]"
+                             .format(convert_to_unicode(paper_file.filename)))
 
         paper_file._contribution = contribution
         db.session.add(paper_file)

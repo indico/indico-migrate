@@ -73,18 +73,23 @@ def migrate(logger, zodb_root, zodb_rb_uri, sqlalchemy_uri, verbose=False, dblog
     debug = kwargs.get('debug', False)
 
     with app.app_context():
-        if restore_file:
-            # preload some data, so that we don't have to
-            # retrieve it from the DB later
-            all_users = db.m.User.query.all()
-            all_categories = db.m.Category.query.all()
-            print '{} users, {} categories preloaded'.format(len(all_users), len(all_categories))
-            data = yaml.load(restore_file, Loader=_zodb_powered_loader(zodb_root))
-            MigrationStateManager.load_restore_point(data)
         try:
+            if restore_file:
+                logger.print_info('loading restore file %[cyan!]{}'.format(restore_file.name), always=True)
+                import time
+                time.sleep(1)
+                # preload some data, so that we don't have to
+                # retrieve it from the DB later
+                all_users = db.m.User.query.all()
+                all_categories = db.m.Category.query.all()
+                logger.print_info('{} users, {} categories preloaded'.format(len(all_users), len(all_categories)),
+                                  always=True)
+                data = yaml.load(restore_file, Loader=_zodb_powered_loader(zodb_root))
+                MigrationStateManager.load_restore_point(data)
+
             for step in steps:
                 if MigrationStateManager.has_already_run(step):
-                    print cformat('%[blue!]Skipping previously-run step {}...').format(step.__name__)
+                    logger.print_info('Skipping previously-run step {}...'.format(step.__name__), always=True)
                     continue
                 if step in (RoomsLocationsImporter, RoomBookingsImporter):
                     if zodb_rb_uri:
@@ -95,16 +100,18 @@ def migrate(logger, zodb_root, zodb_rb_uri, sqlalchemy_uri, verbose=False, dblog
                     step(logger, app, sqlalchemy_uri, zodb_root, verbose, dblog, default_group_provider, tz,
                          **kwargs).run()
                 MigrationStateManager.register_step(step)
+            logger.set_success()
+            logger.shutdown()
         except:
             logger.shutdown()
-            if debug or not ask_to_paste(logger.buffer, get_full_stack()):
-                raise
-        finally:
             if save_restore:
                 db.session.rollback()
-                print cformat('%[yellow]Saving restore point...'),
+                logger.print_warning('%[yellow]Saving restore point...'),
                 MigrationStateManager.save_restore_point(save_restore)
-                print cformat('%[green!]DONE')
+                logger.print_warning('%[green!]Restore point saved.')
+
+            if debug or not ask_to_paste(logger.buffer, get_full_stack()):
+                raise
 
 
 def db_has_data():

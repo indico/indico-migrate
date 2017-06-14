@@ -339,6 +339,7 @@ class EventPaperReviewingImporter(LocalFileImporterMixin, EventMigrationStep):
                 continue
 
             contribution = self.event_ns.legacy_contribution_map[old_contrib]
+            revisions = Paper(contribution).revisions
             self._migrate_paper_roles(old_contrib, contribution)
 
             review_manager = getattr(old_contrib, '_reviewManager', None)
@@ -346,12 +347,14 @@ class EventPaperReviewingImporter(LocalFileImporterMixin, EventMigrationStep):
                 self._migrate_revisions(old_contrib, contribution, review_manager)
 
             reviewing = getattr(old_contrib, 'reviewing', None)
-            if not reviewing:
+
+            # if there were no materials attached to the contribution or no revisions, we're done
+            if not reviewing or not revisions:
                 continue
 
             # these are the resources that correspond to the latest revision
             for resource in reviewing._Material__resources.itervalues():
-                self._migrate_resource(old_contrib, contribution, Paper(contribution).revisions[-1], resource,
+                self._migrate_resource(old_contrib, contribution, revisions[-1], resource,
                                        getattr(reviewing, '_modificationDS', strict_now_utc()), set())
 
     def _migrate_paper_files(self, old_contrib, contribution, old_revision, revision, review_manager):

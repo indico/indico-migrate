@@ -24,7 +24,6 @@ from indico.modules.designer import PageOrientation, PageSize
 from indico.modules.designer.models.images import DesignerImageFile
 from indico.modules.designer.models.templates import DesignerTemplate, TemplateType
 from indico.modules.events.registration.settings import DEFAULT_BADGE_SETTINGS, event_badge_settings
-from indico.util.console import cformat
 from indico.util.fs import secure_filename
 from indico.util.string import to_unicode
 
@@ -46,7 +45,6 @@ def _convert_font_family(name):
     if name in FONT_FAMILY_MAPPING:
         return FONT_FAMILY_MAPPING[name]
     else:
-        print(cformat("%[yellow!]--%[reset] Unknown font: '{}'. Using 'sans-serif' instead.").format(name))
         return 'sans-serif'
 
 

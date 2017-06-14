@@ -106,10 +106,13 @@ class GUILogger(BaseLogger):
         super(GUILogger, self).fatal_error(message)
 
     def progress_iterator(self, description, iterable, total, get_id, get_title, print_every=10):
+        start_time = time.time()
         progress_bar = self.gui.create_progress_bar(description)
         for n, elem in enumerate(iterable, 1):
             if n % print_every == 0:
-                progress_bar.set_state(n * 100 / total, get_id(elem)[:12])
+                elapsed = time.time() - start_time
+                eta = int((total - n) * n / elapsed / 1000)  # seconds
+                progress_bar.set_state(n * 100 / total, get_id(elem)[:12], eta)
             yield elem
         progress_bar.remove()
 
@@ -142,15 +145,21 @@ class StepProgressBar(object):
     def __init__(self, gui, description):
         self.progress_bar = ProgressBar('progress_empty', 'progress_done', satt='progress_progress')
         self.id_text = Text('')
+        self.eta_text = Text('', align='right')
         title = Text(' {} '.format(description), align='center')
-        self.progress_widget = AttrMap(LineBox(Columns([title, ('weight', 2, self.progress_bar), self.id_text])), 'box')
+        self.progress_widget = AttrMap(LineBox(Columns([title, ('weight', 2, self.progress_bar), self.id_text,
+                                                        self.eta_text])), 'box')
         gui.progress.append(self.progress_widget)
         self.gui = gui
         gui.redraw()
 
-    def set_state(self, progress, elem_id):
+    def set_state(self, progress, elem_id, eta):
+        m, s = divmod(eta, 60)
+        h, m = divmod(m, 60)
+
         self.progress_bar.set_completion(progress)
-        self.id_text.set_text([' ', elem_id])
+        self.id_text.set_text([' ', '{:8}'.format(elem_id)])
+        self.eta_text.set_text([('eta', '{:2d}:{:02d}:{:02d}'.format(h, m, s)), ('box', ' left... ')])
         self.gui.redraw()
 
     def remove(self):
@@ -186,7 +195,8 @@ class GUI(object):
             ('step_working', 'dark gray', ''),
             ('global_frame', 'light cyan', ''),
             ('fill', 'light cyan', 'dark cyan'),
-            ('done', 'white', 'dark green')
+            ('done', 'white', 'dark green'),
+            ('eta', 'yellow', 'dark gray')
         ] + generate_urwid_palette(PALETTE))
 
     def print_log(self, icon, message, prefix='', event_id=''):

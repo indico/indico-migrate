@@ -18,6 +18,7 @@ from __future__ import unicode_literals
 
 import re
 import time
+import warnings
 
 from urwid import (Text, Pile, LineBox, ListBox, SimpleFocusListWalker, ProgressBar, Columns, AttrMap,
                    Divider, Filler, GridFlow, SolidFill, BoxAdapter)
@@ -198,11 +199,14 @@ class GUI(object):
         self.redraw()
 
     def start(self):
+        # don't let Python warnings ruin the GUI
+        warnings.filterwarnings('ignore')
         self.screen.start()
         self.redraw()
 
     def stop(self):
         self.screen.stop()
+        warnings.filterwarnings('default')
 
     def create_progress_bar(self, description):
         if self.progress:

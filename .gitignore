@@ -16,3 +16,7 @@ stellar.yaml
 # IDE files
 .idea/
 *.sublime-*
+
+# log files etc
+*.log
+*.yaml

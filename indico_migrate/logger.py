@@ -19,6 +19,7 @@ from __future__ import unicode_literals
 
 import logging
 import re
+import shutil
 import sys
 from io import BytesIO
 
@@ -54,7 +55,7 @@ class BaseLogger(object):
     def save_to_disk(self):
         with open('migration.log', 'w') as f:
             self.buffer.seek(0)
-            f.write(self.buffer.read())
+            shutil.copyfileobj(self.buffer, f)
 
     def wait_for_input(self):
         pass

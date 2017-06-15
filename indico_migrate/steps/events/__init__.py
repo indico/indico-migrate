@@ -66,8 +66,7 @@ class EventMigrationStep(Importer):
     @property
     def log_prefix(self):
         if self.conf:
-            return '%[cyan]{:<10}%[reset] %[grey!]{:<14}%[reset]'.format('[%[white]{}%[cyan]]'.format(self.conf.id),
-                                                                         '[{}]'.format(self.step_id))
+            return '%[reset]%[cyan]{:>6}%[reset]  %[grey!]{:11}%[reset]'.format(self.conf.id, self.step_id)
         else:
             return ''
 

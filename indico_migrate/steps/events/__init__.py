@@ -103,7 +103,7 @@ class EventMigrationStep(Importer):
                     phone=convert_to_unicode(getattr(old_person, '_telephone', None) or
                                              getattr(old_person, '_phone', None)))
         if skip_empty_names and not data['first_name'] and not data['last_name']:
-            self.print_warning('%[yellow!]Skipping nameless event person')
+            self.print_warning('%[yellow!]Skipping nameless event person', always=False)
             return None
         email = strict_sanitize_email(old_person._email)
         if email:

@@ -46,6 +46,8 @@ def compile_log_data(buffer, stack):
 
 
 def ask_to_paste(buffer, stack):
+    print stack
+    print
     print cformat2('%[yellow]*** %[red]ERROR')
     print cformat2('%[yellow]*** %[white]There has been an unexpected error during the migration.')
     print cformat2("%[yellow]*** %[white]You may choose to post an error report on %[cyan]gist.github.com%[reset] "

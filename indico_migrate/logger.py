@@ -51,6 +51,11 @@ class BaseLogger(object):
     def shutdown(self):
         pass
 
+    def save_to_disk(self):
+        with open('migration.log', 'w') as f:
+            self.buffer.seek(0)
+            f.write(self.buffer.read())
+
     def wait_for_input(self):
         pass
 

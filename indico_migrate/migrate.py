@@ -114,6 +114,8 @@ def migrate(logger, zodb_root, zodb_rb_uri, sqlalchemy_uri, verbose=False, dblog
 
             if debug or not ask_to_paste(logger.buffer, get_full_stack()):
                 raise
+        finally:
+            logger.save_to_disk()
 
 
 def db_has_data():

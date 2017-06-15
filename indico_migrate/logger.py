@@ -51,6 +51,9 @@ class BaseLogger(object):
     def shutdown(self):
         pass
 
+    def wait_for_input(self):
+        pass
+
     def fatal_error(self, message):
         for line in message.split('\n'):
             print(cformat2('%[red!]***%[reset] ') + line)

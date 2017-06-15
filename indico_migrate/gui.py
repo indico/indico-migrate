@@ -140,6 +140,9 @@ class GUILogger(BaseLogger):
     def shutdown(self):
         self.gui.stop()
 
+    def wait_for_input(self):
+        self.gui.wait_for_input()
+
 
 class StepProgressBar(object):
     def __init__(self, gui, description):

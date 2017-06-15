@@ -133,7 +133,7 @@ This is followed by the relevant options from the following list:
     E.g. ``broken-indico-identity@myorganization.org``.
 
 
-``--ldap-provider-name`` (mandatory)
+``--ldap-provider-name`` (optional)
 ====================================
     This is the name of the LDAP provider that will be used in your new config. Existing LDAP identities will be mapped
     to it. The best choice at this point is to set it to something like ``<your-organization>-ldap``

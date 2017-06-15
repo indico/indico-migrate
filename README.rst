@@ -215,6 +215,10 @@ Other settings
 These less used settings are meant mainly for debugging purposes. You shouldn't normally use them unless you know what
 you're doing.
 
+``--no-gui`` (optional flag)
+=========================================
+    This option will disable the curses-like "graphical" interface, using plain text instead.
+
 
 ``--verbose`` (optional flag)
 =========================================

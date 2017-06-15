@@ -110,8 +110,8 @@ class GUILogger(BaseLogger):
         progress_bar = self.gui.create_progress_bar(description)
         for n, elem in enumerate(iterable, 1):
             if n % print_every == 0:
-                elapsed = time.time() - start_time
-                eta = int((total - n) * n / elapsed / 1000)  # seconds
+                elapsed = time.time() - start_time  # seconds
+                eta = int((total - n) * elapsed / n)
                 progress_bar.set_state(n * 100 / total, get_id(elem)[:12], eta)
             yield elem
         progress_bar.remove()

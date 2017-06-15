@@ -52,6 +52,9 @@ class BaseLogger(object):
     def shutdown(self):
         pass
 
+    def save_exception(self, stack):
+        self.buffer.write(b'\n\n' + stack.encode('utf-8') + b'\n')
+
     def save_to_disk(self):
         with open('migration.log', 'w') as f:
             self.buffer.seek(0)

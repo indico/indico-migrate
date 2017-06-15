@@ -38,15 +38,7 @@ def get_full_stack():
     return result
 
 
-def compile_log_data(buffer, stack):
-    buffer.write(b'\n\n----------- EXCEPTION DATA -----------\n\n')
-    buffer.write(stack.encode('utf-8'))
-    buffer.seek(0)
-    return buffer.read()
-
-
-def ask_to_paste(buffer, stack):
-    print stack
+def ask_to_paste(buffer):
     print
     print cformat2('%[yellow]*** %[red]ERROR')
     print cformat2('%[yellow]*** %[white]There has been an unexpected error during the migration.')
@@ -55,8 +47,8 @@ def ask_to_paste(buffer, stack):
     print cformat2("%[yellow]*** %[white]The URL won't be publicly advertised and %[yellow]only data "
                    "that was shown on the screen will be sent%[white].\n")
     if click.confirm('Do you wish to submit the error report?'):
-        data = compile_log_data(buffer, stack)
-        return post_gist(data)
+        buffer.seek(0)
+        return post_gist(buffer.read())
     else:
         return False
 

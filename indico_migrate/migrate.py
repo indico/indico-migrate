@@ -103,6 +103,8 @@ def migrate(logger, zodb_root, zodb_rb_uri, sqlalchemy_uri, verbose=False, dblog
             logger.set_success()
             logger.shutdown()
         except:
+            stack = get_full_stack()
+            logger.save_exception(stack)
             if save_restore:
                 db.session.rollback()
                 logger.print_warning('%[yellow]Saving restore point...'),
@@ -112,7 +114,12 @@ def migrate(logger, zodb_root, zodb_rb_uri, sqlalchemy_uri, verbose=False, dblog
 
             logger.shutdown()
 
-            if debug or not ask_to_paste(logger.buffer, get_full_stack()):
+            if debug:
+                raise
+
+            print stack
+
+            if not ask_to_paste(logger.buffer):
                 raise
         finally:
             logger.save_to_disk()

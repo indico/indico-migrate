@@ -108,8 +108,8 @@ def migrate(logger, zodb_root, zodb_rb_uri, sqlalchemy_uri, verbose=False, dblog
                 logger.print_warning('%[yellow]Saving restore point...'),
                 MigrationStateManager.save_restore_point(save_restore)
                 logger.print_warning('%[green!]Restore point saved.')
+                logger.wait_for_input()
 
-            logger.wait_for_input()
             logger.shutdown()
 
             if debug or not ask_to_paste(logger.buffer, get_full_stack()):

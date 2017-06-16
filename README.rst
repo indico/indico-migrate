@@ -2,62 +2,12 @@
 
 This script migrates the database of an Indico 1.2.x server to **version 2.0**.
 
-Prerequisites
--------------
 
-In order to migrate to version 2.0 of Indico you will first of all need to make sure you have **at least version 1.2**
-of Indico installed. Migration of databases using earlier versions will either **fail** or very likely result in an
-**data loss**. So, please make sure that you are **on 1.2.x** before migrating.
+Migrating to Indico 2.0
+-----------------------
 
-**NOTE:** If you are running a version of the experimental (thus unsupported) 1.9.x branch, you will have to perform a
-step-by-step migration. We hope that, as advised, no-one upgraded to intermediate 1.9.x releases. If you did and need
-help with it, please ping us on IRC.
-
-
-Installing
-----------
-
-In order to migrate to 2.0, you will first of all have to install that version of Indico. Please refer to the
-installation docs for instructions.
-
-Once indico is installed, you will have to install the ``indico-migrate`` package::
-
-    $ pip install indico-migrate
-
-Make sure that, if you're using a virtualenv, your are installing it in the same virtualenv of your Indico 2.0
-installation.
-
-
-Backing up ZODB
----------------
-
-The migration script doesn't write to the ZODB, but we still recommend that you **make a backup** just in case::
-
-    $ repozo -B -F -r <some-place-safe> -f <indico-db-dir>/Data.fs --verbose
-
-You should replace ``<some-place-safe>`` with the directory in your filesystem where you want to keep the backup.
-As for ``<indico-db-dir>``, it's the directory where the database file is kept. That should be ``/opt/indico/db`` in
-most Indico installations.
-
-Make sure that backup files have been created (you should have an ``*.index`` and an ``*.fs`` file).
-
-
-Setting up PostgreSQL
----------------------
-
-You will need to install PostgreSQL. We do not provide a full explanation on how to do so since it may differ quite a
-lot from one OS to another, in the case of Linux, from a distribution to another. Please, refer to your OS's
-documentation and/or Google to find out more about it.
-We recommend **PostgreSQL 9.6**. The **minimum** version required to run Indico 2.0 is **9.4**.
-
-After having set up PostgreSQL, you will need to create a DB for indico::
-
-    $ createdb indico -O indico
-    $ echo 'CREATE EXTENSION unaccent; CREATE EXTENSION pg_trgm;' | psql indico
-
-Please note that throughout the process we assume you have an unprivileged ``indico`` user account in your system, which
-will own the database and run the web application server. This is highly recommended, especially in production setups.
-The second line installs in this new DB two extensions that are used by Indico (``unaccent`` and ``pg_trgm``).
+Please refer to the `Upgrade Guide <http://indico.readthedocs.io/en/latest/installation/upgrade/>`_ for instructions on
+how to upgrade from Indico 1.2 to 2.0.
 
 
 Migration settings

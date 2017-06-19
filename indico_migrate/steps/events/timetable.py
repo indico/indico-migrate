@@ -47,11 +47,10 @@ from indico.modules.events.timetable.models.entries import TimetableEntry
 from indico.modules.events.tracks import Track
 from indico.modules.events.tracks.settings import track_settings
 from indico.modules.rb import Location, Room
-from indico.modules.users.models.users import UserTitle
 from indico.util.string import fix_broken_string, is_valid_mail, sanitize_email
 
 from indico_migrate import convert_to_unicode
-from indico_migrate.steps.events import EventMigrationStep
+from indico_migrate.steps.events import EventMigrationStep, PERSON_INFO_MAP
 from indico_migrate.util import strict_sanitize_email
 
 
@@ -59,24 +58,6 @@ PROTECTION_MODE_MAP = {
     -1: ProtectionMode.public,
     0: ProtectionMode.inheriting,
     1: ProtectionMode.protected,
-}
-
-USER_TITLE_MAP = {unicode(x.title): x for x in UserTitle}
-
-PERSON_INFO_MAP = {
-    '_address': 'address',
-    '_affiliation': 'affiliation',
-    '_firstName': 'first_name',
-    '_surName': 'last_name',
-    '_phone': 'phone'
-}
-
-AVATAR_PERSON_INFO_MAP = {
-    'address': lambda x: x.address[0],
-    'affiliation': lambda x: x.organisation[0],
-    'first_name': lambda x: x.name,
-    'last_name': lambda x: x.surName,
-    'phone': lambda x: x.telephone[0]
 }
 
 
@@ -605,16 +586,6 @@ class EventTimetableImporter(EventMigrationStep):
         email = getattr(old_person, '_email', None) or getattr(old_person, 'email', None)
         email = strict_sanitize_email(convert_to_unicode(email).lower()) if email else email
         return self.get_event_person_by_email(email)
-
-    def _get_person_data(self, old_person):
-        if old_person.__class__.__name__ == 'Avatar':
-            data = {new_attr: convert_to_unicode(func(old_person))
-                    for new_attr, func in AVATAR_PERSON_INFO_MAP.viewitems()}
-        else:
-            data = {new_attr: convert_to_unicode(getattr(old_person, old_attr, ''))
-                    for old_attr, new_attr in PERSON_INFO_MAP.iteritems()}
-        data['_title'] = USER_TITLE_MAP.get(getattr(old_person, '_title', ''), UserTitle.none)
-        return data
 
     def _migrate_event_persons_links(self):
         person_link_map = {}

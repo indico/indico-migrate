@@ -29,6 +29,25 @@ from indico_migrate.util import convert_to_unicode, strict_sanitize_email
 __all__ = ('EventImporter', 'EventMigrationStep')
 
 
+USER_TITLE_MAP = {unicode(x.title): x for x in UserTitle}
+
+PERSON_INFO_MAP = {
+    '_address': 'address',
+    '_affiliation': 'affiliation',
+    '_firstName': 'first_name',
+    '_surName': 'last_name',
+    '_phone': 'phone'
+}
+
+AVATAR_PERSON_INFO_MAP = {
+    'address': lambda x: x.address[0],
+    'affiliation': lambda x: x.organisation[0],
+    'first_name': lambda x: x.name,
+    'last_name': lambda x: x.surName,
+    'phone': lambda x: x.telephone[0]
+}
+
+
 class EventMigrationStep(Importer):
     USER_TITLE_MAP = {unicode(x.title): x for x in UserTitle}
     step_id = '?'
@@ -91,16 +110,19 @@ class EventMigrationStep(Importer):
         dt_aware = self.event.tzinfo.localize(dt) if dt.tzinfo is None else dt
         return dt_aware.astimezone(utc_tz) if utc else dt_aware
 
+    def _get_person_data(self, old_person):
+        if old_person.__class__.__name__ == 'Avatar':
+            data = {new_attr: convert_to_unicode(func(old_person))
+                    for new_attr, func in AVATAR_PERSON_INFO_MAP.viewitems()}
+        else:
+            data = {new_attr: convert_to_unicode(getattr(old_person, old_attr, ''))
+                    for old_attr, new_attr in PERSON_INFO_MAP.iteritems()}
+        data['_title'] = USER_TITLE_MAP.get(getattr(old_person, '_title', ''), UserTitle.none)
+        return data
+
     def event_person_from_legacy(self, old_person, skip_empty_email=False, skip_empty_names=False):
         """Translate an old participation-like object to an EventPerson."""
-        data = dict(first_name=convert_to_unicode(old_person._firstName),
-                    last_name=convert_to_unicode(old_person._surName),
-                    _title=self.USER_TITLE_MAP.get(getattr(old_person, '_title', ''), UserTitle.none),
-                    affiliation=convert_to_unicode(getattr(old_person, '_affiliation', None) or
-                                                   getattr(old_person, '_affilliation', None)),
-                    address=convert_to_unicode(old_person._address),
-                    phone=convert_to_unicode(getattr(old_person, '_telephone', None) or
-                                             getattr(old_person, '_phone', None)))
+        data = self._get_person_data(old_person)
         if skip_empty_names and not data['first_name'] and not data['last_name']:
             self.print_warning('%[yellow!]Skipping nameless event person', always=False)
             return None

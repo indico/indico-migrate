@@ -121,12 +121,13 @@ class EventMigrationStep(Importer):
         return data
 
     def event_person_from_legacy(self, old_person, skip_empty_email=False, skip_empty_names=False):
-        """Translate an old participation-like object to an EventPerson."""
+        """Translate an old participation-like (or avatar) object to an EventPerson."""
         data = self._get_person_data(old_person)
         if skip_empty_names and not data['first_name'] and not data['last_name']:
             self.print_warning('%[yellow!]Skipping nameless event person', always=False)
             return None
-        email = strict_sanitize_email(old_person._email)
+        # retrieve e-mail in both Avatar and Participation objects
+        email = strict_sanitize_email(getattr(old_person, '_email', getattr(old_person, 'email')))
         if email:
             person = (self.event_ns.event_persons_by_email.get(email) or
                       self.event_ns.event_persons_by_user.get(self.global_ns.users_by_email.get(email)))

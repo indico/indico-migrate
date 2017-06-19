@@ -72,11 +72,11 @@ PERSON_INFO_MAP = {
 }
 
 AVATAR_PERSON_INFO_MAP = {
-    'getAddress': 'address',
-    'getAffiliation': 'affiliation',
-    'getFirstName': 'first_name',
-    'getFamilyName': 'last_name',
-    'getPhone': 'phone'
+    'address': lambda x: x.address[0],
+    'affiliation': lambda x: x.organisation[0],
+    'first_name': lambda x: x.name,
+    'last_name': lambda x: x.surName,
+    'phone': lambda x: x.telephone[0]
 }
 
 
@@ -607,8 +607,12 @@ class EventTimetableImporter(EventMigrationStep):
         return self.get_event_person_by_email(email)
 
     def _get_person_data(self, old_person):
-        data = {new_attr: convert_to_unicode(getattr(old_person, old_attr, ''))
-                for old_attr, new_attr in PERSON_INFO_MAP.iteritems()}
+        if old_person.__class__.__name__ == 'Avatar':
+            data = {new_attr: convert_to_unicode(func(old_person))
+                    for new_attr, func in AVATAR_PERSON_INFO_MAP.viewitems()}
+        else:
+            data = {new_attr: convert_to_unicode(getattr(old_person, old_attr, ''))
+                    for old_attr, new_attr in PERSON_INFO_MAP.iteritems()}
         data['_title'] = USER_TITLE_MAP.get(getattr(old_person, '_title', ''), UserTitle.none)
         return data
 

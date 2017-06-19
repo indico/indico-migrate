@@ -114,7 +114,11 @@ class EventLayoutImporter(EventMigrationStep):
             logo_image = logo_image.convert('RGB')
 
         logo_bytes = BytesIO()
-        logo_image.save(logo_bytes, 'PNG')
+        try:
+            logo_image.save(logo_bytes, 'PNG')
+        except Exception as e:
+            self.print_warning("Cannot write PNG logo: {}".format(path, e))
+            return
         logo_bytes.seek(0)
         logo_content = logo_bytes.read()
         logo_filename = secure_filename(convert_to_unicode(logo.fileName), 'logo')

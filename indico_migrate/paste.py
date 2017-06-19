@@ -21,6 +21,7 @@ import inspect
 import click
 from github3 import GitHub
 
+import indico
 from indico_migrate.version import __version__
 from indico_migrate.util import cformat2
 
@@ -64,7 +65,7 @@ def post_gist(text):
         }
 
     gh = GitHub()
-    gist = gh.create_gist('indico-migrate {}'.format(__version__), files, public=False)
+    gist = gh.create_gist('indico-migrate {} / indico {}'.format(__version__, indico.__version__), files, public=False)
 
     print
     print '\nThe URL of the error report is:\n'

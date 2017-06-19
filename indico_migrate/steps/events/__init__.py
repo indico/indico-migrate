@@ -127,7 +127,7 @@ class EventMigrationStep(Importer):
             self.print_warning('%[yellow!]Skipping nameless event person', always=False)
             return None
         # retrieve e-mail in both Avatar and Participation objects
-        email = strict_sanitize_email(getattr(old_person, '_email', getattr(old_person, 'email')))
+        email = strict_sanitize_email(getattr(old_person, '_email', None) or getattr(old_person, 'email', None))
         if email:
             person = (self.event_ns.event_persons_by_email.get(email) or
                       self.event_ns.event_persons_by_user.get(self.global_ns.users_by_email.get(email)))

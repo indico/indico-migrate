@@ -190,24 +190,24 @@ class EventLayoutImporter(EventMigrationStep):
             settings['header_text_color'] = format_opts._data.get('titleTextColor')
             settings['header_background_color'] = format_opts._data.get('titleBgColor')
         else:
-            self.print_error('%[red!] Skipping some settings, missing _format attribute')
+            self.print_error('%[red!]Skipping some settings, missing _format attribute')
         if tt:
             settings['show_banner'] = getattr(tt, '_enabledNowPlaying', None)
             settings['announcement'] = getattr(tt, '_text', None)
             settings['show_announcement'] = getattr(tt, '_enabledSimpleText', None)
         else:
-            self.print_error('%[red!] Skipping some settings, missing _tickerTape attribute')
+            self.print_error('%[red!]Skipping some settings, missing _tickerTape attribute')
         if style_mgr:
             template = getattr(style_mgr, '_usingTemplate', None)
             theme = getattr(template, 'templateId', None)
             settings['theme'] = theme if theme in ALLOWED_THEMES else None
             settings['use_custom_css'] = getattr(style_mgr, '_css', None) is not None
         else:
-            self.print_error('%[red!] Skipping some settings, missing _styleMngr attribute')
+            self.print_error('%[red!]Skipping some settings, missing _styleMngr attribute')
         if menu:
             settings['timetable_by_room'] = getattr(menu, '_timetable_layout', None) == 'room'
             settings['timetable_detailed'] = getattr(menu, '_timetable_detailed_view', False)
         else:
-            self.print_error('%[red!] Skipping some settings, missing _menu attribute')
+            self.print_error('%[red!]Skipping some settings, missing _menu attribute')
 
         return {k: v for k, v in settings.iteritems() if v is not None}

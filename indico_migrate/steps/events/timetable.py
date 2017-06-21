@@ -50,7 +50,7 @@ from indico.modules.rb import Location, Room
 from indico.util.string import fix_broken_string, is_valid_mail, sanitize_email
 
 from indico_migrate import convert_to_unicode
-from indico_migrate.steps.events import EventMigrationStep, PERSON_INFO_MAP
+from indico_migrate.steps.events import PERSON_INFO_MAP, EventMigrationStep
 from indico_migrate.util import strict_sanitize_email
 
 
@@ -422,15 +422,14 @@ class EventTimetableImporter(EventMigrationStep):
     def _get_parent_location(self, obj, attr):
         type_ = obj.__class__.__name__
         if type_ == 'SessionSlot':
-            conf = obj.session.conference
-            return getattr(conf, attr)[0] if getattr(conf, attr, None) else None
+            return getattr(self.conf, attr)[0] if getattr(self.conf, attr, None) else None
         elif type_ in ('BreakTimeSchEntry', 'Contribution', 'AcceptedContribution'):
             if type_ == 'AcceptedContribution':
                 contrib_parent = obj._session
                 if getattr(contrib_parent, attr, None):
                     return getattr(contrib_parent, attr)[0]
                 else:
-                    owner = contrib_parent.conference
+                    owner = self.conf
             elif type_ == 'Contribution':
                 contrib_parent = obj.parent
                 if attr == 'places' and contrib_parent:
@@ -445,7 +444,7 @@ class EventTimetableImporter(EventMigrationStep):
         elif type_ == 'Conference':
             return getattr(obj, attr)[0] if getattr(obj, attr, None) else None
         elif type_ == 'Session':
-            return self._get_parent_location(obj.conference, attr)
+            return self._get_parent_location(self.conf, attr)
 
     def _process_references(self, reference_cls, old_object):
         try:

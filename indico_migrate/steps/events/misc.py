@@ -36,6 +36,7 @@ from indico_migrate.badges_posters import BadgeMigration, PosterMigration
 from indico_migrate.steps.events import EventMigrationStep
 from indico_migrate.util import LocalFileImporterMixin
 
+
 WEBFACTORY_NAME_RE = re.compile(r'^MaKaC\.webinterface\.(\w+)(?:\.WebFactory)?$')
 SPLIT_EMAILS_RE = re.compile(r'[\s;,]+')
 SPLIT_PHONES_RE = re.compile(r'[/;,]+')
@@ -285,12 +286,14 @@ class EventPaymentSettingsImporter(EventMigrationStep):
 
         # save these messages for later, since the settings
         # are now part of the reg. form
-        self.event_ns.misc_data['payment_currency'] = self.conf._registrationForm._currency
+        currency = getattr(self.conf._registrationForm, '_currency', '')
+        if not re.match(r'^[A-Z]{3}$', currency):
+            currency = ''
+        self.event_ns.misc_data['payment_currency'] = currency
         self.event_ns.payment_messages['register'] = register_email
         self.event_ns.payment_messages['success'] = success_email
 
-        self.print_success("Payment enabled={0}, currency={1}".format(payment_enabled,
-                                                                      self.conf._registrationForm._currency))
+        self.print_success("Payment enabled={0}, currency={1}".format(payment_enabled, currency))
 
 
 class EventAttachmentsImporter(AttachmentMixin, EventMigrationStep):

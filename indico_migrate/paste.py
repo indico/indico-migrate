@@ -22,8 +22,9 @@ import click
 from github3 import GitHub
 
 import indico
-from indico_migrate.version import __version__
+
 from indico_migrate.util import cformat2
+from indico_migrate.version import __version__
 
 
 def get_full_stack():
@@ -70,6 +71,6 @@ def post_gist(text):
     print
     print '\nThe URL of the error report is:\n'
     print cformat2("%[cyan]" + gist.html_url + '\n')
-    print 'Please let us know about it on IRC (#indico @ FreeNode) or via e-mail (indico-team@cern.ch).\n'
+    print 'Please let us know about it on IRC (#indico @ Freenode) or via e-mail (indico-team@cern.ch).\n'
 
     return True

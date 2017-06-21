@@ -174,7 +174,8 @@ class EventAbstractImporter(LocalFileImporterMixin, EventMigrationStep):
             'allow_attachments': bool(getattr(self.amgr, '_attachFiles', False)),
             'allow_speakers': bool(getattr(self.amgr, '_showSelectAsSpeaker', True)),
             'speakers_required': bool(getattr(self.amgr, '_selectSpeakerMandatory', True)),
-            'authorized_submitters': set(filter(None, map(self.user_from_legacy, self.amgr._authorizedSubmitter)))
+            'authorized_submitters': set(filter(None, map(self.user_from_legacy,
+                                                          getattr(self.amgr, '_authorizedSubmitter', []))))
         })
 
     def _migrate_review_settings(self):
@@ -336,7 +337,7 @@ class EventAbstractImporter(LocalFileImporterMixin, EventMigrationStep):
         type_ = old_abstract._contribTypes[0]
         type_id = None
         try:
-            type_id = self.event_ns.legacy_contribution_type_map.get(type_).id if type_ else None
+            type_id = self.event_ns.legacy_contribution_type_map[type_].id if type_ else None
         except KeyError:
             self.print_warning('Abstract {} - invalid contrib type {}, setting to None'
                                .format(old_abstract._id, convert_to_unicode(getattr(type_, '_name', str(type_)))))
@@ -362,7 +363,7 @@ class EventAbstractImporter(LocalFileImporterMixin, EventMigrationStep):
             if old_abstract._currentStatus.__class__.__name__ == 'AbstractStatusAccepted':
                 old_contrib_type = old_abstract._currentStatus._contribType
                 try:
-                    accepted_type_id = (self.event_ns.legacy_contribution_type_map.get(old_contrib_type).id
+                    accepted_type_id = (self.event_ns.legacy_contribution_type_map[old_contrib_type].id
                                         if old_contrib_type else None)
                 except KeyError:
                     self.print_warning(

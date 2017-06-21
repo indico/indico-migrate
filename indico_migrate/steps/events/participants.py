@@ -214,13 +214,14 @@ class EventParticipantsImporter(EventMigrationStep):
                 return
             self.users.add(user)
             registration.user = user
-        if not self.past_event and old_part._avatar and old_part._avatar.user:
+        if not self.past_event and old_part._avatar and old_part._avatar.id in self.global_ns.avatar_merged_user:
+            user = self.global_ns.avatar_merged_user[old_part._avatar.id]
             if not registration.user:
                 self.print_warning('No email match; discarding association between {} and {}'
-                                   .format(old_part._avatar.user, registration))
-            elif registration.user != old_part._avatar.user:
+                                   .format(user, registration))
+            elif registration.user != user:
                 self.print_warning('Email matches other user; associating {} with {} instead of {}'
-                                   .format(registration, registration.user, old_part._avatar.user))
+                                   .format(registration, registration.user, user))
 
     def _migrate_participant_data(self, old_part, registration):
         for pd_type, field in self.pd_field_map.iteritems():

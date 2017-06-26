@@ -49,9 +49,8 @@ from indico.modules.events.tracks.settings import track_settings
 from indico.modules.rb import Location, Room
 from indico.util.string import fix_broken_string, is_valid_mail, sanitize_email
 
-from indico_migrate import convert_to_unicode
 from indico_migrate.steps.events import PERSON_INFO_MAP, EventMigrationStep
-from indico_migrate.util import strict_sanitize_email
+from indico_migrate.util import strict_sanitize_email, convert_to_unicode
 
 
 PROTECTION_MODE_MAP = {

@@ -38,9 +38,8 @@ from indico.modules.events.papers.settings import PaperReviewingRole, paper_revi
 from indico.util.fs import secure_filename
 from indico.util.string import crc32
 
-from indico_migrate import convert_to_unicode
 from indico_migrate.steps.events import EventMigrationStep
-from indico_migrate.util import LocalFileImporterMixin, strict_now_utc
+from indico_migrate.util import LocalFileImporterMixin, strict_now_utc, convert_to_unicode
 
 
 CPR_NO_REVIEWING = 1

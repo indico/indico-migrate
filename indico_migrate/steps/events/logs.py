@@ -23,8 +23,8 @@ from indico.modules.events.logs import EventLogEntry, EventLogKind, EventLogReal
 from indico.util.date_time import format_datetime, format_human_timedelta
 from indico.util.string import seems_html
 
-from indico_migrate import convert_to_unicode
 from indico_migrate.steps.events import EventMigrationStep
+from indico_migrate.util import convert_to_unicode
 
 
 def _convert_data(conf, value):

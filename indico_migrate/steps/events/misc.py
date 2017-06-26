@@ -30,11 +30,10 @@ from indico.modules.events.settings import event_contact_settings, event_core_se
 from indico.util.date_time import now_utc
 from indico.util.string import fix_broken_string
 
-from indico_migrate import convert_to_unicode
 from indico_migrate.attachments import AttachmentMixin
 from indico_migrate.badges_posters import BadgeMigration, PosterMigration
 from indico_migrate.steps.events import EventMigrationStep
-from indico_migrate.util import LocalFileImporterMixin
+from indico_migrate.util import LocalFileImporterMixin, convert_to_unicode
 
 
 WEBFACTORY_NAME_RE = re.compile(r'^MaKaC\.webinterface\.(\w+)(?:\.WebFactory)?$')

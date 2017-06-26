@@ -27,7 +27,7 @@ from indico.modules.events.registration.settings import DEFAULT_BADGE_SETTINGS, 
 from indico.util.fs import secure_filename
 from indico.util.string import to_unicode
 
-from indico_migrate import convert_to_unicode
+from indico_migrate.util import convert_to_unicode
 
 
 def _lower(text):

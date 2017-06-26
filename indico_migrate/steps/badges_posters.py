@@ -18,7 +18,7 @@ from __future__ import unicode_literals
 
 from indico.modules.users import User
 
-from indico_migrate import TopLevelMigrationStep
+from indico_migrate.importer import TopLevelMigrationStep
 from indico_migrate.badges_posters import BadgeMigration, PosterMigration
 from indico_migrate.util import LocalFileImporterMixin
 

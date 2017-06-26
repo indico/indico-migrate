@@ -21,7 +21,7 @@ from pytz import utc as utc_tz
 from indico.modules.events.models.persons import EventPerson
 from indico.modules.users.models.users import UserTitle
 
-from indico_migrate.cli import Importer
+from indico_migrate.importer import Importer
 from indico_migrate.steps.events.importer import EventImporter
 from indico_migrate.util import convert_to_unicode, strict_sanitize_email
 

@@ -31,9 +31,8 @@ from indico.util.date_time import now_utc
 from indico.util.fs import secure_filename
 from indico.util.string import crc32
 
-from indico_migrate import convert_to_unicode
 from indico_migrate.steps.events import EventMigrationStep
-from indico_migrate.util import LocalFileImporterMixin, get_archived_file
+from indico_migrate.util import LocalFileImporterMixin, get_archived_file, convert_to_unicode
 
 
 ALLOWED_THEMES = {'orange.css', 'brown.css', 'right_menu.css'}

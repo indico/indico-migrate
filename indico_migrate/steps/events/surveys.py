@@ -26,9 +26,8 @@ from indico.modules.events.surveys.models.items import SurveyQuestion, SurveySec
 from indico.modules.events.surveys.models.submissions import SurveyAnswer, SurveySubmission
 from indico.modules.events.surveys.models.surveys import Survey
 
-from indico_migrate import convert_to_unicode
 from indico_migrate.steps.events import EventMigrationStep
-from indico_migrate.util import sanitize_user_input
+from indico_migrate.util import sanitize_user_input, convert_to_unicode
 
 
 class EventSurveyImporter(EventMigrationStep):

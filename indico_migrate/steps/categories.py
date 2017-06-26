@@ -37,9 +37,9 @@ from indico.util.fs import secure_filename
 from indico.util.string import crc32, is_legacy_id, is_valid_mail, sanitize_email
 from indico.web.flask.templating import strip_tags
 
-from indico_migrate import TopLevelMigrationStep, convert_to_unicode, step_description
 from indico_migrate.attachments import AttachmentMixin
-from indico_migrate.util import get_archived_file, patch_default_group_provider
+from indico_migrate.importer import TopLevelMigrationStep
+from indico_migrate.util import get_archived_file, patch_default_group_provider, convert_to_unicode, step_description
 
 
 class CategoryImporter(AttachmentMixin, TopLevelMigrationStep):

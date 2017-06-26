@@ -29,7 +29,8 @@ from indico.modules.attachments.models.legacy_mapping import LegacyAttachmentFol
 from indico.modules.events import Event, LegacyEventMapping
 from indico.modules.events.models.series import EventSeries
 from indico.util.string import is_legacy_id
-from indico_migrate import TopLevelMigrationStep, step_description
+from indico_migrate.importer import TopLevelMigrationStep
+from indico_migrate.util import step_description
 
 
 class EventSeriesImporter(TopLevelMigrationStep):

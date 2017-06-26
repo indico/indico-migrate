@@ -44,9 +44,8 @@ from indico.modules.users.models.users import UserTitle
 from indico.util.date_time import as_utc
 from indico.util.fs import secure_filename
 
-from indico_migrate import convert_to_unicode
 from indico_migrate.steps.events import EventMigrationStep
-from indico_migrate.util import LocalFileImporterMixin, strict_sanitize_email
+from indico_migrate.util import LocalFileImporterMixin, strict_sanitize_email, convert_to_unicode
 
 
 class EventAbstractImporter(LocalFileImporterMixin, EventMigrationStep):

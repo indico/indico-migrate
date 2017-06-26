@@ -29,7 +29,8 @@ from indico.modules.rb.models.reservations import RepeatMapping, Reservation
 from indico.modules.rb.models.rooms import Room
 from indico.util.date_time import as_utc
 
-from indico_migrate import TopLevelMigrationStep, convert_to_unicode, step_description
+from indico_migrate.importer import TopLevelMigrationStep
+from indico_migrate.util import convert_to_unicode, step_description
 
 
 FRENCH_MONTH_NAMES = [(str(i), name[:3].encode('utf-8').lower())

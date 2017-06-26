@@ -32,8 +32,8 @@ from indico.modules.events.registration.util import create_personal_data_fields
 from indico.util.date_time import now_utc
 from indico.util.string import normalize_phone_number
 
-from indico_migrate import convert_to_unicode
 from indico_migrate.steps.events import EventMigrationStep
+from indico_migrate.util import convert_to_unicode
 
 
 PARTICIPATION_FORM_TITLE = 'Participants'

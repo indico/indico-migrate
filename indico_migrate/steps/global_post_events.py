@@ -24,7 +24,8 @@ from HTMLParser import HTMLParser
 from indico.modules.categories import upcoming_events_settings
 from indico.web.flask.templating import strip_tags
 
-from indico_migrate import TopLevelMigrationStep, convert_to_unicode, step_description
+from indico_migrate.importer import TopLevelMigrationStep
+from indico_migrate.util import convert_to_unicode, step_description
 
 
 def _sanitize_title(title, _ws_re=re.compile(r'\s+')):

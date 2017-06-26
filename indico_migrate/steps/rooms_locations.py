@@ -36,7 +36,8 @@ from indico.modules.rb.models.rooms import Room
 from indico.util.date_time import as_utc
 from indico.util.string import is_valid_mail
 
-from indico_migrate import TopLevelMigrationStep, convert_to_unicode, step_description
+from indico_migrate.importer import TopLevelMigrationStep
+from indico_migrate.util import convert_to_unicode, step_description
 
 
 attribute_map = {

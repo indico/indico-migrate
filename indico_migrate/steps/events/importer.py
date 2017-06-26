@@ -27,8 +27,9 @@ from indico.modules.users import User
 from indico.util.string import is_legacy_id
 from indico.util.struct.iterables import committing_iterator
 
-from indico_migrate import TopLevelMigrationStep, convert_to_unicode, step_description
+from indico_migrate.importer import TopLevelMigrationStep
 from indico_migrate.namespaces import SharedNamespace
+from indico_migrate.util import convert_to_unicode, step_description
 
 
 # this function is here only to avoid import loops

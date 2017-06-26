@@ -40,9 +40,8 @@ from indico.util.date_time import as_utc, now_utc
 from indico.util.fs import secure_filename
 from indico.util.string import normalize_phone_number
 
-from indico_migrate import convert_to_unicode
 from indico_migrate.steps.events import EventMigrationStep
-from indico_migrate.util import LocalFileImporterMixin, sanitize_user_input
+from indico_migrate.util import LocalFileImporterMixin, sanitize_user_input, convert_to_unicode
 
 
 def ensure_tzinfo(dt):

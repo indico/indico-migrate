@@ -36,7 +36,8 @@ from indico.util.i18n import get_all_locales
 from indico.util.string import is_valid_mail, sanitize_email
 from indico.util.struct.iterables import committing_iterator
 
-from indico_migrate import TopLevelMigrationStep, convert_to_unicode, step_description
+from indico_migrate.importer import TopLevelMigrationStep
+from indico_migrate.util import convert_to_unicode, step_description
 
 
 USER_TITLE_MAP = {x.title: x for x in UserTitle}

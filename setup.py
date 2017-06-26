@@ -33,7 +33,8 @@ setup(
                       'github3.py==0.9.6'],
     entry_points={
         'console_scripts': [
-            'indico-migrate = indico_migrate.cli:main'
+            'indico-migrate = indico_migrate.cli:main',
+            'indico-html-sanitize = indico_migrate.html:main'
         ]
     },
 )

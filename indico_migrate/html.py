@@ -301,6 +301,7 @@ def migrate_description(obj, verbose, html_log, use_pandoc=False):
 def html_log_writer(f):
     log = StringIO()
     log.write('<table style="width: 100%;">')
+    log.write('<tr><th>Category</th><th>Original version</th><th>Converted version</th></tr>')
     yield log
     log.write('</table>')
     log.seek(0)

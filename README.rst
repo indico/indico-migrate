@@ -48,9 +48,9 @@ The basic migration command consists of::
     don't want to set up a ZEO server.
 
 
-=========================
+===========================
 ``--rb-zodburi`` (optional)
-=========================
+===========================
     This option only applies if you were running Indico's Room Booking system and wish to migrate room and reservation
     information. The URI follows the same rules of ``zodb-uri``. In most cases it will be something like::
 
@@ -122,7 +122,7 @@ This is followed by the relevant options from the following list:
     are specified, symlinks to weirdly-named files will be kept in the directory indicated by ``--symlink-target``. They
     will be associated with the storage backend ID specified in ``--symlink-backend``.
 
-    **NOTE:** *This means that in the ``StorageBackends`` option of your new ``indico.conf`` you will have something
+    **NOTE:** This means that in the ``StorageBackends`` option of your new ``indico.conf`` you will have something
     like::
 
         StorageBackends = {

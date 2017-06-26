@@ -77,7 +77,6 @@ class EventTracksImporter(EventMigrationStep):
         for pos, old_track in enumerate(self.conf.program, 1):
             track = Track(title=convert_to_unicode(old_track.title),
                           description=convert_to_unicode(old_track.description),
-                          render_mode=RenderMode.html,
                           code=convert_to_unicode(old_track._code),
                           position=pos,
                           abstract_reviewers=set())
@@ -144,7 +143,6 @@ class EventTimetableImporter(EventMigrationStep):
             code = ''
         session = Session(event_new=self.event, title=convert_to_unicode(old_session.title),
                           description=convert_to_unicode(old_session.description),
-                          render_mode=RenderMode.html,
                           is_poster=(old_session._ttType == 'poster'), code=code,
                           default_contribution_duration=old_session._contributionDuration,
                           protection_mode=PROTECTION_MODE_MAP[ac._accessProtection])
@@ -360,7 +358,7 @@ class EventTimetableImporter(EventMigrationStep):
 
     def _migrate_break_timetable_entry(self, old_entry, session_block=None):
         break_ = Break(title=convert_to_unicode(old_entry.title), description=convert_to_unicode(old_entry.description),
-                       render_mode=RenderMode.html, duration=old_entry.duration)
+                       duration=old_entry.duration)
         try:
             break_.colors = ColorTuple(old_entry._textColor, old_entry._color)
         except (AttributeError, ValueError) as e:

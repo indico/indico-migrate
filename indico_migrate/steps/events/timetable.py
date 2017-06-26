@@ -77,6 +77,7 @@ class EventTracksImporter(EventMigrationStep):
         for pos, old_track in enumerate(self.conf.program, 1):
             track = Track(title=convert_to_unicode(old_track.title),
                           description=convert_to_unicode(old_track.description),
+                          render_mode=RenderMode.html,
                           code=convert_to_unicode(old_track._code),
                           position=pos,
                           abstract_reviewers=set())
@@ -143,6 +144,7 @@ class EventTimetableImporter(EventMigrationStep):
             code = ''
         session = Session(event_new=self.event, title=convert_to_unicode(old_session.title),
                           description=convert_to_unicode(old_session.description),
+                          render_mode=RenderMode.html,
                           is_poster=(old_session._ttType == 'poster'), code=code,
                           default_contribution_duration=old_session._contributionDuration,
                           protection_mode=PROTECTION_MODE_MAP[ac._accessProtection])
@@ -216,6 +218,7 @@ class EventTimetableImporter(EventMigrationStep):
 
         contrib = Contribution(event_new=self.event, friendly_id=friendly_id,
                                title=convert_to_unicode(old_contrib.title),
+                               render_mode=RenderMode.html,
                                description=description, duration=old_contrib.duration,
                                protection_mode=PROTECTION_MODE_MAP[ac._accessProtection],
                                board_number=convert_to_unicode(getattr(old_contrib, '_boardNumber', '')),
@@ -264,7 +267,8 @@ class EventTimetableImporter(EventMigrationStep):
     def _migrate_subcontribution(self, old_contrib, old_subcontrib, position):
         subcontrib = SubContribution(position=position, friendly_id=position, duration=old_subcontrib.duration,
                                      title=convert_to_unicode(old_subcontrib.title),
-                                     description=convert_to_unicode(old_subcontrib.description))
+                                     description=convert_to_unicode(old_subcontrib.description),
+                                     render_mode=RenderMode.html)
         if not self.quiet:
             self.print_info('  %[cyan!]SubContribution%[reset] {}'.format(subcontrib.title))
         self.event_ns.legacy_subcontribution_map[old_subcontrib] = subcontrib
@@ -356,7 +360,7 @@ class EventTimetableImporter(EventMigrationStep):
 
     def _migrate_break_timetable_entry(self, old_entry, session_block=None):
         break_ = Break(title=convert_to_unicode(old_entry.title), description=convert_to_unicode(old_entry.description),
-                       duration=old_entry.duration)
+                       render_mode=RenderMode.html, duration=old_entry.duration)
         try:
             break_.colors = ColorTuple(old_entry._textColor, old_entry._color)
         except (AttributeError, ValueError) as e:

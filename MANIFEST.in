@@ -1,3 +1,0 @@
-include .isort.cfg
-include COPYING
-include .editorconfig

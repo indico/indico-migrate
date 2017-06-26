@@ -30,7 +30,8 @@ setup(
     packages=find_packages(),
     install_requires=['indico>=1.9.11.dev3',
                       'urwid==1.3.1',
-                      'github3.py==0.9.6'],
+                      'github3.py==0.9.6',
+                      'ZODB3==3.10.5'],
     entry_points={
         'console_scripts': [
             'indico-migrate = indico_migrate.cli:main',

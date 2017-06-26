@@ -32,6 +32,7 @@ from pygments.lexers import HtmlLexer
 from indico.core.db import db
 from indico.util.string import render_markdown
 from indico.web.flask.app import make_app
+from indico.core.db.sqlalchemy.descriptions import RenderMode
 
 
 EMPTY_OR_TRALING_WS_ONLY_REGEX = re.compile(r'()(\s*(?!.))', re.MULTILINE | re.DOTALL)
@@ -330,7 +331,8 @@ def cli(ctx, dry_run, html_log, verbose, use_pandoc):
 @click.option('-c', '--category', help='Process only descriptions for the given category', type=int)
 @click.pass_context
 def contribution_descriptions(ctx, event, category):
-    contribs = db.m.Contribution.find(db.m.Contribution.description.op('~')(HTML_TAG_REGEX))
+    contribs = db.m.Contribution.find(db.m.Contribution.description.op('~')(HTML_TAG_REGEX),
+                                      db.m.Contribution.render_mode == RenderMode.html)
 
     with html_log_writer(ctx.obj['html_log']) as log:
         if event:
@@ -345,6 +347,8 @@ def contribution_descriptions(ctx, event, category):
                 migrate_description(contrib, ctx.obj['verbose'], log, use_pandoc=ctx.obj['use_pandoc'])
 
     if not ctx.obj['dry_run']:
+        for contrib in contribs:
+            contrib.render_mode = RenderMode.markdown
         db.session.commit()
 
 

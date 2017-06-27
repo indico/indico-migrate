@@ -48,8 +48,13 @@ class GlobalPostEventsImporter(TopLevelMigrationStep):
         entries = []
         for entry in mod._objects:
             is_category = type(entry.obj).__name__ == 'Category'
-            obj_id = (self.global_ns.legacy_category_ids[entry.obj.id].id if is_category
-                      else self.global_ns.event_ids[entry.obj.id].id)
+            try:
+                obj_id = (self.global_ns.legacy_category_ids[entry.obj.id].id if is_category
+                          else self.global_ns.event_ids[entry.obj.id].id)
+            except KeyError:
+                self.print_warning('invalid id for upcoming events: {} (category: {})'.format(entry.obj.id,
+                                                                                              is_category))
+                continue
             entries.append({
                 'weight': float(entry.weight),
                 'days': entry.advertisingDelta.days,

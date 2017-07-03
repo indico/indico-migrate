@@ -258,11 +258,19 @@ class UserImporter(TopLevelMigrationStep):
     @step_description('Groups')
     def migrate_groups(self):
         it = committing_iterator(self.zodb_root['groups'].itervalues())
+        used_names = set()
         for old_group in self.logger.progress_iterator('Migrating groups', it, len(self.zodb_root['groups']),
                                                        attrgetter('id'), lambda x: ''):
             if old_group.__class__.__name__ != 'Group':
                 continue
-            group = LocalGroup(id=int(old_group.id), name=convert_to_unicode(old_group.name).strip())
+            group_name = orig_group_name = convert_to_unicode(old_group.name).strip()
+            n = 0
+            while group_name.lower() in used_names:
+                group_name = '{}-{}'.format(orig_group_name, n)
+                n += 1
+                self.print_warning('Duplicate group name: {}, using {} instead'.format(orig_group_name, group_name))
+            used_names.add(group_name.lower())
+            group = LocalGroup(id=int(old_group.id), name=group_name)
             self.print_success('%[white!]{:6d}%[reset] %[cyan]{}%[reset]'.format(group.id, group.name))
             members = set()
             for old_member in old_group.members:

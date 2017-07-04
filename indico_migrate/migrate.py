@@ -102,8 +102,8 @@ def migrate(logger, zodb_root, zodb_rb_uri, sqlalchemy_uri, verbose=False, dblog
                 MigrationStateManager.register_step(step)
             logger.set_success()
             logger.shutdown()
-        except:
-            stack = get_full_stack()
+        except Exception as exc:
+            stack = get_full_stack() + '\n' + unicode(exc)
             logger.save_exception(stack)
             if save_restore:
                 db.session.rollback()

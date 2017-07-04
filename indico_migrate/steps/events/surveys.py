@@ -27,7 +27,7 @@ from indico.modules.events.surveys.models.submissions import SurveyAnswer, Surve
 from indico.modules.events.surveys.models.surveys import Survey
 
 from indico_migrate.steps.events import EventMigrationStep
-from indico_migrate.util import sanitize_user_input, convert_to_unicode
+from indico_migrate.util import convert_to_unicode, sanitize_user_input
 
 
 class EventSurveyImporter(EventMigrationStep):
@@ -91,9 +91,10 @@ class EventSurveyImporter(EventMigrationStep):
             question_map[old_question] = question
             section.children.append(question)
 
-        for old_submission in evaluation._submissions:
-            submission = self.migrate_submission(old_submission, question_map)
+        for i, old_submission in enumerate(evaluation._submissions, 1):
+            submission = self.migrate_submission(old_submission, question_map, i)
             survey.submissions.append(submission)
+        survey._last_friendly_submission_id = len(survey.submissions)
 
         return survey
 
@@ -127,14 +128,15 @@ class EventSurveyImporter(EventMigrationStep):
         self.print_success(" - Question: {}".format(question.title))
         return question
 
-    def migrate_submission(self, old_submission, question_map):
+    def migrate_submission(self, old_submission, question_map, friendly_id):
         submitter = old_submission._submitter
         if not old_submission.anonymous and submitter is not None:
             user = self.global_ns.avatar_merged_user[submitter.id]
         else:
             user = None
 
-        submission = SurveySubmission(is_submitted=True, is_anonymous=(user is None), user=user)
+        submission = SurveySubmission(is_submitted=True, is_anonymous=(user is None), user=user,
+                                      friendly_id=friendly_id)
         submitted_dt = old_submission.submissionDate
         submission.submitted_dt = submitted_dt if submitted_dt.tzinfo else self._naive_to_aware(submitted_dt)
         self.print_success(" - Submission from user {}".format(submission.user or 'anonymous'))

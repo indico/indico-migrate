@@ -72,6 +72,7 @@ class RoomsLocationsImporter(TopLevelMigrationStep):
         self.migrate_rooms()
         self.migrate_blockings()
         db.session.commit()
+        self.fix_sequences('roombooking')
 
     def migrate_settings(self):
         rb_settings.delete_all()

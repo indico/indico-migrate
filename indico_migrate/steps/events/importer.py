@@ -196,6 +196,7 @@ class EventImporter(TopLevelMigrationStep):
 
         for importer in importers:
             importer.teardown()
+        self.fix_sequences('events', {'events'})
 
     def _iter_events(self):
         def _it():

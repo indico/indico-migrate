@@ -152,3 +152,4 @@ class RoomBookingsImporter(TopLevelMigrationStep):
             if not i:
                 db.session.commit()
         db.session.commit()
+        self.fix_sequences('roombooking')

@@ -341,7 +341,7 @@ class EventAbstractImporter(LocalFileImporterMixin, EventMigrationStep):
             self.print_warning('Abstract {} - invalid contrib type {}, setting to None'
                                .format(old_abstract._id, convert_to_unicode(getattr(type_, '_name', str(type_)))))
 
-        abstract = Abstract(friendly_id=old_abstract._id,
+        abstract = Abstract(friendly_id=int(old_abstract._id),
                             title=convert_to_unicode(old_abstract._title),
                             description=description,
                             submitter=submitter,
@@ -440,6 +440,9 @@ class EventAbstractImporter(LocalFileImporterMixin, EventMigrationStep):
     def _migrate_abstracts(self):
         for zodb_abstract in self.amgr._abstracts.itervalues():
             self._migrate_abstract(zodb_abstract)
+
+        if self.event.abstracts:
+            self.event._last_friendly_contribution_id = max(a.friendly_id for a in self.event.abstracts)
 
         # merges/duplicates
         for abstract in self.event.abstracts:

@@ -200,7 +200,9 @@ class EventTimetableImporter(EventMigrationStep):
         for old_contrib in self.conf.contributions.itervalues():
             contribs.append(self._migrate_contribution(old_contrib, friendly_id_map[old_contrib]))
         if contribs:
-            self.event._last_friendly_contribution_id = max(c.friendly_id for c in contribs)
+            # there may be a higher last_friendly_contribution_id from abstracts
+            self.event._last_friendly_contribution_id = max(self.event._last_friendly_contribution_id,
+                                                            max(c.friendly_id for c in contribs))
 
     def _migrate_contribution(self, old_contrib, friendly_id):
         ac = old_contrib._Contribution__ac

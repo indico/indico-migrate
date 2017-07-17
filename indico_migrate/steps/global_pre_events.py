@@ -18,12 +18,12 @@ from __future__ import unicode_literals
 
 import re
 from HTMLParser import HTMLParser
-from operator import attrgetter
-
 from ipaddress import ip_network
+from operator import attrgetter
 
 from indico.core.db import db
 from indico.modules.api import api_settings
+from indico.modules.cephalopod import cephalopod_settings
 from indico.modules.core.settings import core_settings, social_settings
 from indico.modules.events.models.references import ReferenceType
 from indico.modules.events.payment import payment_settings
@@ -63,6 +63,7 @@ class GlobalPreEventsImporter(TopLevelMigrationStep):
         self.migrate_news()
         self.migrate_networks()
         self.migrate_reference_types()
+        cephalopod_settings.set('show_migration_message', True)
         db.session.commit()
 
     @step_description('API settings')

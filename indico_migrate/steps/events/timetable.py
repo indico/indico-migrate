@@ -209,7 +209,8 @@ class EventTimetableImporter(EventMigrationStep):
         try:
             description = old_contrib._fields.get('content', '')
         except AttributeError:
-            self.print_warning('Contribution {} has no fields'.format(old_contrib))
+            if not self.is_legacy_event:
+                self.print_warning('Contribution {} has no fields'.format(old_contrib))
             description = ''
         description = convert_to_unicode(getattr(description, 'value', description))  # str or AbstractFieldContent
         status = getattr(old_contrib, '_status', None)

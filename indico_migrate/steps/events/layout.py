@@ -201,7 +201,7 @@ class EventLayoutImporter(EventMigrationStep):
             theme = getattr(template, 'templateId', None)
             settings['theme'] = theme if theme in ALLOWED_THEMES else None
             settings['use_custom_css'] = getattr(style_mgr, '_css', None) is not None
-        else:
+        elif not self.is_legacy_event:
             self.print_error('%[red!]Skipping some settings, missing _styleMngr attribute')
         if menu:
             settings['timetable_by_room'] = getattr(menu, '_timetable_layout', None) == 'room'

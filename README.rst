@@ -6,7 +6,7 @@ This script migrates the database of an Indico 1.2.x server to **version 2.0**.
 Migrating to Indico 2.0
 -----------------------
 
-Please refer to the `Upgrade Guide <http://indico.readthedocs.io/en/latest/installation/upgrade/>`_ for instructions on
+Please refer to the `Upgrade Guide <https://docs.getindico.io/en/latest/installation/upgrade/>`_ for instructions on
 how to upgrade from Indico 1.2 to 2.0.
 
 

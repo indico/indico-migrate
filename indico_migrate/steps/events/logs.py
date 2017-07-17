@@ -31,7 +31,8 @@ def _convert_data(conf, value):
     if isinstance(value, timedelta):
         value = format_human_timedelta(value)
     elif isinstance(value, datetime):
-        value = format_datetime(value, locale='en_GB', timezone=conf.timezone)
+        tz = getattr(conf, 'timezone', 'UTC')
+        value = format_datetime(value, locale='en_GB', timezone=tz)
     elif value.__class__.__name__ == 'ContributionType':
         value = value._name
     elif value.__class__.__name__ == 'AbstractFieldContent':

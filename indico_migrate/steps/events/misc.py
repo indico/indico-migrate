@@ -70,9 +70,7 @@ class EventTypeImporter(EventMigrationStep):
         total = len(self.zodb_root['webfactoryregistry'])
         if not self.quiet:
             it = self.logger.progress_iterator('Loading data', it, total, itemgetter(0), lambda x: '')
-        for conf_id, wf in it:
-            if conf_id.isdigit():
-                yield conf_id, wf
+        return it
 
 
 class EventSettingsImporter(EventMigrationStep):

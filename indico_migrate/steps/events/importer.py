@@ -112,8 +112,8 @@ class _EventContextBase(object):
                            title=title,
                            description=convert_to_unicode(self.conf.__dict__['description']) or '',
                            timezone=tz,
-                           start_dt=self._fix_naive(self.conf.__dict__['startDate'], tz),
-                           end_dt=self._fix_naive(self.conf.__dict__['endDate'], tz),
+                           start_dt=self._fix_naive(self.conf.__dict__['startDate'], tz, self.conf.id),
+                           end_dt=self._fix_naive(self.conf.__dict__['endDate'], tz, self.conf.id),
                            is_locked=self.conf._closed,
                            category=parent_category,
                            is_deleted=False)
@@ -122,9 +122,9 @@ class _EventContextBase(object):
         importer.bind(self)
         importer.run()
 
-    def _fix_naive(self, dt, tz):
+    def _fix_naive(self, dt, tz, event_id):
         if dt.tzinfo is None:
-            self.importer.print_warning('Naive datetime converted ({})'.format(dt))
+            self.importer.print_warning('Naive datetime converted ({})'.format(dt), event_id=event_id)
             return pytz.timezone(tz).localize(dt)
         else:
             return dt

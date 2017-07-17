@@ -146,7 +146,7 @@ This is followed by the relevant options from the following list:
 
 
 ``--default-currency`` (mandatory)
-=========================================
+==================================
     This is the code of the currency unit that will be used by default in your server. E.g. ``USD`` or ``EUR``.
 
 
@@ -158,6 +158,14 @@ This is followed by the relevant options from the following list:
     This will also save you some migration time.
 
 
+``--migrate-broken-events`` (optional flag)
+===========================================
+    This option will import events that were previously broken due to not being associated with a valid category.
+    Such events usually only exist if the old database had events imported from CDSAgenda.
+    If this flag is enabled and any such events exist, a new top-level category named 'Lost & Found' will be created
+    and the events stored in there.
+
+
 ==============
 Other settings
 ==============
@@ -166,24 +174,24 @@ These less used settings are meant mainly for debugging purposes. You shouldn't 
 you're doing.
 
 ``--no-gui`` (optional flag)
-=========================================
+============================
     This option will disable the curses-like "graphical" interface, using plain text instead.
 
 
 ``--verbose`` (optional flag)
-=========================================
+=============================
     This flag increases the verbosity of the Indico migration command. The amount of information can be overwhelming.
 
 
 ``--dblog`` (optional flag)
-=========================================
+===========================
     If this option is specified, the migration command will contact the
     `Indico DB logger <https://github.com/indico/indico/blob/master/bin/utils/db_log.py>`_ running in the local machine
     and log every request that is made to the PostgreSQL server.
 
 
 ``--debug`` (optional flag)
-=========================================
+===========================
     This option will launch the migration in debug mode, which means that the user will be given a debugger shell
     when something goes wrong.
 

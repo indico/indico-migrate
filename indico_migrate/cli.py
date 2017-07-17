@@ -68,6 +68,10 @@ def except_hook(exc_class, exception, tb):
 @click.option('--reference-type', 'reference_types', multiple=True,
               help="Reference types ('report numbers'). Can be used multiple times to specify multiple reference types")
 @click.option('--default-currency', required=True, help="currency unit to use by default")
+@click.option('--migrate-broken-events', is_flag=True, default=False,
+              help="Migrate broken events that have no category and would usually be skipped. "
+                   "They will be added to a new 'Lost & Found' top-level category which needs to be checked "
+                   "(and possibly deleted) manually.")
 @click.option('--debug', is_flag=True, default=False, help="Open debug shell if there is an error")
 @click.option('--no-gui', is_flag=True, default=False, help="Don't run the GUI")
 @click.option('--save-restore', type=click.File('w'), help="Save a restore point to the given file in case of failure")
@@ -106,6 +110,7 @@ def cli(sqlalchemy_uri, zodb_uri, rb_zodb_uri, verbose, dblog, debug, restore_fi
         'users_by_secondary_email': dict,
         'users_by_email': dict,
         'reference_types': dict,
+        'lostandfound_category': lambda: None,
     })
 
     # register the global namespace, so that it gets dumped to disk

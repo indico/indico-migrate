@@ -312,9 +312,13 @@ class EventTimetableImporter(EventMigrationStep):
             raise ValueError('Unexpected field type: {}'.format(new_field.field_type))
 
     def _migrate_timetable(self):
+        schedule = self.conf._Conference__schedule
+        if schedule is None:
+            self.print_error('%[red!]Event has no schedule')
+            return
         if not self.quiet:
             self.print_info('%[green]Timetable...')
-        self._migrate_timetable_entries(self.conf._Conference__schedule._entries)
+        self._migrate_timetable_entries(schedule._entries)
 
     def _migrate_timetable_entries(self, old_entries, session_block=None):
         for old_entry in old_entries:
@@ -350,7 +354,8 @@ class EventTimetableImporter(EventMigrationStep):
     def _migrate_contribution_timetable_entry(self, old_entry, session_block=None):
         old_contrib = old_entry._LinkedTimeSchEntry__owner
         contrib = self.event_ns.legacy_contribution_map[old_contrib]
-        contrib.timetable_entry = TimetableEntry(event_new=self.event, start_dt=old_contrib.startDate)
+        contrib.timetable_entry = TimetableEntry(event_new=self.event,
+                                                 start_dt=self.context._fix_naive(old_contrib.startDate))
         self._migrate_location(old_contrib, contrib)
         if session_block:
             contrib.session = session_block.session
@@ -365,7 +370,8 @@ class EventTimetableImporter(EventMigrationStep):
             break_.colors = ColorTuple(old_entry._textColor, old_entry._color)
         except (AttributeError, ValueError) as e:
             self.print_warning('%[yellow]Break has no colors: "{}" [{}]'.format(break_.title, e))
-        break_.timetable_entry = TimetableEntry(event_new=self.event, start_dt=old_entry.startDate)
+        break_.timetable_entry = TimetableEntry(event_new=self.event,
+                                                start_dt=self.context._fix_naive(old_entry.startDate))
         self._migrate_location(old_entry, break_)
         if session_block:
             break_.timetable_entry.parent = session_block.timetable_entry
@@ -380,7 +386,8 @@ class EventTimetableImporter(EventMigrationStep):
             session = self._migrate_session(old_block.session)
         session_block = SessionBlock(session=session, title=convert_to_unicode(old_block.title),
                                      duration=old_block.duration)
-        session_block.timetable_entry = TimetableEntry(event_new=self.event, start_dt=old_block.startDate)
+        session_block.timetable_entry = TimetableEntry(event_new=self.event,
+                                                       start_dt=self.context._fix_naive(old_block.startDate))
         if session.legacy_mapping is not None:
             session_block.legacy_mapping = LegacySessionBlockMapping(event_new=self.event,
                                                                      legacy_session_id=old_block.session.id,
@@ -557,12 +564,14 @@ class EventTimetableImporter(EventMigrationStep):
             for old_subcontrib in old_contrib._subConts:
                 for speaker in getattr(old_subcontrib, 'speakers', []):
                     old_people.append(speaker)
-        for old_entry in self.conf._Conference__schedule._entries:
-            entry_type = old_entry.__class__.__name__
-            if entry_type == 'LinkedTimeSchEntry':
-                old_block = old_entry._LinkedTimeSchEntry__owner
-                for convener in getattr(old_block, '_conveners', []):
-                    old_people.append(convener)
+        schedule = self.conf._Conference__schedule
+        if schedule:
+            for old_entry in schedule._entries:
+                entry_type = old_entry.__class__.__name__
+                if entry_type == 'LinkedTimeSchEntry':
+                    old_block = old_entry._LinkedTimeSchEntry__owner
+                    for convener in getattr(old_block, '_conveners', []):
+                        old_people.append(convener)
         for old_person in old_people:
             person = self.event_person_from_legacy(old_person, skip_empty_email=True, skip_empty_names=True)
             if person:

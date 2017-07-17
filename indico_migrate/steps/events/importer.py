@@ -21,6 +21,8 @@ from operator import attrgetter
 import pytz
 
 from indico.core.db import db
+from indico.core.db.sqlalchemy.protection import ProtectionMode
+from indico.modules.categories import Category
 from indico.modules.events.models.events import Event
 from indico.modules.events.models.settings import EventSetting
 from indico.modules.users import User
@@ -87,6 +89,19 @@ class _EventContextBase(object):
             # -> 'participant_list_disabled': bool
         })
 
+    @property
+    def lostandfound_category(self):
+        if self.importer.global_ns.lostandfound_category:
+            return self.importer.global_ns.lostandfound_category
+        root = Category.get_root()
+        category = Category(parent=root, default_event_themes=root.default_event_themes,
+                            timezone=root.timezone, title='Lost & Found',
+                            protection_mode=ProtectionMode.protected,
+                            description='Events that had no category in the old database')
+        db.session.add(category)
+        self.importer.global_ns.lostandfound_category = category
+        return self.importer.global_ns.lostandfound_category
+
     def create_event(self):
         if is_legacy_id(self.conf.id):
             event_id = int(self.gen_event_id())
@@ -94,26 +109,25 @@ class _EventContextBase(object):
         else:
             event_id = int(self.conf.id)
 
-        if 'title' not in self.conf.__dict__:
-            self.importer.print_error('Event has no title in ZODB', self.conf.id)
-            raise SkipEvent
-
         try:
             parent_category = self.importer.global_ns.legacy_category_ids[self.conf._Conference__owners[0].id]
         except (IndexError, KeyError):
             self.importer.print_error('Event has no category!', event_id=self.conf.id)
-            raise SkipEvent
+            if self.importer.migrate_broken_events:
+                parent_category = self.lostandfound_category
+            else:
+                raise SkipEvent
 
-        title = convert_to_unicode(self.conf.__dict__['title']) or '(no title)'
+        title = convert_to_unicode(getattr(self.conf, 'title', '')) or '(no title)'
         self.importer.print_success(title)
 
         tz = self.conf.__dict__.get('timezone', 'UTC')
         self.event = Event(id=event_id,
                            title=title,
-                           description=convert_to_unicode(self.conf.__dict__['description']) or '',
+                           description=convert_to_unicode(self.conf.description) or '',
                            timezone=tz,
-                           start_dt=self._fix_naive(self.conf.__dict__['startDate'], tz, self.conf.id),
-                           end_dt=self._fix_naive(self.conf.__dict__['endDate'], tz, self.conf.id),
+                           start_dt=self._fix_naive(self.conf.startDate),
+                           end_dt=self._fix_naive(self.conf.endDate),
                            is_locked=self.conf._closed,
                            category=parent_category,
                            is_deleted=False)
@@ -122,9 +136,10 @@ class _EventContextBase(object):
         importer.bind(self)
         importer.run()
 
-    def _fix_naive(self, dt, tz, event_id):
+    def _fix_naive(self, dt):
         if dt.tzinfo is None:
-            self.importer.print_warning('Naive datetime converted ({})'.format(dt), event_id=event_id)
+            tz = getattr(self.conf, 'timezone', 'UTC')
+            self.importer.print_warning('Naive datetime converted ({})'.format(dt), event_id=self.conf.id)
             return pytz.timezone(tz).localize(dt)
         else:
             return dt
@@ -149,6 +164,7 @@ class EventImporter(TopLevelMigrationStep):
         super(EventImporter, self).__init__(*args, **kwargs)
         del kwargs['system_user_id']
         self.system_user = User.get_system_user()
+        self.migrate_broken_events = kwargs.get('migrate_broken_events')
         self.debug = kwargs.get('debug')
         self.kwargs = kwargs
         self.kwargs['system_user'] = self.system_user
@@ -207,6 +223,6 @@ class EventImporter(TopLevelMigrationStep):
         total = len(self.zodb_root['conferences'])
         if self.quiet:
             it = self.logger.progress_iterator('Migrating Events', it, total, attrgetter('id'),
-                                               lambda x: x.__dict__.get('title', ''))
+                                               lambda x: getattr(x, 'title', ''))
         for old_event in self.flushing_iterator(it):
             yield old_event

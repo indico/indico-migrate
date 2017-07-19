@@ -50,7 +50,7 @@ from indico.modules.rb import Location, Room
 from indico.util.string import fix_broken_string, is_valid_mail, sanitize_email
 
 from indico_migrate.steps.events import PERSON_INFO_MAP, EventMigrationStep
-from indico_migrate.util import strict_sanitize_email, convert_to_unicode
+from indico_migrate.util import convert_to_unicode, strict_sanitize_email
 
 
 PROTECTION_MODE_MAP = {
@@ -597,6 +597,8 @@ class EventTimetableImporter(EventMigrationStep):
     def _get_person(self, old_person):
         email = getattr(old_person, '_email', None) or getattr(old_person, 'email', None)
         email = strict_sanitize_email(convert_to_unicode(email).lower()) if email else email
+        if not email:
+            return self.event_person_from_legacy(old_person, skip_empty_names=True)
         return self.get_event_person_by_email(email)
 
     def _migrate_event_persons_links(self):

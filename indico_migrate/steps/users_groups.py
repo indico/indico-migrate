@@ -76,6 +76,9 @@ class UserImporter(TopLevelMigrationStep):
         self.migrate_system_user()
         self.global_ns.users_by_email = dict(self.global_ns.users_by_primary_email)
         self.global_ns.users_by_email.update(self.global_ns.users_by_secondary_email)
+        # delete identities of deleted users. they should not have any since otherwise
+        # a login using a remote provider fails instead of creating a new user for them
+        Identity.query.filter(Identity.user.has(is_deleted=True)).delete(synchronize_session=False)
         db.session.commit()
 
     def migrate_system_user(self):

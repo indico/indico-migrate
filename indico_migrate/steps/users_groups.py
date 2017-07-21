@@ -308,7 +308,6 @@ class UserImporter(TopLevelMigrationStep):
                     is_blocked=avatar.status == 'disabled',
                     is_deleted=False,
                     **kwargs)
-        # Add user as a favorite of themselves
         if not is_valid_mail(user.email):
             user.is_deleted = True
         return user

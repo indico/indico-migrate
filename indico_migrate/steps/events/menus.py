@@ -185,7 +185,7 @@ class EventMenuImporter(EventMigrationStep):
         if used is None:
             used = set()
         for pos, item in enumerate(container._listLink, 1):
-            data = {'parent': parent, 'event_new': event, 'is_enabled': item._active, 'position': pos}
+            data = {'parent': parent, 'event': event, 'is_enabled': item._active, 'position': pos}
             item_type = item.__class__.__name__
             if item_type == 'SystemLink':
                 if item._name in REMOVED_MENU_NAMES:
@@ -235,7 +235,7 @@ class EventMenuImporter(EventMigrationStep):
             elif item_type == 'PageLink':
                 data['type'] = MenuEntryType.page
                 data['title'] = sanitize_user_input(item._caption)
-                data['page'] = EventPage(event_new=event, html=item._page._content)
+                data['page'] = EventPage(event=event, html=item._page._content)
                 data['page'].legacy_mapping = LegacyPageMapping(event_id=event.id, legacy_page_id=item._page._id)
                 if item._page._isHome:
                     event.default_page = data['page']

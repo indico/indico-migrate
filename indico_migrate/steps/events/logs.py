@@ -74,7 +74,7 @@ class EventLogImporter(EventMigrationStep):
             module = 'Timetable/Subcontribution'
         elif module.islower():
             module = module.title()
-        entry = EventLogEntry(event_new=self.event, logged_dt=self._naive_to_aware(item._logDate),
+        entry = EventLogEntry(event=self.event, logged_dt=self._naive_to_aware(item._logDate),
                               module=module, user=user, kind=EventLogKind.other)
         return entry
 

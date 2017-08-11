@@ -183,12 +183,12 @@ class EventPaperReviewingImporter(LocalFileImporterMixin, EventMigrationStep):
 
     def _migrate_questions(self):
         for n, q in enumerate(self.pr._reviewingQuestions, 1):
-            question = PaperReviewQuestion(text=q._text, type=PaperReviewType.content, position=n, event_new=self.event)
+            question = PaperReviewQuestion(text=q._text, type=PaperReviewType.content, position=n, event=self.event)
             self.event.paper_review_questions.append(question)
             self.legacy_question_map[q] = question
 
         for n, q in enumerate(self.pr._layoutQuestions, 1):
-            question = PaperReviewQuestion(text=q._text, type=PaperReviewType.layout, position=n, event_new=self.event)
+            question = PaperReviewQuestion(text=q._text, type=PaperReviewType.layout, position=n, event=self.event)
             self.event.paper_review_questions.append(question)
             self.legacy_question_map[q] = question
 

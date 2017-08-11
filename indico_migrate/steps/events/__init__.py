@@ -138,7 +138,7 @@ class EventMigrationStep(Importer):
                                                               data['affiliation']))
         if not person:
             user = self.global_ns.users_by_email.get(email)
-            person = EventPerson(event_new=self.event, user=user, email=email, **data)
+            person = EventPerson(event=self.event, user=user, email=email, **data)
             self.add_event_person(person)
         return person
 

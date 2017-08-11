@@ -254,7 +254,7 @@ class TemplateMigrationBase(object):
             if self.event is None:
                 tpl.category = Category.get_root()
             else:
-                tpl.event_new = self.event
+                tpl.event = self.event
             self.importer.print_success('%[blue!]{}'.format(tpl), event_id=self.event_id)
 
     def _migrate_data(self, manager):

@@ -50,7 +50,7 @@ class EventSurveyImporter(EventMigrationStep):
             db.session.flush()
 
     def migrate_survey(self, evaluation):
-        survey = Survey(event_new=self.event)
+        survey = Survey(event=self.event)
         title = convert_to_unicode(evaluation.title)
         if title and not title.startswith('Evaluation for '):
             survey.title = sanitize_user_input(title)

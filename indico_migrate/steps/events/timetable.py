@@ -140,7 +140,7 @@ class EventTimetableImporter(EventMigrationStep):
         code = convert_to_unicode(old_session._code)
         if code == 'no code':
             code = ''
-        session = Session(event_new=self.event, title=convert_to_unicode(old_session.title),
+        session = Session(event=self.event, title=convert_to_unicode(old_session.title),
                           description=convert_to_unicode(old_session.description),
                           is_poster=(old_session._ttType == 'poster'), code=code,
                           default_contribution_duration=old_session._contributionDuration,
@@ -155,7 +155,7 @@ class EventTimetableImporter(EventMigrationStep):
             self.print_info('%[blue!]Session%[reset] {}'.format(session.title))
         self.event_ns.legacy_session_map[old_session] = session
         if old_session.id not in self.legacy_session_ids_used:
-            session.legacy_mapping = LegacySessionMapping(event_new=self.event, legacy_session_id=old_session.id)
+            session.legacy_mapping = LegacySessionMapping(event=self.event, legacy_session_id=old_session.id)
             self.legacy_session_ids_used.add(old_session.id)
         else:
             self.print_warning('%[yellow!]Duplicate session id; not adding legacy mapping for {}'
@@ -216,7 +216,7 @@ class EventTimetableImporter(EventMigrationStep):
         status = getattr(old_contrib, '_status', None)
         status_class = status.__class__.__name__ if status else None
 
-        contrib = Contribution(event_new=self.event, friendly_id=friendly_id,
+        contrib = Contribution(event=self.event, friendly_id=friendly_id,
                                title=convert_to_unicode(old_contrib.title),
                                render_mode=RenderMode.html,
                                description=description, duration=old_contrib.duration,
@@ -233,7 +233,7 @@ class EventTimetableImporter(EventMigrationStep):
         if not self.quiet:
             self.print_info('%[cyan]Contribution%[reset] {}'.format(contrib.title))
         self.event_ns.legacy_contribution_map[old_contrib] = contrib
-        contrib.legacy_mapping = LegacyContributionMapping(event_new=self.event, legacy_contribution_id=old_contrib.id)
+        contrib.legacy_mapping = LegacyContributionMapping(event=self.event, legacy_contribution_id=old_contrib.id)
         # contribution type
         if old_contrib._type is not None:
             try:
@@ -272,7 +272,7 @@ class EventTimetableImporter(EventMigrationStep):
         if not self.quiet:
             self.print_info('  %[cyan!]SubContribution%[reset] {}'.format(subcontrib.title))
         self.event_ns.legacy_subcontribution_map[old_subcontrib] = subcontrib
-        subcontrib.legacy_mapping = LegacySubContributionMapping(event_new=self.event,
+        subcontrib.legacy_mapping = LegacySubContributionMapping(event=self.event,
                                                                  legacy_contribution_id=old_contrib.id,
                                                                  legacy_subcontribution_id=old_subcontrib.id)
         subcontrib.references = list(self._process_references(SubContributionReference, old_subcontrib))
@@ -354,7 +354,7 @@ class EventTimetableImporter(EventMigrationStep):
     def _migrate_contribution_timetable_entry(self, old_entry, session_block=None):
         old_contrib = old_entry._LinkedTimeSchEntry__owner
         contrib = self.event_ns.legacy_contribution_map[old_contrib]
-        contrib.timetable_entry = TimetableEntry(event_new=self.event,
+        contrib.timetable_entry = TimetableEntry(event=self.event,
                                                  start_dt=self.context._fix_naive(old_contrib.startDate))
         self._migrate_location(old_contrib, contrib)
         if session_block:
@@ -370,7 +370,7 @@ class EventTimetableImporter(EventMigrationStep):
             break_.colors = ColorTuple(old_entry._textColor, old_entry._color)
         except (AttributeError, ValueError) as e:
             self.print_warning('%[yellow]Break has no colors: "{}" [{}]'.format(break_.title, e))
-        break_.timetable_entry = TimetableEntry(event_new=self.event,
+        break_.timetable_entry = TimetableEntry(event=self.event,
                                                 start_dt=self.context._fix_naive(old_entry.startDate))
         self._migrate_location(old_entry, break_)
         if session_block:
@@ -386,10 +386,10 @@ class EventTimetableImporter(EventMigrationStep):
             session = self._migrate_session(old_block.session)
         session_block = SessionBlock(session=session, title=convert_to_unicode(old_block.title),
                                      duration=old_block.duration)
-        session_block.timetable_entry = TimetableEntry(event_new=self.event,
+        session_block.timetable_entry = TimetableEntry(event=self.event,
                                                        start_dt=self.context._fix_naive(old_block.startDate))
         if session.legacy_mapping is not None:
-            session_block.legacy_mapping = LegacySessionBlockMapping(event_new=self.event,
+            session_block.legacy_mapping = LegacySessionBlockMapping(event=self.event,
                                                                      legacy_session_id=old_block.session.id,
                                                                      legacy_session_block_id=old_block.id)
         self._migrate_location(old_block, session_block)
@@ -582,7 +582,7 @@ class EventTimetableImporter(EventMigrationStep):
             person = self.get_event_person_by_email(email)
             if not person:
                 person = EventPerson(email=email,
-                                     event_new=self.event,
+                                     event=self.event,
                                      user=self.global_ns.users_by_email.get(email),
                                      first_name=most_common(persons, key=attrgetter('first_name')),
                                      last_name=most_common(persons, key=attrgetter('last_name')),

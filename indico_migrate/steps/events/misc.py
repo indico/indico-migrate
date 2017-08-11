@@ -120,7 +120,7 @@ class EventAlarmImporter(EventMigrationStep):
                 is_sent = True
                 is_overdue = True
             recipients = filter(None, {convert_to_unicode(x).strip().lower() for x in alarm.toAddr})
-            reminder = EventReminder(event_new=self.event, creator=self.system_user,
+            reminder = EventReminder(event=self.event, creator=self.system_user,
                                      created_dt=alarm.createdOn, scheduled_dt=start_dt, is_sent=is_sent,
                                      event_start_delta=getattr(alarm, '_relative', None), recipients=recipients,
                                      send_to_participants=alarm.toAllParticipants,

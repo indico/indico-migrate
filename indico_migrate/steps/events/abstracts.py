@@ -707,7 +707,7 @@ class EventAbstractImporter(LocalFileImporterMixin, EventMigrationStep):
         if old_field._id in self.event_ns.legacy_contribution_field_map:
             self.print_warning("%[yellow!]There is already a field with legacy_id '{}')!%[reset]".format(old_field._id))
             return
-        field = ContributionField(event_new=self.event, field_type=field_type, is_active=old_field._active,
+        field = ContributionField(event=self.event, field_type=field_type, is_active=old_field._active,
                                   title=convert_to_unicode(old_field._caption), is_required=old_field._isMandatory,
                                   field_data=field_data, position=position, legacy_id=old_field._id)
         self.event_ns.legacy_contribution_field_map[old_field._id] = field

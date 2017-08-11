@@ -81,17 +81,17 @@ class AttachmentMixin(LocalFileImporterMixin):
 
     def _iter_event_materials(self):
         for material, resources in self._iter_attachments(self.conf):
-            yield self.event, material, resources, {'event_new': self.event}
+            yield self.event, material, resources, {'event': self.event}
         for old_session, session in self.event_ns.legacy_session_map.iteritems():
             for material, resources in self._iter_attachments(old_session):
-                yield session, material, resources, {'event_new': self.event, 'session_id': old_session.id}
+                yield session, material, resources, {'event': self.event, 'session_id': old_session.id}
         for old_contrib, contrib in self.event_ns.legacy_contribution_map.iteritems():
             for material, resources in self._iter_attachments(old_contrib):
-                yield contrib, material, resources, {'event_new': self.event, 'contribution_id': old_contrib.id}
+                yield contrib, material, resources, {'event': self.event, 'contribution_id': old_contrib.id}
             for old_subcontrib in old_contrib._subConts:
                 subcontrib = self.event_ns.legacy_subcontribution_map[old_subcontrib]
                 for material, resources in self._iter_attachments(old_subcontrib):
-                    yield subcontrib, material, resources, {'event_new': self.event,
+                    yield subcontrib, material, resources, {'event': self.event,
                                                             'contribution_id': old_contrib.id,
                                                             'subcontribution_id': old_subcontrib.id}
 

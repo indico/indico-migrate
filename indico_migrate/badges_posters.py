@@ -127,7 +127,7 @@ BADGE_CONFIG_MAPPING = {
     'right_margin': ('__BadgePDFOptions_rightMargin', float),
     'margin_columns': ('__BadgePDFOptions_marginColumns', float),
     'margin_rows': ('__BadgePDFOptions_marginRows', float),
-    'page_size': ('_pageSize', lambda s: getattr(PageSize, s.title())),
+    'page_size': ('_pageSize', lambda s: getattr(PageSize, s.title() if s[0].lower() == 'a' else s.lower())),
     'page_orientation': ('_landscape', lambda x: PageOrientation.landscape if x else PageOrientation.portrait),
     'dashed_border': ('_drawDashedRectangles', bool)
 }

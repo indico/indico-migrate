@@ -60,7 +60,7 @@ JUDGMENT_STATE_REVISION_MAP = {
 }
 
 STATE_COLOR_MAP = {
-    PaperRevisionState.submitted: 'white',
+    PaperRevisionState.submitted: 'blue',
     PaperRevisionState.accepted: 'green',
     PaperRevisionState.to_be_corrected: 'yellow',
     PaperRevisionState.rejected: 'red'

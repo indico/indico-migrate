@@ -39,11 +39,11 @@ from indico_migrate.paste import ask_to_paste, get_full_stack
 
 def _monkeypatch_config():
     """Make sure we're not accesing the indico.conf"""
-    def _raise_method():
+    def _raise_method(self):
         raise RuntimeError("Config file shouldn't be accessed during migration!")
 
-    from indico.core.config import Config
-    Config.getInstance = staticmethod(_raise_method)
+    from indico.core.config import IndicoConfig
+    IndicoConfig.data = property(_raise_method)
 
 
 def _zodb_powered_loader(_zodb_root):

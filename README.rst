@@ -122,10 +122,10 @@ This is followed by the relevant options from the following list:
     are specified, symlinks to weirdly-named files will be kept in the directory indicated by ``--symlink-target``. They
     will be associated with the storage backend ID specified in ``--symlink-backend``.
 
-    **NOTE:** This means that in the ``StorageBackends`` option of your new ``indico.conf`` you will have something
+    **NOTE:** This means that in the ``STORAGE_BACKENDS`` option of your new ``indico.conf`` you will have something
     like::
 
-        StorageBackends = {
+        STORAGE_BACKENDS = {
             ...
             'fs-legacy-symlinks`: '/opt/indico/archive/legacy-symlinks'
         }

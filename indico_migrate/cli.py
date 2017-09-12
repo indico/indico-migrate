@@ -21,10 +21,6 @@ import sys
 import click
 from IPython.core import ultratb
 
-# inject_unicode_debug happens to access the Config object
-from indico.util import string as indico_util_string
-indico_util_string.inject_unicode_debug = lambda s, level=1: s
-
 from indico_migrate import gui
 from indico_migrate.logger import StdoutLogger
 from indico_migrate.migrate import migrate

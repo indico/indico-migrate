@@ -921,7 +921,7 @@ class EventRegFormImporter(LocalFileImporterMixin, EventMigrationStep):
                 return
             local_file = old_item._value
             content_type = mimetypes.guess_type(local_file.fileName)[0] or 'application/octet-stream'
-            storage_backend, storage_path, size = self._get_local_file_info(local_file)
+            storage_backend, storage_path, size, md5 = self._get_local_file_info(local_file)
             filename = secure_filename(local_file.fileName, 'attachment')
             if storage_path is None:
                 self.print_error('%[red!]File not found on disk; skipping it [{}]'
@@ -932,6 +932,7 @@ class EventRegFormImporter(LocalFileImporterMixin, EventMigrationStep):
             attrs['storage_backend'] = storage_backend
             attrs['storage_file_id'] = storage_path
             attrs['size'] = size
+            attrs['md5'] = md5
 
         elif field.input_type == 'single_choice':
             try:

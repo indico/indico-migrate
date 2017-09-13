@@ -125,14 +125,15 @@ class AttachmentMixin(LocalFileImporterMixin):
                 return None
         else:
             data['type'] = AttachmentType.file
-            storage_backend, storage_path, size = self._get_local_file_info(resource)
+            storage_backend, storage_path, size, md5 = self._get_local_file_info(resource)
             if storage_path is None:
                 self.print_error('%[red!]File {} not found on disk'.format(resource._LocalFile__archivedId))
                 return None
             filename = secure_filename(convert_to_unicode(resource.fileName), 'attachment')
             data['file'] = AttachmentFile(user=self.system_user, created_dt=modified_dt, filename=filename,
                                           content_type=mimetypes.guess_type(filename)[0] or 'application/octet-stream',
-                                          size=size, storage_backend=storage_backend, storage_file_id=storage_path)
+                                          size=size, storage_backend=storage_backend, storage_file_id=storage_path,
+                                          md5=md5)
         attachment = Attachment(**data)
         self.protection_from_ac(attachment, resource._Resource__ac)
         return attachment

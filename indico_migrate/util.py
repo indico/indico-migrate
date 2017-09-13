@@ -17,6 +17,7 @@
 from __future__ import unicode_literals
 
 import errno
+import hashlib
 import os
 import re
 import sys
@@ -178,6 +179,17 @@ def patch_default_group_provider(provider_name):
         IndicoMultipass.default_group_provider = prop
 
 
+def get_file_md5(path, chunk_size=1024*1024):
+    checksum = hashlib.md5()
+    with open(path, 'rb') as fileobj:
+        while True:
+            chunk = fileobj.read(chunk_size)
+            if not chunk:
+                break
+            checksum.update(chunk)
+    return unicode(checksum.hexdigest())
+
+
 class LocalFileImporterMixin(object):
     """This mixin takes care of interpreting arcane LocalFile information,
        handling incorrectly encoded paths and other artifacts.
@@ -221,32 +233,33 @@ class LocalFileImporterMixin(object):
                     except OSError as e:
                         if e.errno != errno.ENOENT:
                             raise
-                        return None, None, 0
+                        return None, None, 0, ''
                     if len(candidates) != 1:
-                        return None, None, 0
+                        return None, None, 0, ''
                     path = os.path.join(parent_path, candidates[0])
                     if not os.path.exists(path):
-                        return None, None, 0
+                        return None, None, 0, ''
 
             assert path
             try:
                 size = 0 if self.avoid_storage_check else os.path.getsize(path)
+                md5 = '' if self.avoid_storage_check else get_file_md5(path)
             except OSError as e:
                 if e.errno != errno.ENOENT:
                     raise
-                return None, None, 0
+                return None, None, 0, ''
             rel_path = os.path.relpath(path, archive_path)
             try:
                 rel_path = rel_path.decode('utf-8')
             except UnicodeDecodeError:
                 if not self.symlink_target:
-                    return None, None, 0
+                    return None, None, 0, ''
                 symlink_name = uuid4()
                 symlink = os.path.join(self.symlink_target, bytes(symlink_name))
                 os.symlink(path, symlink)
-                return self.symlink_backend, symlink_name, size
+                return self.symlink_backend, symlink_name, size, md5
             else:
-                return self.storage_backend, rel_path, size
+                return self.storage_backend, rel_path, size, md5
 
 
 def strict_sanitize_email(email, fallback=None):

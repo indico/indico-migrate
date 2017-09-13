@@ -195,14 +195,14 @@ class EventPaperReviewingImporter(LocalFileImporterMixin, EventMigrationStep):
     def _migrate_templates(self):
         for __, old_tpl in self.pr._templates.viewitems():
             old_filename = convert_to_unicode(old_tpl._Template__file.name)
-            storage_backend, storage_path, size = self._get_local_file_info(old_tpl._Template__file)
+            storage_backend, storage_path, size, md5 = self._get_local_file_info(old_tpl._Template__file)
             if storage_path is None:
                 self.print_error('%[red!]File not found on disk; skipping it [{}]'.format(old_filename))
                 continue
 
             filename = secure_filename(old_filename, 'attachment')
             content_type = mimetypes.guess_type(old_filename)[0] or 'application/octet-stream'
-            tpl = PaperTemplate(filename=filename, content_type=content_type, size=size,
+            tpl = PaperTemplate(filename=filename, content_type=content_type, size=size, md5=md5,
                                 storage_backend=storage_backend, storage_file_id=storage_path,
                                 name=convert_to_unicode(old_tpl._Template__name) or old_filename,
                                 description=convert_to_unicode(old_tpl._Template__description))
@@ -353,7 +353,7 @@ class EventPaperReviewingImporter(LocalFileImporterMixin, EventMigrationStep):
 
             # these are the resources that correspond to the latest revision
             for resource in reviewing._Material__resources.itervalues():
-                self._migrate_resource(old_contrib, contribution, revisions[-1], resource,
+                self._migrate_resource(contribution, revisions[-1], resource,
                                        getattr(reviewing, '_modificationDS', strict_now_utc()), set())
 
     def _migrate_paper_files(self, old_contrib, contribution, old_revision, revision, review_manager):
@@ -365,7 +365,7 @@ class EventPaperReviewingImporter(LocalFileImporterMixin, EventMigrationStep):
             return
         assert len(old_revision._materials) == 1
         for resource in old_revision._materials[0]._Material__resources.itervalues():
-            res_file = self._migrate_resource(old_contrib, contribution, revision, resource,
+            res_file = self._migrate_resource(contribution, revision, resource,
                                               getattr(reviewing, '_modificationDS', strict_now_utc()),
                                               ignored_checksums)
             if res_file:
@@ -380,30 +380,28 @@ class EventPaperReviewingImporter(LocalFileImporterMixin, EventMigrationStep):
 
         return last_file
 
-    def _migrate_resource(self, old_contrib, contribution, revision, resource, created_dt, ignored_checksums):
-        storage_backend, storage_path, size = self._get_local_file_info(resource)
+    def _migrate_resource(self, contribution, revision, resource, created_dt, ignored_checksums):
+        storage_backend, storage_path, size, md5 = self._get_local_file_info(resource)
         content_type = mimetypes.guess_type(resource.fileName)[0] or 'application/octet-stream'
 
         paper_file = PaperFile(filename=resource.fileName, content_type=content_type,
-                               size=size, storage_backend=storage_backend,
+                               size=size, md5=md5, storage_backend=storage_backend,
                                storage_file_id=storage_path, created_dt=created_dt,
                                paper_revision=revision)
 
         # check whether the same file has been uploaded to a subsequent revision
-        try:
-            with paper_file.open() as f:
-                checksum = crc32(f.read())
-            self.checksum_map[checksum] = paper_file
-            collision = self.file_checksums.get(checksum)
+        if md5:
+            self.checksum_map[md5] = paper_file
+            collision = self.file_checksums.get(md5)
             if collision:
-                ignored_checksums.add(checksum)
+                ignored_checksums.add(md5)
                 self.print_warning('%[yellow!]File {} (rev. {}) already in revision {}'.format(
                     resource.filename, revision.id if revision else None, collision.id))
                 return
             else:
-                self.file_checksums[checksum] = revision
-        except (RuntimeError, StorageError):
-            self.print_error("%[red!]File not accessible; can't CRC it [{}]"
+                self.file_checksums[md5] = revision
+        else:
+            self.print_error("%[red!]File not accessible; can't MD5 it [{}]"
                              .format(convert_to_unicode(paper_file.filename)))
 
         paper_file._contribution = contribution

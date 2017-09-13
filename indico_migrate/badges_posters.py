@@ -204,7 +204,7 @@ class TemplateMigrationBase(object):
         }
 
     def _migrate_background(self, old_bg, tpl):
-        storage_backend, storage_path, size = self.importer._get_local_file_info(old_bg)
+        storage_backend, storage_path, size, md5 = self.importer._get_local_file_info(old_bg)
         if storage_path is None:
             self.importer.print_error('%[red!]File not found on disk; skipping it [{}]'
                                       .format(convert_to_unicode(old_bg.fileName)),
@@ -212,7 +212,7 @@ class TemplateMigrationBase(object):
             return
         content_type = mimetypes.guess_type(old_bg.fileName)[0] or 'application/octet-stream'
         filename = secure_filename(convert_to_unicode(old_bg.fileName), 'attachment')
-        return DesignerImageFile(filename=filename, content_type=content_type, size=size,
+        return DesignerImageFile(filename=filename, content_type=content_type, size=size, md5=md5,
                                  storage_backend=storage_backend, storage_file_id=storage_path)
 
     def _migrate_templates(self, manager):

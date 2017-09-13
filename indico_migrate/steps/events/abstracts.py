@@ -400,14 +400,14 @@ class EventAbstractImporter(LocalFileImporterMixin, EventMigrationStep):
 
         # files
         for old_attachment in getattr(old_abstract, '_attachments', {}).itervalues():
-            storage_backend, storage_path, size = self._get_local_file_info(old_attachment)
+            storage_backend, storage_path, size, md5 = self._get_local_file_info(old_attachment)
             if storage_path is None:
                 self.print_error('%[red!]File not found on disk; skipping it [{}]'
                                  .format(convert_to_unicode(old_attachment.fileName)))
                 continue
             content_type = mimetypes.guess_type(old_attachment.fileName)[0] or 'application/octet-stream'
             filename = secure_filename(convert_to_unicode(old_attachment.fileName), 'attachment')
-            attachment = AbstractFile(filename=filename, content_type=content_type, size=size,
+            attachment = AbstractFile(filename=filename, content_type=content_type, size=size, md5=md5,
                                       storage_backend=storage_backend, storage_file_id=storage_path)
             abstract.files.append(attachment)
 

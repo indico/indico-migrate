@@ -49,7 +49,7 @@ class EventImageImporter(LocalFileImporterMixin, EventMigrationStep):
         for picture in self._iter_pictures(self.conf):
             local_file = picture._localFile
             content_type = mimetypes.guess_type(local_file.fileName)[0] or 'application/octet-stream'
-            storage_backend, storage_path, size = self._get_local_file_info(local_file)
+            storage_backend, storage_path, size, md5 = self._get_local_file_info(local_file)
 
             if storage_path is None:
                 self.print_warning('%[yellow][{}]%[reset] -> %[red!]Not found in filesystem'.format(
@@ -62,6 +62,7 @@ class EventImageImporter(LocalFileImporterMixin, EventMigrationStep):
                               content_type=content_type,
                               created_dt=now_utc(),
                               size=size,
+                              md5=md5,
                               storage_backend=storage_backend,
                               storage_file_id=storage_path)
 

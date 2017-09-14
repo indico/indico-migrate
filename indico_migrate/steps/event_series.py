@@ -72,7 +72,7 @@ class EventSeriesImporter(TopLevelMigrationStep):
                 except KeyError:
                     return None
         else:
-            match = re.match(r'/(?:event|e)/(?P<event_id>\d+)/material/(?P<material_id>\d+)/?', path)
+            match = re.search(r'/(?:event|e)/(?P<event_id>\d+)/material/(?P<material_id>\d+)/?', path)
             if match is not None:
                 folder = (LegacyAttachmentFolderMapping.query
                           .filter_by(event_id=match.group('event_id'), contribution_id=None, session_id=None,
@@ -80,7 +80,7 @@ class EventSeriesImporter(TopLevelMigrationStep):
                           .one()
                           .folder)
                 return self._extract_event_id(folder.attachments[0].link_url)
-            match = re.match(r'/(?:event|e)/(?P<event_id>\d+)/?', path)
+            match = re.search(r'/(?:event|e)/(?P<event_id>\d+)/?', path)
             event_id = match.group('event_id')
         return int(event_id)
 

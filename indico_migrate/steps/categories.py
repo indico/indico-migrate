@@ -170,10 +170,8 @@ class CategoryImporter(AttachmentMixin, TopLevelMigrationStep):
                                    always=False, event_id=old_cat.id)
         return default_themes
 
-    def _fix_title(self, title, categ_id, _ws_re=re.compile(r'\s+'),
-                   _status_re=re.compile(r'<font[^>]+>\s*(open|closed)\s*$')):
+    def _fix_title(self, title, categ_id, _ws_re=re.compile(r'\s+')):
         orig = title
-        title = _status_re.sub(r'(\1)', title)  # XXX: remove for 2.0; only needed for a CERN indico catgory
         title = HTMLParser().unescape(strip_tags(title))
         title = _ws_re.sub(' ', title).strip()
         if title != orig:

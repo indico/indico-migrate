@@ -39,8 +39,7 @@ from ZODB.broken import Broken, find_global
 from indico.core.auth import IndicoMultipass
 from indico.util.caching import memoize
 from indico.util.date_time import now_utc
-from indico.util.string import sanitize_email
-from indico.web.flask.templating import strip_tags
+from indico.util.string import sanitize_email, strip_tags
 
 
 WHITESPACE_RE = re.compile(r'\s+')

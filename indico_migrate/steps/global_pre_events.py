@@ -32,7 +32,7 @@ from indico.modules.networks.models.networks import IPNetworkGroup
 from indico.modules.news import news_settings
 from indico.modules.news.models.news import NewsItem
 from indico.modules.users import user_management_settings
-from indico.web.flask.templating import strip_tags
+from indico.util.string import strip_tags
 
 from indico_migrate.importer import TopLevelMigrationStep
 from indico_migrate.util import convert_to_unicode, step_description

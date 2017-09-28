@@ -22,7 +22,7 @@ from datetime import date
 from HTMLParser import HTMLParser
 
 from indico.modules.categories import upcoming_events_settings
-from indico.web.flask.templating import strip_tags
+from indico.util.string import strip_tags
 
 from indico_migrate.importer import TopLevelMigrationStep
 from indico_migrate.util import convert_to_unicode, step_description

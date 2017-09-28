@@ -34,8 +34,7 @@ from indico.modules.events.layout import theme_settings
 from indico.modules.networks.models.networks import IPNetworkGroup
 from indico.modules.users import User
 from indico.util.fs import secure_filename
-from indico.util.string import crc32, is_legacy_id, is_valid_mail, sanitize_email
-from indico.web.flask.templating import strip_tags
+from indico.util.string import crc32, is_legacy_id, is_valid_mail, sanitize_email, strip_tags
 
 from indico_migrate.attachments import AttachmentMixin
 from indico_migrate.importer import TopLevelMigrationStep

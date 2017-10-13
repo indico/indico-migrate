@@ -71,7 +71,8 @@ class UserImporter(TopLevelMigrationStep):
         self.fix_sequences('users', {'users'})
         self.migrate_favorite_users()
         self.migrate_admins()
-        self.migrate_groups()
+        if 'groups' in self.zodb_root:
+            self.migrate_groups()
         self.fix_sequences('users', {'groups'})
         self.migrate_system_user()
         self.global_ns.users_by_email = dict(self.global_ns.users_by_primary_email)

@@ -185,7 +185,7 @@ class EventMenuImporter(EventMigrationStep):
         if used is None:
             used = set()
         for pos, item in enumerate(container._listLink, 1):
-            data = {'parent': parent, 'event': event, 'is_enabled': item._active, 'position': pos}
+            data = {'parent': parent, 'is_enabled': item._active, 'position': pos}
             item_type = item.__class__.__name__
             if item_type == 'SystemLink':
                 if item._name in REMOVED_MENU_NAMES:
@@ -243,6 +243,7 @@ class EventMenuImporter(EventMigrationStep):
                 self.print_error('Unexpected menu item type: {}'.format(item_type))
                 continue
             entry = MenuEntry(**data)
+            entry.event = event  # XXX: the kwarg does not populate the relationship!
             yield entry
             if getattr(item, '_listLink', None):
                 # child entries

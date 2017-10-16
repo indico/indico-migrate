@@ -16,8 +16,10 @@
 
 from __future__ import unicode_literals
 
+import logging.config
 import os
 import sys
+from logging.handlers import SocketHandler
 
 import pytz
 import yaml
@@ -26,15 +28,17 @@ from sqlalchemy.orm import configure_mappers
 
 from indico.core.db.sqlalchemy import db
 from indico.core.db.sqlalchemy.logging import apply_db_loggers
-from indico.core.db.sqlalchemy.migration import migrate as alembic_migrate, prepare_db
+from indico.core.db.sqlalchemy.migration import migrate as alembic_migrate
+from indico.core.db.sqlalchemy.migration import prepare_db
 from indico.core.db.sqlalchemy.util.management import get_all_tables
 from indico.core.db.sqlalchemy.util.models import import_all_models
+from indico.core.logger import Logger
 from indico.core.plugins import plugin_engine
 from indico.util.console import cformat
 from indico.web.flask.wrappers import IndicoFlask
 
-from indico_migrate.util import MigrationStateManager, UnbreakingDB, get_storage
 from indico_migrate.paste import ask_to_paste, get_full_stack
+from indico_migrate.util import MigrationStateManager, UnbreakingDB, get_storage
 
 
 def _monkeypatch_config():
@@ -151,7 +155,11 @@ def setup(logger, zodb_root, sqlalchemy_uri, dblog=False, restore=False):
     db.init_app(app)
     if dblog:
         app.debug = True
-        apply_db_loggers(app)
+        apply_db_loggers(app, force=True)
+        db_logger = Logger.get('_db')
+        db_logger.level = logging.DEBUG
+        db_logger.propagate = False
+        db_logger.addHandler(SocketHandler('127.0.0.1', 9020))
 
     import_all_models()
     configure_mappers()
@@ -171,5 +179,9 @@ def setup(logger, zodb_root, sqlalchemy_uri, dblog=False, restore=False):
                                        'If you want to reset it, please drop and recreate it first.')
             else:
                 # the DB is empty, prepare DB tables
+                # prevent alembic from messing with the logging config
+                tmp = logging.config.fileConfig
+                logging.config.fileConfig = lambda fn: None
                 prepare_db(empty=True, root_path=get_root_path('indico'), verbose=False)
+                logging.config.fileConfig = tmp
     return app, tz

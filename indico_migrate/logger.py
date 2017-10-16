@@ -17,7 +17,6 @@
 
 from __future__ import unicode_literals
 
-import logging
 import re
 import shutil
 import sys
@@ -26,9 +25,6 @@ from io import BytesIO
 from indico.util.console import clear_line, verbose_iterator
 
 from indico_migrate.util import cformat2
-
-# alembic's logger is quite noisy
-logging.disable(sys.maxint)
 
 
 CFORMAT_TAGS = re.compile(r'%\[[a-z]+!?(?:,[a-z]+)?\]')

@@ -161,6 +161,9 @@ def setup(logger, zodb_root, sqlalchemy_uri, dblog=False, restore=False):
         db_logger.propagate = False
         db_logger.addHandler(SocketHandler('127.0.0.1', 9020))
 
+    # avoid "no handlers registered" warnings
+    logging.root.addHandler(logging.NullHandler())
+
     import_all_models()
     configure_mappers()
     alembic_migrate.init_app(app, db, os.path.join(app.root_path, 'migrations'))

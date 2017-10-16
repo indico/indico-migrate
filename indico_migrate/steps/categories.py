@@ -105,7 +105,7 @@ class CategoryImporter(AttachmentMixin, TopLevelMigrationStep):
     def process_principal(self, cat, legacy_principal, name, color, read_access=None, full_access=None, roles=None):
         principal = self.convert_principal(legacy_principal)
         if principal is None:
-            self.print_warning('%%[%s]{}%%[reset]%%[yellow] does not exist:%%[reset] {}' % color
+            self.print_warning(('%%[%s]{}%%[reset]%%[yellow] does not exist:%%[reset] {}' % color)
                                .format(name, legacy_principal))
             return
         updates = {}

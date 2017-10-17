@@ -23,7 +23,6 @@ from datetime import timedelta
 from pytz import utc
 
 from indico.core.db import db
-from indico.core.storage import StorageError
 from indico.modules.events.features.util import set_feature_enabled
 from indico.modules.events.models.events import EventType
 from indico.modules.events.papers.models.competences import PaperCompetence
@@ -36,7 +35,6 @@ from indico.modules.events.papers.models.revisions import PaperRevision, PaperRe
 from indico.modules.events.papers.models.templates import PaperTemplate
 from indico.modules.events.papers.settings import PaperReviewingRole, paper_reviewing_settings
 from indico.util.fs import secure_filename
-from indico.util.string import crc32
 
 from indico_migrate.steps.events import EventMigrationStep
 from indico_migrate.util import LocalFileImporterMixin, strict_now_utc, convert_to_unicode
@@ -396,7 +394,7 @@ class EventPaperReviewingImporter(LocalFileImporterMixin, EventMigrationStep):
             if collision:
                 ignored_checksums.add(md5)
                 self.print_warning('%[yellow!]File {} (rev. {}) already in revision {}'.format(
-                    resource.filename, revision.id if revision else None, collision.id))
+                    resource.fileName, revision.id if revision else None, collision.id))
                 return
             else:
                 self.file_checksums[md5] = revision

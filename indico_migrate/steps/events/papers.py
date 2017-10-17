@@ -37,7 +37,7 @@ from indico.modules.events.papers.settings import PaperReviewingRole, paper_revi
 from indico.util.fs import secure_filename
 
 from indico_migrate.steps.events import EventMigrationStep
-from indico_migrate.util import LocalFileImporterMixin, strict_now_utc, convert_to_unicode
+from indico_migrate.util import LocalFileImporterMixin, convert_to_unicode, strict_now_utc
 
 
 CPR_NO_REVIEWING = 1
@@ -314,7 +314,7 @@ class EventPaperReviewingImporter(LocalFileImporterMixin, EventMigrationStep):
             self.print_info('\tRevision %[blue!]{}%[reset] %[white,{}]  %[reset] {}'.format(
                 n, STATE_COLOR_MAP[state], review_colors))
 
-            last_file = self._migrate_paper_files(old_contrib, contribution, old_revision, revision, rm)
+            last_file = self._migrate_paper_files(old_contrib, contribution, old_revision, revision)
             submitted_dt = _to_utc(last_file.created_dt) if last_file else min(self.event.end_dt, strict_now_utc())
 
             # some dates may be duplicates (shouldn't happen if CRC is used, though)
@@ -354,7 +354,7 @@ class EventPaperReviewingImporter(LocalFileImporterMixin, EventMigrationStep):
                 self._migrate_resource(contribution, revisions[-1], resource,
                                        getattr(reviewing, '_modificationDS', strict_now_utc()), set())
 
-    def _migrate_paper_files(self, old_contrib, contribution, old_revision, revision, review_manager):
+    def _migrate_paper_files(self, old_contrib, contribution, old_revision, revision):
         reviewing = getattr(old_contrib, 'reviewing', None)
         last_file = None
         ignored_checksums = set()
@@ -373,6 +373,7 @@ class EventPaperReviewingImporter(LocalFileImporterMixin, EventMigrationStep):
         if not revision.files and ignored_checksums:
             for checksum in ignored_checksums:
                 paper_file = self.checksum_map[checksum]
+                paper_file._contribution = contribution
                 revision.files.append(paper_file)
                 self.print_warning('%[yellow!]File {} (rev. {}) reinstated'.format(paper_file.filename, revision.id))
 
@@ -384,8 +385,7 @@ class EventPaperReviewingImporter(LocalFileImporterMixin, EventMigrationStep):
 
         paper_file = PaperFile(filename=resource.fileName, content_type=content_type,
                                size=size, md5=md5, storage_backend=storage_backend,
-                               storage_file_id=storage_path, created_dt=created_dt,
-                               paper_revision=revision)
+                               storage_file_id=storage_path, created_dt=created_dt)
 
         # check whether the same file has been uploaded to a subsequent revision
         if md5:
@@ -403,5 +403,6 @@ class EventPaperReviewingImporter(LocalFileImporterMixin, EventMigrationStep):
                              .format(convert_to_unicode(paper_file.filename)))
 
         paper_file._contribution = contribution
+        paper_file.paper_revision = revision
         db.session.add(paper_file)
         return paper_file

@@ -58,10 +58,13 @@ class GlobalPreEventsImporter(TopLevelMigrationStep):
         self.migrate_global_settings()
         self.migrate_user_management_settings()
         self.migrate_legal_settings()
-        self.migrate_payment_settings()
-        self.migrate_news_settings()
-        self.migrate_news()
-        self.migrate_networks()
+        if 'EPayment' in self.zodb_root['plugins']:
+            self.migrate_payment_settings()
+        if 'news' in self.zodb_root['modules']:
+            self.migrate_news_settings()
+            self.migrate_news()
+        if 'domains' in self.zodb_root:
+            self.migrate_networks()
         self.migrate_reference_types()
         cephalopod_settings.set('show_migration_message', True)
         db.session.commit()

@@ -17,6 +17,7 @@
 from __future__ import unicode_literals
 
 import mimetypes
+import re
 from copy import deepcopy
 from datetime import datetime, timedelta
 from decimal import Decimal
@@ -116,6 +117,12 @@ def _get_worldpay_data(ti_data):
             '_old_provider': 'worldpay'
         }
     }
+
+
+def _extract_int(val):
+    if isinstance(val, str):
+        val = re.sub(r'[^0-9]+', '', val)
+    return int(val)
 
 
 class EventRegFormImporter(LocalFileImporterMixin, EventMigrationStep):
@@ -455,8 +462,8 @@ class EventRegFormImporter(LocalFileImporterMixin, EventMigrationStep):
             input_type = old_type
         elif old_type == 'textarea':
             input_type = 'textarea'
-            field_data['number_of_rows'] = int(getattr(inp, '_numberOfRows', None) or 3)
-            field_data['number_of_columns'] = int(getattr(inp, '_numberOfColumns', None) or 60)
+            field_data['number_of_rows'] = _extract_int(getattr(inp, '_numberOfRows', None) or 3)
+            field_data['number_of_columns'] = _extract_int(getattr(inp, '_numberOfColumns', None) or 60)
         elif old_type == 'number':
             input_type = 'number'
             field_billable = True

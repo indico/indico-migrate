@@ -34,6 +34,7 @@ from indico.core.db.sqlalchemy.util.management import get_all_tables
 from indico.core.db.sqlalchemy.util.models import import_all_models
 from indico.core.logger import Logger
 from indico.core.plugins import plugin_engine
+from indico.modules.oauth.models.applications import SystemAppType, OAuthApplication
 from indico.util.console import cformat
 from indico.web.flask.wrappers import IndicoFlask
 
@@ -187,4 +188,12 @@ def setup(logger, zodb_root, sqlalchemy_uri, dblog=False, restore=False):
                 logging.config.fileConfig = lambda fn: None
                 prepare_db(empty=True, root_path=get_root_path('indico'), verbose=False)
                 logging.config.fileConfig = tmp
+                _create_oauth_apps()
     return app, tz
+
+
+def _create_oauth_apps():
+    for sat in SystemAppType:
+        if sat != SystemAppType.none:
+            db.session.add(OAuthApplication(system_app_type=sat, **sat.default_data))
+    db.session.commit()

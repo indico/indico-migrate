@@ -16,10 +16,15 @@
 
 from __future__ import unicode_literals
 
+from indico.core.db import db
+from indico.core.db.sqlalchemy.util.management import DEFAULT_TEMPLATE_DATA
+from indico.modules.categories import Category
+from indico.modules.designer import TemplateType
+from indico.modules.designer.models.templates import DesignerTemplate
 from indico.modules.users import User
 
-from indico_migrate.importer import TopLevelMigrationStep
 from indico_migrate.badges_posters import BadgeMigration, PosterMigration
+from indico_migrate.importer import TopLevelMigrationStep
 from indico_migrate.util import LocalFileImporterMixin
 
 
@@ -38,3 +43,7 @@ class GlobalBadgePosterImporter(LocalFileImporterMixin, TopLevelMigrationStep):
         system_user = User.get_system_user()
         BadgeMigration(self, default_conference, None, system_user).run()
         PosterMigration(self, default_conference, None, system_user).run()
+        dt = DesignerTemplate(category_id=0, title='Default ticket', type=TemplateType.badge,
+                              data=DEFAULT_TEMPLATE_DATA, is_system_template=True)
+        Category.get_root().default_ticket_template = dt
+        db.session.commit()

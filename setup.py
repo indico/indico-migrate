@@ -28,7 +28,7 @@ setup(
     author_email='indico-team@cern.ch',
     license='https://www.gnu.org/licenses/gpl-3.0.txt',
     packages=find_packages(),
-    install_requires=['indico>=2.0rc1,<2.1.dev0',
+    install_requires=['indico>=2.0,<2.1.dev0',
                       'urwid==1.3.1',
                       'github3.py==0.9.6',
                       'ZODB3==3.10.5'],

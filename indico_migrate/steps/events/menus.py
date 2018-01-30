@@ -228,13 +228,17 @@ class EventMenuImporter(EventMigrationStep):
                         continue
                 if not data['title']:
                     if getattr(item, '_listLink', None):
-                        self.print_warning('%[yellow!]Link has no title but children')
+                        data['title'] = '(no title)'
+                        self.print_warning('%[yellow!]Link has no title but children; using dummy title')
                     else:
                         self.print_warning('%[yellow]Skipping link with no title')
                         continue
             elif item_type == 'PageLink':
                 data['type'] = MenuEntryType.page
                 data['title'] = sanitize_user_input(item._caption)
+                if not data['title']:
+                    data['title'] = '(no title)'
+                    self.print_warning('%[yellow!]Page has no title; using dummy')
                 data['page'] = EventPage(event=event, html=item._page._content)
                 data['page'].legacy_mapping = LegacyPageMapping(event_id=event.id, legacy_page_id=item._page._id)
                 if item._page._isHome:

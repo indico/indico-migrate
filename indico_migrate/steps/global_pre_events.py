@@ -107,7 +107,7 @@ class GlobalPreEventsImporter(TopLevelMigrationStep):
             '_protectionDisclaimerRestricted': 'restricted_disclaimer'
         }
         for old, new in settings_map.iteritems():
-            legal_settings.set(new, convert_to_unicode(getattr(self.makac_info, old)))
+            legal_settings.set(new, convert_to_unicode(getattr(self.makac_info, old, '')))
 
     @step_description('Payment settings')
     def migrate_payment_settings(self):

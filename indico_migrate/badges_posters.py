@@ -199,7 +199,7 @@ class TemplateMigrationBase(object):
             'data': {
                 'width': width * self.zoom_multiplier,
                 'height': _sane_float(tpl_data[1]['height']) * self.zoom_multiplier,
-                'items': [self._translate_tpl_item(item) for item in tpl_data[4]]
+                'items': filter(None, [self._translate_tpl_item(item) for item in tpl_data[4]])
             }
         }
 

@@ -394,7 +394,7 @@ class EventPaperReviewingImporter(LocalFileImporterMixin, EventMigrationStep):
             if collision:
                 ignored_checksums.add(md5)
                 self.print_warning('%[yellow!]File {} (rev. {}) already in revision {}'.format(
-                    resource.fileName, revision.id if revision else None, collision.id))
+                    convert_to_unicode(resource.fileName), revision.id if revision else None, collision.id))
                 return
             else:
                 self.file_checksums[md5] = revision

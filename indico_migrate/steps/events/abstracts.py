@@ -413,7 +413,7 @@ class EventAbstractImporter(LocalFileImporterMixin, EventMigrationStep):
 
         # internal comments
         for old_comment in old_abstract._intComments:
-            comment = AbstractComment(user=self.user_from_legacy(old_comment._responsible),
+            comment = AbstractComment(user=self.user_from_legacy(old_comment._responsible, system_user=True),
                                       text=convert_to_unicode(old_comment._content),
                                       created_dt=old_comment._creationDate,
                                       modified_dt=old_comment._modificationDate)

@@ -1,5 +1,3 @@
-**ATTENTION: This module is not yet fully tested, use it at your own risk!**
-
 This script migrates the database of an Indico 1.2.x server to **version 2.0**.
 
 

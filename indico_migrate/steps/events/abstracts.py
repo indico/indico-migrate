@@ -455,7 +455,7 @@ class EventAbstractImporter(LocalFileImporterMixin, EventMigrationStep):
         # mark-as-duplicate judgments
         for review, old_abstract in self.event_ns.as_duplicate_reviews.viewitems():
             try:
-                review.proposed_related_abstract = self.event_ns.abstract_map.get(old_abstract)
+                review.proposed_related_abstract = self.event_ns.abstract_map[old_abstract]
             except KeyError:
                 self.print_error('%[yellow!]Abstract #{} marked as duplicate of invalid abstract #{}'
                                  .format(review.abstract.friendly_id, old_abstract._id))

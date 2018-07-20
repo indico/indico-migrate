@@ -106,7 +106,7 @@ class EventAlarmImporter(EventMigrationStep):
 
     def migrate(self):
         for alarm in self.conf.alarmList.itervalues():
-            if not alarm.startDateTime:
+            if not getattr(alarm, 'startDateTime', None):
                 self.print_error('Alarm has no start time')
                 continue
             start_dt = self._naive_to_aware(alarm.startDateTime).replace(second=0, microsecond=0)

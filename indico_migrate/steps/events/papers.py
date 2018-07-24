@@ -383,6 +383,10 @@ class EventPaperReviewingImporter(LocalFileImporterMixin, EventMigrationStep):
         storage_backend, storage_path, size, md5 = self._get_local_file_info(resource)
         content_type = mimetypes.guess_type(resource.fileName)[0] or 'application/octet-stream'
 
+        if not storage_path:
+            self.print_error("%[red!]File not accessible [{}]".format(convert_to_unicode(resource.fileName)))
+            return
+
         paper_file = PaperFile(filename=resource.fileName, content_type=content_type,
                                size=size, md5=md5, storage_backend=storage_backend,
                                storage_file_id=storage_path, created_dt=created_dt)

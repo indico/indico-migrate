@@ -904,7 +904,7 @@ class EventRegFormImporter(LocalFileImporterMixin, EventMigrationStep):
                 attrs['data'] = float(old_item._value)
             except ValueError:
                 self.print_warning("Garbage number '%[red]{0}%[reset]' in number field"
-                                   .format(old_item._value))
+                                   .format(convert_to_unicode(old_item._value)))
             else:
                 if attrs['data'] == int(attrs['data']):
                     # if we store a float we keep an ugly '.0'

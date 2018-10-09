@@ -56,7 +56,7 @@ class EventACLImporter(EventMigrationStep):
         if roles:
             entry.roles = sorted(set(entry.roles) | set(roles))
         if not self.quiet:
-            self.print_log('      %%[%s][{}]%%[reset] {}' % color.format(name.lower(), principal))
+            self.print_log(('%%[%s][{}]%%[reset] {}' % color).format(name.lower(), principal))
         return principal
 
     def process_emails(self, principals, emails, name, color, full_access=None, roles=None):

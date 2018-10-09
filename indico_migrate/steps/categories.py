@@ -116,7 +116,7 @@ class CategoryImporter(AttachmentMixin, TopLevelMigrationStep):
         if roles:
             updates['add_roles'] = roles
         cat.update_principal(principal, quiet=True, **updates)
-        self.print_log('    - %%[%s][{}]%%[reset] {}' % color.format(name.lower(), principal))
+        self.print_log(('    - %%[%s][{}]%%[reset] {}' % color).format(name.lower(), principal))
 
     def _process_protection(self, cat, old_cat):
         ac = old_cat._Category__ac

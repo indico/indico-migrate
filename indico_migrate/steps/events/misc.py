@@ -246,7 +246,7 @@ class EventLegacyIdImporter(EventMigrationStep):
 
 
 class EventPaymentSettingsImporter(EventMigrationStep):
-    step_id = 'paymsett'
+    step_id = 'payment'
 
     def migrate(self):
         if not hasattr(self.conf, '_registrationForm') or not hasattr(self.conf, '_modPay'):

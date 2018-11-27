@@ -42,7 +42,7 @@ from indico.util.fs import secure_filename
 from indico.util.string import normalize_phone_number
 
 from indico_migrate.steps.events import EventMigrationStep
-from indico_migrate.util import LocalFileImporterMixin, sanitize_user_input, convert_to_unicode
+from indico_migrate.util import LocalFileImporterMixin, convert_to_unicode, sanitize_user_input
 
 
 def ensure_tzinfo(dt):
@@ -1021,7 +1021,7 @@ class EventRegFormImporter(LocalFileImporterMixin, EventMigrationStep):
             return
 
         if data['provider'] == '_manual' and data['amount'] == 0.0:
-            self.print_warning("Skipping {0[provider]} transaction with zero ammount (reg. {1})".format(
+            self.print_warning("Skipping {0[provider]} transaction with zero amount (reg. {1})".format(
                 data, registrant._id))
             return
 

@@ -45,7 +45,7 @@ from indico.util.date_time import as_utc
 from indico.util.fs import secure_filename
 
 from indico_migrate.steps.events import EventMigrationStep
-from indico_migrate.util import LocalFileImporterMixin, strict_sanitize_email, convert_to_unicode
+from indico_migrate.util import LocalFileImporterMixin, convert_to_unicode, strict_sanitize_email
 
 
 class EventAbstractImporter(LocalFileImporterMixin, EventMigrationStep):
@@ -485,7 +485,7 @@ class EventAbstractImporter(LocalFileImporterMixin, EventMigrationStep):
                     continue
 
                 try:
-                    track = self.event_ns.track_map_by_id.get(int(old_judgment._track.id))
+                    track = self.event_ns.track_map_by_id[int(old_judgment._track.id)]
                 except KeyError:
                     self.print_warning('%[blue!]Abstract {} %[yellow]judged in invalid track {}%[reset]'.format(
                         old_abstract._id, int(old_judgment._track.id)))

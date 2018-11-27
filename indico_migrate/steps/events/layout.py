@@ -32,7 +32,7 @@ from indico.util.fs import secure_filename
 from indico.util.string import crc32
 
 from indico_migrate.steps.events import EventMigrationStep
-from indico_migrate.util import LocalFileImporterMixin, get_archived_file, convert_to_unicode
+from indico_migrate.util import LocalFileImporterMixin, convert_to_unicode, get_archived_file
 
 
 ALLOWED_THEMES = {'orange.css', 'brown.css', 'right_menu.css'}
@@ -105,7 +105,7 @@ class EventLayoutImporter(EventMigrationStep):
         try:
             logo_image = Image.open(path)
         except IOError as e:
-            self.print_warning("Cannot open {}: {}".format(path, e))
+            self.print_warning("Cannot open {}: {}".format(convert_to_unicode(path), e))
             return
 
         if logo_image.mode == 'CMYK':

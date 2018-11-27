@@ -38,7 +38,7 @@ from indico.util.string import crc32, is_legacy_id, is_valid_mail, sanitize_emai
 
 from indico_migrate.attachments import AttachmentMixin
 from indico_migrate.importer import TopLevelMigrationStep
-from indico_migrate.util import get_archived_file, patch_default_group_provider, convert_to_unicode, step_description
+from indico_migrate.util import convert_to_unicode, get_archived_file, patch_default_group_provider, step_description
 
 
 class CategoryImporter(AttachmentMixin, TopLevelMigrationStep):
@@ -74,7 +74,7 @@ class CategoryImporter(AttachmentMixin, TopLevelMigrationStep):
         try:
             icon_image = Image.open(path)
         except IOError as e:
-            self.print_warning("Cannot open {}: {}".format(path, e), event_id=cat.id)
+            self.print_warning("Cannot open {}: {}".format(convert_to_unicode(path), e), event_id=cat.id)
             return
 
         if icon_image.mode == 'CMYK':

@@ -514,9 +514,9 @@ class EventAbstractImporter(LocalFileImporterMixin, EventMigrationStep):
                 if review.proposed_action == AbstractAction.accept:
                     review.proposed_contribution_type = self.event_ns.legacy_contribution_type_map.get(
                         old_judgment._contribType)
-                    review.proposed_track = self.event_ns.track_map_by_id.get(track_id)
                 elif review.proposed_action == AbstractAction.change_tracks:
-                    review.proposed_tracks = {self.event_ns.track_map.get(t) for t in old_judgment._proposedTracks}
+                    review.proposed_tracks = {self.event_ns.track_map[t] for t in old_judgment._proposedTracks
+                                              if t in self.event_ns.track_map}
                 elif review.proposed_action == AbstractAction.mark_as_duplicate:
                     self.event_ns.as_duplicate_reviews[review] = old_judgment._originalAbst
 

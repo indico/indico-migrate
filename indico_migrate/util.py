@@ -209,7 +209,7 @@ class LocalFileImporterMixin(object):
             raise click.exceptions.UsageError('Both or none of --symlink-target and --symlink-backend must be used.')
         return kwargs
 
-    def _get_local_file_info(self, resource):
+    def _get_local_file_info(self, resource, force_access=False):
         archive_id = resource._LocalFile__archivedId
         repo_path = resource._LocalFile__repository._MaterialLocalRepository__files[archive_id]
         for archive_path in map(bytes, self.archive_dirs):
@@ -241,8 +241,8 @@ class LocalFileImporterMixin(object):
 
             assert path
             try:
-                size = 0 if self.avoid_storage_check else os.path.getsize(path)
-                md5 = '' if self.avoid_storage_check else get_file_md5(path)
+                size = 0 if (self.avoid_storage_check and not force_access) else os.path.getsize(path)
+                md5 = '' if (self.avoid_storage_check and not force_access) else get_file_md5(path)
             except OSError as e:
                 if e.errno != errno.ENOENT:
                     raise

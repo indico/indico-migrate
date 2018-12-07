@@ -380,7 +380,7 @@ class EventPaperReviewingImporter(LocalFileImporterMixin, EventMigrationStep):
         return last_file
 
     def _migrate_resource(self, contribution, revision, resource, created_dt, ignored_checksums):
-        storage_backend, storage_path, size, md5 = self._get_local_file_info(resource)
+        storage_backend, storage_path, size, md5 = self._get_local_file_info(resource, force_access=True)
         content_type = mimetypes.guess_type(resource.fileName)[0] or 'application/octet-stream'
 
         if not storage_path:

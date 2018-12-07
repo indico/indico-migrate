@@ -119,6 +119,20 @@ def _get_worldpay_data(ti_data):
     }
 
 
+def _get_saferpay_data(ti_data):
+    del ti_data['ModPay']
+    amount = float(ti_data.pop('OrderTotal'))
+    currency = ti_data.pop('Currency')
+    timestamp = ensure_tzinfo(ti_data.pop('payment_date'))
+    return {
+        'amount': amount,
+        'currency': currency,
+        'provider': 'sixpay',
+        'timestamp': timestamp,
+        'data': dict(ti_data, _migrated=True),
+    }
+
+
 def _extract_int(val):
     if isinstance(val, str):
         val = re.sub(r'[^0-9]+', '', val)
@@ -1039,7 +1053,8 @@ class EventRegFormImporter(LocalFileImporterMixin, EventMigrationStep):
             'TransactionPayLaterMod': _get_pay_later_data,
             'TransactionCERNYellowPay': _get_cern_yellow_pay_data,
             'TransactionPayPal': _get_paypal_data,
-            'TransactionWorldPay': _get_worldpay_data
+            'TransactionWorldPay': _get_worldpay_data,
+            'TransactionSaferPay': _get_saferpay_data,
         }
 
         try:

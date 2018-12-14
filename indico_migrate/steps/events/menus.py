@@ -61,7 +61,7 @@ MENU_ENTRY_NAME_MAP = {
     'downloadtemplate': 'download_template',
     'abstractsBook': 'abstracts_book',
     'registrationForm': 'registration',
-    'registrants': 'registrants',
+    'registrants': 'participants',
     'evaluation': 'surveys',
     'chat-event-page': 'chat:chatrooms',
     'vc-event-page': 'videoconference_rooms',
@@ -93,7 +93,7 @@ DEFAULT_MENU_TITLES = {
     'paper_upload': {'upload paper'},
     'program': {'scientific programme'},
     'program_my_tracks': {'manage my track', 'manage my tracks'},
-    'registrants': {'list of participants', 'partecipants', 'participant list'},
+    'participants': {'list of participants', 'partecipants', 'participant list'},
     'registration': {'registration'},
     'speaker_index': {'speaker index', 'speaker list'},
     'surveys': {'evaluation', 'surveys'},
@@ -179,7 +179,7 @@ class EventMenuImporter(EventMigrationStep):
         assert(len(entries) < 2)
         self.event_ns.misc_data['participant_list_disabled'] = False
         if entries:
-            self.event_ns.misc_data['participant_list_disabled'] = entries[0].is_disabled
+            self.event_ns.misc_data['participant_list_disabled'] = not entries[0].is_enabled
 
     def _migrate_menu(self, event, container, parent=None, used=None):
         if used is None:

@@ -251,7 +251,7 @@ class UserImporter(TopLevelMigrationStep):
         for avatar in committing_iterator(self.zodb_root['adminlist']._AdminList__list):
             try:
                 user = self.global_ns.avatar_merged_user[avatar.id]
-            except ValueError:
+            except KeyError:
                 continue
             if user is None or user.is_deleted:
                 continue
